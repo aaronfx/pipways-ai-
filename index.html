@@ -12,10 +12,68 @@
         * { font-family: 'Inter', sans-serif; }
         .mono { font-family: 'JetBrains Mono', monospace; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200">
-    <div class="flex h-screen">
+    
+    <!-- Auth Screen (shown if not logged in) -->
+    <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="glass rounded-2xl p-8 w-full max-w-md">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent mb-2">Pipways</h1>
+                <p class="text-slate-400">Institutional Trader Development</p>
+            </div>
+            
+            <div id="auth-tabs" class="flex gap-2 mb-6">
+                <button onclick="showAuthTab('login')" id="tab-login" class="flex-1 py-2 rounded-lg bg-blue-500 text-white font-medium">Sign In</button>
+                <button onclick="showAuthTab('register')" id="tab-register" class="flex-1 py-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white">Register</button>
+            </div>
+            
+            <!-- Login Form -->
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Email</label>
+                        <input type="email" name="email" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Password</label>
+                        <input type="password" name="password" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 rounded-lg py-2 font-medium transition-colors">
+                        Sign In
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Register Form -->
+            <form id="register-form" onsubmit="handleRegister(event)" class="hidden">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Name</label>
+                        <input type="text" name="name" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Email</label>
+                        <input type="email" name="email" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Password</label>
+                        <input type="password" name="password" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 rounded-lg py-2 font-medium transition-colors">
+                        Create Account
+                    </button>
+                </div>
+            </form>
+            
+            <p id="auth-error" class="text-red-400 text-sm mt-4 text-center hidden"></p>
+        </div>
+    </div>
+
+    <!-- Main App (shown after login) -->
+    <div id="app" class="hidden h-screen flex">
         <!-- Sidebar -->
         <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
             <div class="p-6 border-b border-slate-800">
@@ -39,7 +97,7 @@
             </nav>
             
             <div class="p-4 border-t border-slate-800">
-                <div class="bg-slate-800 rounded-lg p-4">
+                <div class="bg-slate-800 rounded-lg p-4 mb-3">
                     <div class="flex items-center justify-between mb-2">
                         <span class="text-xs text-slate-400">Level 2</span>
                         <span class="text-xs text-blue-400">65%</span>
@@ -47,8 +105,10 @@
                     <div class="w-full bg-slate-700 rounded-full h-2">
                         <div class="bg-gradient-to-r from-blue-500 to-violet-500 h-2 rounded-full transition-all" style="width: 65%"></div>
                     </div>
-                    <p class="text-xs text-slate-500 mt-2">To Level 3</p>
                 </div>
+                <button onclick="logout()" class="w-full flex items-center gap-2 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
+                    <i data-lucide="log-out" class="w-4 h-4"></i> Sign Out
+                </button>
             </div>
         </aside>
 
@@ -57,235 +117,411 @@
     </div>
 
 <script>
-    // Data Storage (Local Browser)
-    const DB = {
-        get: (k, d=[]) => JSON.parse(localStorage.getItem(k)||JSON.stringify(d)),
-        set: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
-        addTrade: (t) => {
-            const trades = DB.get('trades');
-            trades.unshift({...t, id: Date.now(), date: new Date().toLocaleDateString()});
-            DB.set('trades', trades);
-            return trades;
+// API Configuration
+const API_URL = 'https://pipways-api.onrender.com'; // Change this to your API URL after deploy
+
+// Auth State
+let authToken = localStorage.getItem('pipways_token');
+let currentUser = JSON.parse(localStorage.getItem('pipways_user') || '{}');
+
+// Check auth on load
+if (authToken) {
+    showApp();
+} else {
+    showAuth();
+}
+
+function showAuth() {
+    document.getElementById('auth-screen').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+}
+
+function showApp() {
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    showPage('dashboard');
+}
+
+function showAuthTab(tab) {
+    const loginBtn = document.getElementById('tab-login');
+    const registerBtn = document.getElementById('tab-register');
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    
+    if (tab === 'login') {
+        loginBtn.classList.add('bg-blue-500', 'text-white');
+        loginBtn.classList.remove('bg-slate-800', 'text-slate-400');
+        registerBtn.classList.remove('bg-blue-500', 'text-white');
+        registerBtn.classList.add('bg-slate-800', 'text-slate-400');
+        loginForm.classList.remove('hidden');
+        registerForm.classList.add('hidden');
+    } else {
+        registerBtn.classList.add('bg-blue-500', 'text-white');
+        registerBtn.classList.remove('bg-slate-800', 'text-slate-400');
+        loginBtn.classList.remove('bg-blue-500', 'text-white');
+        loginBtn.classList.add('bg-slate-800', 'text-slate-400');
+        registerForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+    }
+    document.getElementById('auth-error').classList.add('hidden');
+}
+
+async function handleLogin(e) {
+    e.preventDefault();
+    const form = e.target;
+    const errorEl = document.getElementById('auth-error');
+    
+    try {
+        const response = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `email=${encodeURIComponent(form.email.value)}&password=${encodeURIComponent(form.password.value)}`
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.detail || 'Login failed');
         }
+        
+        authToken = data.access_token;
+        localStorage.setItem('pipways_token', authToken);
+        localStorage.setItem('pipways_user', JSON.stringify(data));
+        showApp();
+        
+    } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+    }
+}
+
+async function handleRegister(e) {
+    e.preventDefault();
+    const form = e.target;
+    const errorEl = document.getElementById('auth-error');
+    
+    try {
+        const response = await fetch(`${API_URL}/auth/register`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `email=${encodeURIComponent(form.email.value)}&password=${encodeURIComponent(form.password.value)}&name=${encodeURIComponent(form.name.value)}`
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.detail || 'Registration failed');
+        }
+        
+        authToken = data.access_token;
+        localStorage.setItem('pipways_token', authToken);
+        localStorage.setItem('pipways_user', JSON.stringify(data));
+        showApp();
+        
+    } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+    }
+}
+
+function logout() {
+    localStorage.removeItem('pipways_token');
+    localStorage.removeItem('pipways_user');
+    authToken = null;
+    showAuth();
+}
+
+// API Helper
+async function apiCall(endpoint, options = {}) {
+    const headers = {
+        'Authorization': `Bearer ${authToken}`,
+        ...options.headers
     };
-
-    // Initialize sample data
-    if(!localStorage.getItem('init')) {
-        DB.set('trades', [
-            {pair: 'EURUSD', direction: 'LONG', pips: 16, grade: 'A-', date: '1/15/24'},
-            {pair: 'GBPUSD', direction: 'SHORT', pips: 17, grade: 'B+', date: '1/14/24'},
-            {pair: 'USDJPY', direction: 'LONG', pips: -22, grade: 'C', date: '1/13/24', flags: ['Oversizing']}
-        ]);
-        localStorage.setItem('init', '1');
+    
+    const response = await fetch(`${API_URL}${endpoint}`, {
+        ...options,
+        headers
+    });
+    
+    if (response.status === 401) {
+        logout();
+        throw new Error('Session expired');
     }
+    
+    return response;
+}
 
-    function showPage(page) {
-        const content = document.getElementById('content');
-        const trades = DB.get('trades');
-        const totalPips = trades.reduce((a,b) => a + b.pips, 0);
+// Pages
+async function showPage(page) {
+    const content = document.getElementById('content');
+    
+    // Update nav
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-500/10', 'text-blue-400', 'border-r-2', 'border-blue-500');
+        btn.classList.add('text-slate-400');
+    });
+    event.target.closest('.nav-btn').classList.add('bg-blue-500/10', 'text-blue-400', 'border-r-2', 'border-blue-500');
+    event.target.closest('.nav-btn').classList.remove('text-slate-400');
+    
+    if (page === 'dashboard') {
+        await renderDashboard(content);
+    } else if (page === 'journal') {
+        renderJournal(content);
+    } else if (page === 'discipline') {
+        renderDiscipline(content);
+    } else if (page === 'mentor') {
+        renderMentor(content);
+    }
+    lucide.createIcons();
+}
+
+async function renderDashboard(content) {
+    try {
+        const response = await apiCall('/trades');
+        const trades = await response.json();
+        
+        const totalPips = trades.reduce((a, b) => a + (b.pips || 0), 0);
         const wins = trades.filter(t => t.pips > 0).length;
-        const score = 87;
-
-        // Update nav styling
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.classList.remove('bg-blue-500/10', 'text-blue-400', 'border-r-2', 'border-blue-500');
-            btn.classList.add('text-slate-400');
-        });
-        event.target.closest('.nav-btn').classList.add('bg-blue-500/10', 'text-blue-400', 'border-r-2', 'border-blue-500');
-        event.target.closest('.nav-btn').classList.remove('text-slate-400');
-
-        if(page === 'dashboard') {
-            content.innerHTML = `
-                <h2 class="text-3xl font-bold mb-6">Dashboard</h2>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <div class="glass rounded-xl p-6">
-                        <div class="text-slate-400 text-sm mb-1">Discipline Score</div>
-                        <div class="text-3xl font-bold text-blue-400">${score}</div>
-                        <div class="mt-2 w-full bg-slate-700 rounded-full h-2">
-                            <div class="bg-blue-500 h-2 rounded-full" style="width: ${score}%"></div>
-                        </div>
-                    </div>
-                    <div class="glass rounded-xl p-6">
-                        <div class="text-slate-400 text-sm mb-1">Win Rate</div>
-                        <div class="text-3xl font-bold text-violet-400">${(wins/trades.length*100).toFixed(0)}%</div>
-                    </div>
-                    <div class="glass rounded-xl p-6">
-                        <div class="text-slate-400 text-sm mb-1">Total Pips</div>
-                        <div class="text-3xl font-bold ${totalPips>=0?'text-emerald-400':'text-red-400'}">${totalPips>0?'+':''}${totalPips}</div>
-                    </div>
-                    <div class="glass rounded-xl p-6">
-                        <div class="text-slate-400 text-sm mb-1">Trades</div>
-                        <div class="text-3xl font-bold text-orange-400">${trades.length}</div>
-                    </div>
+        const winRate = trades.length ? (wins / trades.length * 100).toFixed(0) : 0;
+        
+        content.innerHTML = `
+            <h2 class="text-3xl font-bold mb-6">Dashboard</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="glass rounded-xl p-6">
+                    <div class="text-slate-400 text-sm mb-1">Discipline Score</div>
+                    <div class="text-3xl font-bold text-blue-400">87</div>
                 </div>
                 <div class="glass rounded-xl p-6">
-                    <h3 class="font-semibold mb-4">Recent Trades</h3>
-                    <div class="space-y-3">
-                        ${trades.map(t => `
-                            <div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">
-                                <div class="flex items-center gap-4">
-                                    <span class="font-bold">${t.pair}</span>
-                                    <span class="px-2 py-1 rounded text-xs ${t.direction==='LONG'?'bg-emerald-500/20 text-emerald-400':'bg-red-500/20 text-red-400'}">${t.direction}</span>
-                                    <span class="font-mono ${t.pips>=0?'text-emerald-400':'text-red-400'}">${t.pips>0?'+':''}${t.pips}</span>
-                                </div>
-                                <span class="px-2 py-1 rounded bg-slate-700 text-xs font-bold">${t.grade}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        } else if(page === 'journal') {
-            content.innerHTML = `
-                <h2 class="text-3xl font-bold mb-6">Trade Journal</h2>
-                <div class="glass rounded-xl p-8 mb-6 text-center border-2 border-dashed border-slate-700 hover:border-blue-500/50 transition-colors">
-                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-500/20 flex items-center justify-center">
-                        <i data-lucide="upload-cloud" class="w-8 h-8 text-blue-400"></i>
-                    </div>
-                    <p class="text-lg mb-4">Log your trade manually</p>
-                    <form onsubmit="addTrade(event)" class="max-w-md mx-auto grid grid-cols-2 gap-4 text-left">
-                        <input name="pair" placeholder="Pair (EURUSD)" class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" required>
-                        <select name="direction" class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
-                            <option>LONG</option><option>SHORT</option>
-                        </select>
-                        <input name="pips" type="number" placeholder="Pips (+/-)" class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" required>
-                        <select name="grade" class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
-                            <option>A</option><option>B</option><option>C</option>
-                        </select>
-                        <button type="submit" class="col-span-2 bg-blue-500 hover:bg-blue-600 rounded-lg py-2 font-medium transition-colors">Add Trade</button>
-                    </form>
+                    <div class="text-slate-400 text-sm mb-1">Win Rate</div>
+                    <div class="text-3xl font-bold text-violet-400">${winRate}%</div>
                 </div>
                 <div class="glass rounded-xl p-6">
-                    <h3 class="font-semibold mb-4">All Trades</h3>
-                    <div class="space-y-3">
-                        ${trades.map(t => `
-                            <div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">
-                                <div class="flex items-center gap-4">
-                                    <span class="text-slate-400 text-sm">${t.date}</span>
-                                    <span class="font-bold">${t.pair}</span>
-                                    <span class="px-2 py-1 rounded text-xs ${t.direction==='LONG'?'bg-emerald-500/20 text-emerald-400':'bg-red-500/20 text-red-400'}">${t.direction}</span>
-                                    <span class="font-mono ${t.pips>=0?'text-emerald-400':'text-red-400'}">${t.pips>0?'+':''}${t.pips}</span>
-                                </div>
-                                <span class="px-2 py-1 rounded bg-slate-700 text-xs font-bold">${t.grade}</span>
+                    <div class="text-slate-400 text-sm mb-1">Total Pips</div>
+                    <div class="text-3xl font-bold ${totalPips>=0?'text-emerald-400':'text-red-400'}">${totalPips>0?'+':''}${totalPips}</div>
+                </div>
+                <div class="glass rounded-xl p-6">
+                    <div class="text-slate-400 text-sm mb-1">Trades</div>
+                    <div class="text-3xl font-bold text-orange-400">${trades.length}</div>
+                </div>
+            </div>
+            <div class="glass rounded-xl p-6">
+                <h3 class="font-semibold mb-4">Recent Trades</h3>
+                <div class="space-y-3">
+                    ${trades.slice(0, 5).map(t => `
+                        <div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">
+                            <div class="flex items-center gap-4">
+                                <span class="text-slate-400 text-sm">${new Date(t.created_at).toLocaleDateString()}</span>
+                                <span class="font-bold">${t.pair}</span>
+                                <span class="px-2 py-1 rounded text-xs ${t.direction==='LONG'?'bg-emerald-500/20 text-emerald-400':'bg-red-500/20 text-red-400'}">${t.direction}</span>
+                                <span class="font-mono ${t.pips>=0?'text-emerald-400':'text-red-400'}">${t.pips>0?'+':''}${t.pips}</span>
                             </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        } else if(page === 'discipline') {
-            content.innerHTML = `
-                <h2 class="text-3xl font-bold mb-6">Discipline Score</h2>
-                <div class="glass rounded-xl p-12 text-center mb-6">
-                    <div class="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-blue-500/20 to-violet-500/20 border-4 border-blue-500/30 mb-4">
-                        <span class="text-5xl font-bold">${score}</span>
-                    </div>
-                    <p class="text-xl text-slate-300 mb-2">Disciplined Trader</p>
-                    <p class="text-slate-500">Top 15% of users</p>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="glass rounded-xl p-6">
-                        <h3 class="font-semibold mb-4">Plan Adherence</h3>
-                        <div class="w-full bg-slate-700 rounded-full h-3 mb-2">
-                            <div class="bg-emerald-500 h-3 rounded-full" style="width: 92%"></div>
+                            <span class="px-2 py-1 rounded bg-slate-700 text-xs font-bold">${t.grade}</span>
                         </div>
-                        <p class="text-sm text-slate-400">92% - Excellent</p>
-                    </div>
-                    <div class="glass rounded-xl p-6">
-                        <h3 class="font-semibold mb-4">Emotional Variance</h3>
-                        <div class="w-full bg-slate-700 rounded-full h-3 mb-2">
-                            <div class="bg-yellow-500 h-3 rounded-full" style="width: 15%"></div>
-                        </div>
-                        <p class="text-sm text-slate-400">0.15 - Low variance</p>
-                    </div>
-                </div>
-            `;
-        } else if(page === 'mentor') {
-            content.innerHTML = `
-                <h2 class="text-3xl font-bold mb-6">AI Mentor</h2>
-                <div class="glass rounded-xl p-6 h-[calc(100vh-200px)] flex flex-col">
-                    <div id="chatHistory" class="flex-1 overflow-y-auto space-y-4 mb-4">
-                        <div class="flex gap-3">
-                            <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                                <i data-lucide="bot" class="w-4 h-4 text-blue-400"></i>
-                            </div>
-                            <div class="bg-slate-800 rounded-lg px-4 py-2 max-w-[80%]">
-                                <p class="text-sm">Hello! I'm your AI trading mentor. I see you've maintained a 12-day discipline streak. Your plan adherence is at 92% - excellent progress!</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <input type="text" id="mentorInput" placeholder="Ask about your trading..." 
-                            class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-                            onkeypress="if(event.key==='Enter') askMentor()">
-                        <button onclick="askMentor()" class="px-6 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors">
-                            <i data-lucide="send" class="w-5 h-5"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-        lucide.createIcons();
-    }
-
-    function addTrade(e) {
-        e.preventDefault();
-        const f = e.target;
-        DB.addTrade({
-            pair: f.pair.value,
-            direction: f.direction.value,
-            pips: parseInt(f.pips.value),
-            grade: f.grade.value
-        });
-        showPage('dashboard');
-    }
-
-    function askMentor() {
-        const input = document.getElementById('mentorInput');
-        const message = input.value;
-        if(!message) return;
-        
-        const chat = document.getElementById('chatHistory');
-        
-        // Add user message
-        chat.innerHTML += `
-            <div class="flex gap-3 flex-row-reverse">
-                <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
-                    <i data-lucide="user" class="w-4 h-4 text-slate-300"></i>
-                </div>
-                <div class="bg-blue-600 rounded-lg px-4 py-2 max-w-[80%]">
-                    <p class="text-sm">${message}</p>
+                    `).join('') || '<p class="text-slate-500">No trades yet. Add your first trade in the Journal.</p>'}
                 </div>
             </div>
         `;
+    } catch (err) {
+        content.innerHTML = `<p class="text-red-400">Error loading dashboard: ${err.message}</p>`;
+    }
+}
+
+function renderJournal(content) {
+    content.innerHTML = `
+        <h2 class="text-3xl font-bold mb-6">Trade Journal</h2>
         
-        input.value = '';
+        <!-- Chart Upload Section -->
+        <div class="glass rounded-xl p-8 mb-6 border-2 border-dashed border-slate-700 hover:border-blue-500/50 transition-colors">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <i data-lucide="upload-cloud" class="w-8 h-8 text-blue-400"></i>
+                </div>
+                <p class="text-lg font-medium mb-2">Upload Chart Screenshot</p>
+                <p class="text-sm text-slate-500 mb-4">AI will analyze your trade setup automatically</p>
+                <input type="file" id="chartUpload" accept="image/*" class="hidden" onchange="analyzeChart(this)">
+                <button onclick="document.getElementById('chartUpload').click()" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-medium transition-colors">
+                    Select Chart Image
+                </button>
+            </div>
+            <div id="analysisResult" class="hidden">
+                <!-- AI analysis appears here -->
+            </div>
+        </div>
         
-        // Mock AI response
-        setTimeout(() => {
-            const responses = [
-                "Based on your recent trades, focus on maintaining consistent position sizing. Your last 3 trades show good entry timing but varied sizes.",
-                "Your win rate is solid at 58%, but your R:R ratio could improve. Consider aiming for 1:2 minimum on all setups.",
-                "I notice you tend to trade more aggressively after losses. Consider implementing a mandatory 30-minute break rule."
-            ];
-            const response = responses[Math.floor(Math.random() * responses.length)];
-            
-            chat.innerHTML += `
+        <!-- Manual Entry -->
+        <div class="glass rounded-xl p-6">
+            <h3 class="font-semibold mb-4">Manual Entry</h3>
+            <form onsubmit="addTrade(event)" class="grid grid-cols-2 gap-4">
+                <input name="pair" placeholder="Pair (EURUSD)" class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" required>
+                <select name="direction" class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                    <option>LONG</option><option>SHORT</option>
+                </select>
+                <input name="pips" type="number" placeholder="Pips (+/-)" class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" required>
+                <select name="grade" class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                    <option>A</option><option>B</option><option>C</option>
+                </select>
+                <button type="submit" class="col-span-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg py-2 font-medium transition-colors">Add Trade</button>
+            </form>
+        </div>
+    `;
+}
+
+async function analyzeChart(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    const resultDiv = document.getElementById('analysisResult');
+    resultDiv.classList.remove('hidden');
+    resultDiv.innerHTML = '<p class="text-center text-blue-400"><i data-lucide="loader-2" class="w-6 h-6 animate-spin inline"></i> Analyzing chart with AI...</p>';
+    lucide.createIcons();
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await apiCall('/analyze-chart', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        resultDiv.innerHTML = `
+            <div class="border-t border-slate-700 pt-6">
+                <h4 class="font-semibold mb-3 flex items-center gap-2">
+                    <i data-lucide="sparkles" class="w-5 h-5 text-blue-400"></i>
+                    AI Analysis Results
+                </h4>
+                <div class="bg-slate-800/50 rounded-lg p-4 mb-4">
+                    <pre class="text-sm text-slate-300 whitespace-pre-wrap">${data.analysis}</pre>
+                </div>
+                ${data.fallback ? '<p class="text-xs text-yellow-500">⚠️ Using fallback mode - OpenAI API not configured</p>' : ''}
+                <button onclick="showPage('journal')" class="text-blue-400 hover:text-blue-300 text-sm">Analyze another chart</button>
+            </div>
+        `;
+        
+    } catch (err) {
+        resultDiv.innerHTML = `<p class="text-red-400">Error: ${err.message}</p>`;
+    }
+    lucide.createIcons();
+}
+
+async function addTrade(e) {
+    e.preventDefault();
+    const f = e.target;
+    
+    try {
+        const response = await apiCall('/trades', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `pair=${encodeURIComponent(f.pair.value)}&direction=${f.direction.value}&pips=${f.pips.value}&grade=${f.grade.value}`
+        });
+        
+        if (response.ok) {
+            alert('Trade saved!');
+            showPage('dashboard');
+        }
+    } catch (err) {
+        alert('Error saving trade: ' + err.message);
+    }
+}
+
+function renderDiscipline(content) {
+    content.innerHTML = `
+        <h2 class="text-3xl font-bold mb-6">Discipline Score</h2>
+        <div class="glass rounded-xl p-12 text-center mb-6">
+            <div class="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-blue-500/20 to-violet-500/20 border-4 border-blue-500/30 mb-4">
+                <span class="text-5xl font-bold">87</span>
+            </div>
+            <p class="text-xl text-slate-300 mb-2">Disciplined Trader</p>
+            <p class="text-slate-500">Top 15% of users</p>
+        </div>
+    `;
+}
+
+function renderMentor(content) {
+    content.innerHTML = `
+        <h2 class="text-3xl font-bold mb-6">AI Mentor</h2>
+        <div class="glass rounded-xl p-6 h-[calc(100vh-200px)] flex flex-col">
+            <div id="chatHistory" class="flex-1 overflow-y-auto space-y-4 mb-4">
                 <div class="flex gap-3">
                     <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                         <i data-lucide="bot" class="w-4 h-4 text-blue-400"></i>
                     </div>
                     <div class="bg-slate-800 rounded-lg px-4 py-2 max-w-[80%]">
-                        <p class="text-sm">${response}</p>
+                        <p class="text-sm">Hello! I'm your AI trading mentor. Ask me anything about your trading psychology, risk management, or strategy.</p>
                     </div>
                 </div>
-            `;
-            lucide.createIcons();
-            chat.scrollTop = chat.scrollHeight;
-        }, 1000);
-    }
+            </div>
+            <div class="flex gap-2">
+                <input type="text" id="mentorInput" placeholder="Ask your mentor..." 
+                    class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    onkeypress="if(event.key==='Enter') askMentor()">
+                <button onclick="askMentor()" class="px-6 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors">
+                    <i data-lucide="send" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    `;
+}
 
-    // Load initial page
-    showPage('dashboard');
+async function askMentor() {
+    const input = document.getElementById('mentorInput');
+    const message = input.value;
+    if (!message) return;
+    
+    const chat = document.getElementById('chatHistory');
+    
+    // Add user message
+    chat.innerHTML += `
+        <div class="flex gap-3 flex-row-reverse">
+            <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
+                <i data-lucide="user" class="w-4 h-4 text-slate-300"></i>
+            </div>
+            <div class="bg-blue-600 rounded-lg px-4 py-2 max-w-[80%]">
+                <p class="text-sm">${message}</p>
+            </div>
+        </div>
+    `;
+    
+    input.value = '';
+    chat.scrollTop = chat.scrollHeight;
+    
+    // Get AI response
+    try {
+        const response = await apiCall(`/mentor-chat?message=${encodeURIComponent(message)}`);
+        const data = await response.json();
+        
+        chat.innerHTML += `
+            <div class="flex gap-3">
+                <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="bot" class="w-4 h-4 text-blue-400"></i>
+                </div>
+                <div class="bg-slate-800 rounded-lg px-4 py-2 max-w-[80%]">
+                    <p class="text-sm">${data.response}</p>
+                    ${data.fallback ? '<p class="text-xs text-yellow-500 mt-1">⚠️ Fallback mode</p>' : ''}
+                </div>
+            </div>
+        `;
+        
+    } catch (err) {
+        chat.innerHTML += `
+            <div class="flex gap-3">
+                <div class="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="alert-circle" class="w-4 h-4 text-red-400"></i>
+                </div>
+                <div class="bg-red-500/10 rounded-lg px-4 py-2 max-w-[80%]">
+                    <p class="text-sm text-red-400">Error: ${err.message}</p>
+                </div>
+            </div>
+        `;
+    }
+    
     lucide.createIcons();
+    chat.scrollTop = chat.scrollHeight;
+}
+
+lucide.createIcons();
 </script>
 </body>
 </html>
