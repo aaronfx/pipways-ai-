@@ -241,6 +241,16 @@
             border-radius: 0.5rem;
         }
         
+        /* Performance Score Ring */
+        .score-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .score-ring-circle {
+            transition: stroke-dashoffset 1s ease;
+            transform-origin: 50% 50%;
+        }
+        
         /* Responsive Utilities */
         @media (max-width: 1024px) {
             .desktop-sidebar {
@@ -375,6 +385,9 @@
                 <button onclick="showPage('journal')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
                     <i data-lucide="book-open" class="w-5 h-5"></i> Trade Journal
                 </button>
+                <button onclick="showPage('performance')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="trophy" class="w-5 h-5"></i> Performance
+                </button>
                 <button onclick="showPage('analysis')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
                     <i data-lucide="scan-eye" class="w-5 h-5"></i> Chart Analysis
                 </button>
@@ -427,13 +440,13 @@
                 <i data-lucide="plus-circle"></i>
                 <span>Trade</span>
             </button>
-            <button onclick="showPage('analysis')" class="nav-btn-mobile" data-page="analysis">
-                <i data-lucide="scan-eye"></i>
-                <span>Scan</span>
+            <button onclick="showPage('performance')" class="nav-btn-mobile" data-page="performance">
+                <i data-lucide="trophy"></i>
+                <span>AI Score</span>
             </button>
-            <button onclick="showPage('blog')" class="nav-btn-mobile" data-page="blog">
-                <i data-lucide="newspaper"></i>
-                <span>Blog</span>
+            <button onclick="showPage('more')" class="nav-btn-mobile" data-page="more">
+                <i data-lucide="menu"></i>
+                <span>More</span>
             </button>
         </nav>
     </div>
@@ -635,6 +648,12 @@ async function showPage(page) {
         btn.classList.remove('active');
     });
     
+    // Handle "More" menu on mobile
+    if (page === 'more') {
+        showMobileMenu();
+        return;
+    }
+    
     // Set active states
     const desktopBtn = document.querySelector(`.desktop-sidebar [onclick="showPage('${page}')"]`);
     if (desktopBtn) desktopBtn.classList.add('active');
@@ -647,6 +666,7 @@ async function showPage(page) {
         'dashboard': renderDashboard,
         'analytics': renderAnalytics,
         'journal': renderJournal,
+        'performance': renderPerformance,
         'analysis': renderChartAnalysis,
         'discipline': renderDiscipline,
         'mentor': renderMentor,
@@ -661,6 +681,83 @@ async function showPage(page) {
     // Scroll to top
     content.scrollTop = 0;
     
+    lucide.createIcons();
+}
+
+function showMobileMenu() {
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <div class="p-4 md:p-8 max-w-4xl mx-auto fade-in pb-24">
+            <h2 class="text-2xl font-bold text-white mb-6">More Options</h2>
+            <div class="space-y-3">
+                <button onclick="showPage('performance')" class="w-full p-4 glass rounded-xl flex items-center gap-4 text-left">
+                    <div class="w-12 h-12 rounded-lg bg-violet-500/20 flex items-center justify-center">
+                        <i data-lucide="trophy" class="w-6 h-6 text-violet-400"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-white">AI Performance</div>
+                        <div class="text-sm text-slate-400">Analyze your trading history</div>
+                    </div>
+                </button>
+                <button onclick="showPage('analysis')" class="w-full p-4 glass rounded-xl flex items-center gap-4 text-left">
+                    <div class="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                        <i data-lucide="scan-eye" class="w-6 h-6 text-blue-400"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-white">Chart Analysis</div>
+                        <div class="text-sm text-slate-400">AI-powered setup review</div>
+                    </div>
+                </button>
+                <button onclick="showPage('discipline')" class="w-full p-4 glass rounded-xl flex items-center gap-4 text-left">
+                    <div class="w-12 h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                        <i data-lucide="shield-check" class="w-6 h-6 text-emerald-400"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-white">Discipline Score</div>
+                        <div class="text-sm text-slate-400">Track your trading discipline</div>
+                    </div>
+                </button>
+                <button onclick="showPage('mentor')" class="w-full p-4 glass rounded-xl flex items-center gap-4 text-left">
+                    <div class="w-12 h-12 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                        <i data-lucide="bot" class="w-6 h-6 text-orange-400"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-white">AI Mentor</div>
+                        <div class="text-sm text-slate-400">Trading psychology coach</div>
+                    </div>
+                </button>
+                <button onclick="showPage('blog')" class="w-full p-4 glass rounded-xl flex items-center gap-4 text-left">
+                    <div class="w-12 h-12 rounded-lg bg-pink-500/20 flex items-center justify-center">
+                        <i data-lucide="newspaper" class="w-6 h-6 text-pink-400"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-white">Trading Blog</div>
+                        <div class="text-sm text-slate-400">Insights and strategies</div>
+                    </div>
+                </button>
+                ${currentUser.is_admin ? `
+                <button onclick="showPage('admin')" class="w-full p-4 glass rounded-xl flex items-center gap-4 text-left border-amber-500/30">
+                    <div class="w-12 h-12 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                        <i data-lucide="settings" class="w-6 h-6 text-amber-400"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-white">Admin Dashboard</div>
+                        <div class="text-sm text-slate-400">Manage platform</div>
+                    </div>
+                </button>
+                ` : ''}
+                <button onclick="logout()" class="w-full p-4 glass rounded-xl flex items-center gap-4 text-left border-red-500/30">
+                    <div class="w-12 h-12 rounded-lg bg-red-500/20 flex items-center justify-center">
+                        <i data-lucide="log-out" class="w-6 h-6 text-red-400"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-white">Sign Out</div>
+                        <div class="text-sm text-slate-400">Logout from account</div>
+                    </div>
+                </button>
+            </div>
+        </div>
+    `;
     lucide.createIcons();
 }
 
@@ -772,6 +869,18 @@ async function renderDashboard(content) {
                     <div class="glass rounded-xl p-4 md:p-6">
                         <h3 class="text-base md:text-lg font-semibold text-white mb-4 md:mb-6">Quick Actions</h3>
                         <div class="space-y-2 md:space-y-3">
+                            <button onclick="showPage('performance')" class="w-full p-3 md:p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-violet-500/50 hover:bg-slate-800 transition-all text-left group">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-violet-500/20 flex items-center justify-center group-hover:bg-violet-500/30 transition-colors">
+                                        <i data-lucide="trophy" class="w-4 h-4 md:w-5 md:h-5 text-violet-400"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-white text-sm md:text-base">AI Performance</div>
+                                        <div class="text-xs text-slate-400 hidden md:block">Analyze your trading history</div>
+                                    </div>
+                                </div>
+                            </button>
+                            
                             <button onclick="showPage('analysis')" class="w-full p-3 md:p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-blue-500/50 hover:bg-slate-800 transition-all text-left group">
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/30 transition-colors">
@@ -784,10 +893,10 @@ async function renderDashboard(content) {
                                 </div>
                             </button>
                             
-                            <button onclick="showPage('mentor')" class="w-full p-3 md:p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-violet-500/50 hover:bg-slate-800 transition-all text-left group">
+                            <button onclick="showPage('mentor')" class="w-full p-3 md:p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-orange-500/50 hover:bg-slate-800 transition-all text-left group">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-violet-500/20 flex items-center justify-center group-hover:bg-violet-500/30 transition-colors">
-                                        <i data-lucide="message-circle" class="w-4 h-4 md:w-5 md:h-5 text-violet-400"></i>
+                                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-orange-500/20 flex items-center justify-center group-hover:bg-orange-500/30 transition-colors">
+                                        <i data-lucide="message-circle" class="w-4 h-4 md:w-5 md:h-5 text-orange-400"></i>
                                     </div>
                                     <div>
                                         <div class="font-medium text-white text-sm md:text-base">Ask Mentor</div>
@@ -1041,7 +1150,7 @@ function exportAnalytics() {
     showToast('Export feature coming soon!');
 }
 
-// Trade Journal with Pre-Trade Checklist - FIXED VERSION
+// Trade Journal with Pre-Trade Checklist
 async function renderJournal(content) {
     try {
         // Fetch checklist template
@@ -1148,7 +1257,7 @@ async function renderJournal(content) {
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Pips (+/-)</label>
-                            <input name="pips" type="number" step="0.1" placeholder="+25 or -10" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" required>
+                            <input name="pips" type="text" inputmode="decimal" pattern="[0-9+\-]*" placeholder="+25 or -10" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" required>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Grade</label>
@@ -1160,11 +1269,11 @@ async function renderJournal(content) {
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Entry Price (Optional)</label>
-                            <input name="entry_price" type="number" step="0.00001" placeholder="1.08500" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                            <input name="entry_price" type="text" inputmode="decimal" placeholder="1.08500" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Exit Price (Optional)</label>
-                            <input name="exit_price" type="number" step="0.00001" placeholder="1.09000" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                            <input name="exit_price" type="text" inputmode="decimal" placeholder="1.09000" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
                         </div>
                         <div class="md:col-span-2">
                             <button type="submit" id="submit-trade-btn" class="w-full bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 rounded-lg py-3 font-medium text-white shadow-lg transition-all flex items-center justify-center gap-2">
@@ -1288,6 +1397,317 @@ async function addTrade(e) {
         btn.innerHTML = originalText;
         btn.disabled = false;
         showToast('Error: ' + err.message);
+    }
+}
+
+// NEW: Performance Analysis Page
+async function renderPerformance(content) {
+    content.innerHTML = `
+        <div class="p-4 md:p-8 max-w-4xl mx-auto fade-in pb-24 md:pb-8">
+            <div class="flex items-center justify-between mb-6 md:mb-8">
+                <div>
+                    <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">AI Performance Analysis</h2>
+                    <p class="text-slate-400 text-sm">Upload your trading history for AI insights</p>
+                </div>
+            </div>
+            
+            <!-- Upload Section -->
+            <div class="glass rounded-xl p-6 md:p-8 mb-6 border-2 border-dashed border-slate-700 hover:border-violet-500/50 transition-all cursor-pointer upload-zone" 
+                onclick="document.getElementById('performanceUpload').click()"
+                ondragover="handleDragOver(event)" 
+                ondragleave="handleDragLeave(event)"
+                ondrop="handlePerformanceDrop(event)">
+                <input type="file" id="performanceUpload" accept=".csv,.xlsx,.xls,.png,.jpg,.jpeg,.pdf" class="hidden" onchange="analyzePerformance(this)">
+                <div class="text-center">
+                    <div class="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 rounded-full bg-violet-500/20 flex items-center justify-center">
+                        <i data-lucide="upload-cloud" class="w-8 h-8 md:w-10 md:h-10 text-violet-400"></i>
+                    </div>
+                    <p class="text-base md:text-lg font-medium text-white mb-2">Upload Trading History</p>
+                    <p class="text-xs md:text-sm text-slate-400 mb-4">CSV, Excel, or screenshots of your trades</p>
+                    <button class="px-4 md:px-6 py-2 md:py-2.5 bg-violet-500 hover:bg-violet-600 rounded-lg text-white font-medium transition-colors text-sm md:text-base">
+                        Select File
+                    </button>
+                    <p class="text-xs text-slate-500 mt-3">Max 5MB • Your data is analyzed securely</p>
+                </div>
+            </div>
+            
+            <!-- Loading State -->
+            <div id="performanceLoading" class="hidden py-12 text-center">
+                <div class="loading-spinner mx-auto mb-4"></div>
+                <p class="text-slate-400">AI analyzing your performance...</p>
+                <p class="text-xs text-slate-500 mt-2">This may take 30-60 seconds</p>
+            </div>
+            
+            <!-- Results Container -->
+            <div id="performanceResult" class="hidden fade-in space-y-6"></div>
+            
+            <!-- Previous Analyses -->
+            <div id="previousAnalyses" class="hidden mt-8">
+                <h3 class="text-lg font-semibold text-white mb-4">Previous Analyses</h3>
+                <div id="analysesList" class="space-y-3"></div>
+            </div>
+        </div>
+    `;
+    
+    // Load previous analyses
+    loadPreviousAnalyses();
+    lucide.createIcons();
+}
+
+function handlePerformanceDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        const input = document.getElementById('performanceUpload');
+        input.files = files;
+        analyzePerformance(input);
+    }
+}
+
+async function analyzePerformance(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('File too large. Max 5MB');
+        return;
+    }
+
+    const loadingDiv = document.getElementById('performanceLoading');
+    const resultDiv = document.getElementById('performanceResult');
+    const uploadZone = document.querySelector('.upload-zone');
+    
+    loadingDiv.classList.remove('hidden');
+    resultDiv.classList.add('hidden');
+    uploadZone.classList.add('hidden');
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await apiCall('/performance/analyze', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        loadingDiv.classList.add('hidden');
+        resultDiv.classList.remove('hidden');
+        
+        if (!data.success) {
+            resultDiv.innerHTML = `
+                <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                        <span class="font-medium">Analysis Failed</span>
+                    </div>
+                    <p class="text-sm">${data.error || 'Unknown error occurred'}</p>
+                </div>
+            `;
+            lucide.createIcons();
+            return;
+        }
+        
+        const analysis = data.analysis;
+        const score = analysis.performance_score || 0;
+        const scoreColor = score >= 80 ? 'text-emerald-400' : score >= 60 ? 'text-blue-400' : score >= 40 ? 'text-yellow-400' : 'text-red-400';
+        const scoreBg = score >= 80 ? 'bg-emerald-500' : score >= 60 ? 'bg-blue-500' : score >= 40 ? 'bg-yellow-500' : 'bg-red-500';
+        
+        resultDiv.innerHTML = `
+            <!-- Overall Score Card -->
+            <div class="glass rounded-xl p-6 md:p-8 text-center border-2 ${score >= 60 ? 'border-emerald-500/30' : 'border-yellow-500/30'}">
+                <h3 class="text-lg font-semibold text-white mb-6">Your Trading Performance Score</h3>
+                
+                <div class="relative w-32 h-32 md:w-40 md:h-40 mx-auto mb-6">
+                    <svg class="score-ring w-full h-full" viewBox="0 0 100 100">
+                        <circle class="text-slate-700" stroke-width="8" stroke="currentColor" fill="transparent" r="42" cx="50" cy="50"/>
+                        <circle id="score-circle" class="score-ring-circle ${scoreBg}" stroke-width="8" stroke-dasharray="263.89" stroke-dashoffset="263.89" stroke-linecap="round" stroke="currentColor" fill="transparent" r="42" cx="50" cy="50"/>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span class="text-3xl md:text-4xl font-bold ${scoreColor}">${score}</span>
+                        <span class="text-xs text-slate-400">/100</span>
+                    </div>
+                </div>
+                
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800 border border-slate-700">
+                    <i data-lucide="user" class="w-4 h-4 text-violet-400"></i>
+                    <span class="text-white font-medium">${analysis.trader_type || 'Analyzing...'}</span>
+                </div>
+                
+                <p class="mt-4 text-slate-300 text-sm max-w-md mx-auto">${analysis.key_insights || 'Analysis in progress...'}</p>
+            </div>
+            
+            <!-- Score Breakdown -->
+            <div class="glass rounded-xl p-4 md:p-6">
+                <h4 class="font-semibold text-white mb-4 flex items-center gap-2">
+                    <i data-lucide="pie-chart" class="w-5 h-5 text-blue-400"></i>
+                    Score Breakdown
+                </h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    ${Object.entries(analysis.score_breakdown || {}).map(([key, value]) => `
+                        <div class="text-center p-3 bg-slate-800/50 rounded-lg">
+                            <div class="text-2xl font-bold ${value >= 70 ? 'text-emerald-400' : value >= 50 ? 'text-blue-400' : 'text-yellow-400'} mb-1">${value}</div>
+                            <div class="text-xs text-slate-400 capitalize">${key.replace('_', ' ')}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <!-- Risk Appetite -->
+            <div class="glass rounded-xl p-4 md:p-6 border ${(analysis.risk_appetite || '').includes('Aggressive') ? 'border-red-500/30 bg-red-500/5' : (analysis.risk_appetite || '').includes('Conservative') ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-blue-500/30 bg-blue-500/5'}">
+                <h4 class="font-semibold text-white mb-3 flex items-center gap-2">
+                    <i data-lucide="shield" class="w-5 h-5 ${(analysis.risk_appetite || '').includes('Aggressive') ? 'text-red-400' : (analysis.risk_appetite || '').includes('Conservative') ? 'text-emerald-400' : 'text-blue-400'}"></i>
+                    Risk Profile: ${analysis.risk_appetite || 'Moderate'}
+                </h4>
+                <p class="text-sm text-slate-300">Based on your position sizing and drawdown patterns, you demonstrate a ${(analysis.risk_appetite || 'moderate').toLowerCase()} approach to risk management.</p>
+            </div>
+            
+            <!-- Strengths & Weaknesses -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="glass rounded-xl p-4 md:p-6 border border-emerald-500/20">
+                    <h4 class="font-semibold text-white mb-3 flex items-center gap-2">
+                        <i data-lucide="thumbs-up" class="w-5 h-5 text-emerald-400"></i>
+                        Strengths
+                    </h4>
+                    <ul class="space-y-2">
+                        ${(analysis.strengths || ['Keep trading to identify your strengths']).map(s => `
+                            <li class="flex items-start gap-2 text-sm text-slate-300">
+                                <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5"></i>
+                                <span>${s}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+                
+                <div class="glass rounded-xl p-4 md:p-6 border border-orange-500/20">
+                    <h4 class="font-semibold text-white mb-3 flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-orange-400"></i>
+                        Areas to Improve
+                    </h4>
+                    <ul class="space-y-2">
+                        ${(analysis.weaknesses || ['Continue journaling for detailed insights']).map(w => `
+                            <li class="flex items-start gap-2 text-sm text-slate-300">
+                                <i data-lucide="arrow-right-circle" class="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5"></i>
+                                <span>${w}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Improvement Plan -->
+            <div class="glass rounded-xl p-4 md:p-6 border border-blue-500/20">
+                <h4 class="font-semibold text-white mb-4 flex items-center gap-2">
+                    <i data-lucide="target" class="w-5 h-5 text-blue-400"></i>
+                    Your Improvement Plan
+                </h4>
+                <div class="space-y-3">
+                    ${(analysis.improvement_plan || ['Log more trades for personalized recommendations']).map((item, i) => `
+                        <div class="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg">
+                            <div class="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                                <span class="text-xs font-bold text-blue-400">${i + 1}</span>
+                            </div>
+                            <p class="text-sm text-slate-300">${item}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <!-- Recommended Courses -->
+            <div class="glass rounded-xl p-4 md:p-6">
+                <h4 class="font-semibold text-white mb-4 flex items-center gap-2">
+                    <i data-lucide="book-open" class="w-5 h-5 text-violet-400"></i>
+                    Recommended Courses
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    ${(analysis.recommended_courses || []).map(course => `
+                        <div class="p-4 bg-slate-800/50 rounded-lg border border-slate-700 hover:border-violet-500/50 transition-colors">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="px-2 py-1 rounded text-xs ${course.priority === 'High' ? 'bg-red-500/20 text-red-400' : course.priority === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'}">${course.priority} Priority</span>
+                                <span class="text-xs text-slate-500">${course.level}</span>
+                            </div>
+                            <h5 class="font-medium text-white mb-1">${course.title}</h5>
+                            <p class="text-xs text-slate-400">Recommended based on your ${(analysis.weaknesses || ['performance'])[0] || 'trading patterns'}</p>
+                        </div>
+                    `).join('') || '<p class="text-slate-400 text-sm">Continue trading to get personalized course recommendations</p>'}
+                </div>
+            </div>
+            
+            <!-- Monthly Goal -->
+            <div class="glass rounded-xl p-4 md:p-6 bg-gradient-to-r from-blue-600/20 to-violet-600/20 border-blue-500/30">
+                <h4 class="font-semibold text-white mb-2 flex items-center gap-2">
+                    <i data-lucide="trophy" class="w-5 h-5 text-yellow-400"></i>
+                    Your Monthly Goal
+                </h4>
+                <p class="text-slate-200">${analysis.monthly_goal || 'Log 20 trades with complete checklist this month'}</p>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex gap-3">
+                <button onclick="showPage('journal')" class="flex-1 bg-emerald-500 hover:bg-emerald-600 rounded-lg py-3 font-medium text-white transition-colors flex items-center justify-center gap-2">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Log New Trade
+                </button>
+                <button onclick="renderPerformance(document.getElementById('content'))" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition-colors">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                </button>
+            </div>
+        `;
+        
+        // Animate score ring
+        setTimeout(() => {
+            const circle = document.getElementById('score-circle');
+            if (circle) {
+                const circumference = 2 * Math.PI * 42;
+                const offset = circumference - (score / 100) * circumference;
+                circle.style.strokeDashoffset = offset;
+            }
+        }, 100);
+        
+    } catch (err) {
+        loadingDiv.classList.add('hidden');
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = `
+            <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
+                <div class="flex items-center gap-2 mb-2">
+                    <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                    <span class="font-medium">Error</span>
+                </div>
+                <p class="text-sm">${err.message}</p>
+            </div>
+        `;
+    }
+    
+    lucide.createIcons();
+}
+
+async function loadPreviousAnalyses() {
+    try {
+        const response = await apiCall('/performance/history');
+        const analyses = await response.json();
+        
+        const container = document.getElementById('previousAnalyses');
+        const list = document.getElementById('analysesList');
+        
+        if (analyses.length > 0) {
+            container.classList.remove('hidden');
+            list.innerHTML = analyses.slice(0, 3).map(a => `
+                <div class="p-4 glass rounded-lg flex items-center justify-between">
+                    <div>
+                        <div class="font-medium text-white">${a.trader_type || 'Analysis'}</div>
+                        <div class="text-xs text-slate-400">${new Date(a.created_at).toLocaleDateString()} • Score: ${a.performance_score || 'N/A'}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-bold ${(a.performance_score || 0) >= 60 ? 'text-emerald-400' : 'text-yellow-400'}">${a.performance_score || '-'}/100</div>
+                        <div class="text-xs text-slate-500">${a.risk_appetite || ''}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (err) {
+        console.error('Failed to load previous analyses:', err);
     }
 }
 
@@ -1801,25 +2221,27 @@ async function showBlogPost(slug) {
                     <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Blog
                 </button>
                 
-                <article class="glass rounded-2xl p-6 md:p-8">
-                    <!-- SEO Meta for this post -->
+                <article class="glass rounded-2xl p-6 md:p-8" itemscope itemtype="https://schema.org/BlogPosting">
+                    <meta itemprop="headline" content="${post.title}">
+                    <meta itemprop="datePublished" content="${post.created_at}">
+                    
                     <div class="flex items-center gap-3 mb-4">
-                        <span class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm font-medium">${post.category || 'General'}</span>
-                        <span class="text-slate-500 text-sm">${new Date(post.created_at).toLocaleDateString()}</span>
+                        <span class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm font-medium" itemprop="articleSection">${post.category || 'General'}</span>
+                        <span class="text-slate-500 text-sm"><time itemprop="datePublished" datetime="${post.created_at}">${new Date(post.created_at).toLocaleDateString()}</time></span>
                         <span class="text-slate-500 text-sm flex items-center gap-1">
                             <i data-lucide="eye" class="w-4 h-4"></i> ${post.view_count || 0} views
                         </span>
                     </div>
                     
-                    <h1 class="text-2xl md:text-4xl font-bold text-white mb-6">${post.title}</h1>
+                    <h1 class="text-2xl md:text-4xl font-bold text-white mb-6" itemprop="headline">${post.title}</h1>
                     
                     ${post.featured_image ? `
                     <div class="mb-6 rounded-xl overflow-hidden">
-                        <img src="${post.featured_image}" class="w-full h-48 md:h-64 object-cover" alt="${post.title}">
+                        <img src="${post.featured_image}" class="w-full h-48 md:h-64 object-cover" alt="${post.title}" itemprop="image">
                     </div>
                     ` : ''}
                     
-                    <div class="prose prose-invert max-w-none text-slate-300 leading-relaxed text-sm md:text-base">
+                    <div class="prose prose-invert max-w-none text-slate-300 leading-relaxed text-sm md:text-base" itemprop="articleBody">
                         ${post.content.replace(/\n/g, '<br>')}
                     </div>
                     
@@ -1827,7 +2249,7 @@ async function showBlogPost(slug) {
                     <div class="mt-8 pt-6 border-t border-slate-800">
                         <div class="flex flex-wrap gap-2">
                             ${post.tags.map(tag => `
-                                <span class="px-3 py-1 bg-slate-800 text-slate-400 rounded-full text-sm">#${tag}</span>
+                                <span class="px-3 py-1 bg-slate-800 text-slate-400 rounded-full text-sm" itemprop="keywords">#${tag}</span>
                             `).join('')}
                         </div>
                     </div>
