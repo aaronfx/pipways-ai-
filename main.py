@@ -6,8 +6,8 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 import asyncpg
 import os
-import openai
 import base64
+import requests
 from typing import Optional
 
 app = FastAPI(title="Pipways API")
@@ -29,6 +29,10 @@ ACCESS_TOKEN_EXPIRE_DAYS = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
+# OpenRouter Configuration
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
 # Database
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -38,6 +42,86 @@ async def get_db():
         yield conn
     finally:
         await conn.close()
+
+# OpenRouter API Helper
+def openrouter_chat(messages, model="anthropic/claude-3.5-sonnet"):
+    """Call OpenRouter API for chat completions"""
+    if not OPENROUTER_API_KEY:
+        return None, "OpenRouter API key not configured"
+    
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://pipways-web.onrender.com",  # Required by OpenRouter
+        "X-Title": "Pipways Trading Platform"  # Required by OpenRouter
+    }
+    
+    data = {
+        "model": model,
+        "messages": messages,
+        "max_tokens": 500
+    }
+    
+    try:
+        response = requests.post(
+            f"{OPENROUTER_BASE_URL}/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=30
+        )
+        response.raise_for_status()
+        result = response.json()
+        return result["choices"][0]["message"]["content"], None
+    except Exception as e:
+        return None, str(e)
+
+def openrouter_vision(image_base64, prompt, model="anthropic/claude-3.5-sonnet"):
+    """Call OpenRouter API for vision/image analysis"""
+    if not OPENROUTER_API_KEY:
+        return None, "OpenRouter API key not configured"
+    
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://pipways-web.onrender.com",
+        "X-Title": "Pipways Trading Platform"
+    }
+    
+    data = {
+        "model": model,
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are a professional forex trading analyst. Analyze trading charts and extract: pair name, direction (LONG/SHORT), entry price, exit price, stop loss, take profit, and grade the trade setup (A, B, or C). Be concise and return structured data."
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{image_base64}"
+                        }
+                    }
+                ]
+            }
+        ],
+        "max_tokens": 500
+    }
+    
+    try:
+        response = requests.post(
+            f"{OPENROUTER_BASE_URL}/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=30
+        )
+        response.raise_for_status()
+        result = response.json()
+        return result["choices"][0]["message"]["content"], None
+    except Exception as e:
+        return None, str(e)
 
 # Startup - create tables
 @app.on_event("startup")
@@ -101,7 +185,11 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 # Routes
 @app.get("/health")
 async def health():
-    return {"status": "ok", "version": "1.0.0"}
+    return {
+        "status": "ok", 
+        "version": "1.0.0",
+        "openrouter_configured": bool(OPENROUTER_API_KEY)
+    }
 
 @app.post("/auth/register")
 async def register(email: str, password: str, name: str, conn=Depends(get_db)):
@@ -162,76 +250,49 @@ async def analyze_chart(
     file: UploadFile = File(...),
     current_user: str = Depends(get_current_user)
 ):
-    """Upload trading chart screenshot for AI analysis"""
+    """Upload trading chart screenshot for AI analysis via OpenRouter"""
     
     # Read image
     contents = await file.read()
-    
-    # Convert to base64 for OpenAI
     base64_image = base64.b64encode(contents).decode('utf-8')
     
-    # Call OpenAI Vision API
-    try:
-        client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a professional forex trading analyst. Analyze trading charts and extract: pair name, direction (LONG/SHORT), entry price, exit price, stop loss, take profit, and grade the trade setup (A, B, or C). Respond in JSON format."
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Analyze this trading chart screenshot. Extract trade details and provide a grade."},
-                        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}
-                    ]
-                }
-            ],
-            max_tokens=500
-        )
-        
-        analysis = response.choices[0].message.content
-        
-        return {
-            "analysis": analysis,
-            "filename": file.filename
-        }
-        
-    except Exception as e:
-        # Fallback if OpenAI not configured
+    # Call OpenRouter Vision API
+    analysis, error = openrouter_vision(
+        base64_image,
+        "Analyze this trading chart screenshot. Extract: pair name, direction (LONG/SHORT), entry price, exit price, stop loss, take profit. Grade the setup A/B/C and explain why."
+    )
+    
+    if error:
         return {
             "analysis": "AI analysis temporarily unavailable. Please enter trade details manually.",
-            "error": str(e),
+            "error": error,
             "fallback": True
         }
+    
+    return {
+        "analysis": analysis,
+        "filename": file.filename,
+        "model": "claude-3.5-sonnet"
+    }
 
 @app.get("/mentor-chat")
 async def mentor_chat(message: str, current_user: str = Depends(get_current_user)):
-    """Get AI mentor response based on user's trading history"""
+    """Get AI mentor response via OpenRouter"""
     
-    try:
-        client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a disciplined forex trading mentor. Focus on risk management, trading psychology, and process adherence. Keep responses concise and actionable."
-                },
-                {
-                    "role": "user",
-                    "content": message
-                }
-            ],
-            max_tokens=300
-        )
-        
-        return {"response": response.choices[0].message.content}
-        
-    except Exception as e:
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a disciplined forex trading mentor. Focus on risk management, trading psychology, and process adherence. Keep responses concise (2-3 sentences) and actionable. Be encouraging but firm about discipline."
+        },
+        {
+            "role": "user",
+            "content": message
+        }
+    ]
+    
+    response, error = openrouter_chat(messages)
+    
+    if error:
         # Fallback responses
         fallbacks = [
             "Focus on your process, not the outcome. Did you follow your trading plan?",
@@ -241,7 +302,39 @@ async def mentor_chat(message: str, current_user: str = Depends(get_current_user
             "Review your losing trades objectively. What can you learn?"
         ]
         import random
-        return {"response": random.choice(fallbacks), "fallback": True}
+        return {
+            "response": random.choice(fallbacks),
+            "fallback": True,
+            "error": error
+        }
+    
+    return {
+        "response": response,
+        "model": "claude-3.5-sonnet"
+    }
+
+@app.get("/models")
+async def list_models(current_user: str = Depends(get_current_user)):
+    """List available models on OpenRouter"""
+    if not OPENROUTER_API_KEY:
+        return {"error": "OpenRouter not configured"}
+    
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "HTTP-Referer": "https://pipways-web.onrender.com",
+        "X-Title": "Pipways Trading Platform"
+    }
+    
+    try:
+        response = requests.get(
+            "https://openrouter.ai/api/v1/models",
+            headers=headers,
+            timeout=10
+        )
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        return {"error": str(e)}
 
 if __name__ == "__main__":
     import uvicorn
