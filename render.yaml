@@ -1,29 +1,39 @@
 services:
-  # Static Website (Frontend)
+  # Frontend (Static Site)
   - type: web
     name: pipways-web
     runtime: static
-    buildCommand: ""  # Empty for now
+    buildCommand: ""
     staticPublishPath: ./
-    pullRequestPreviewsEnabled: true
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
     envVars:
-      - key: VERSION
-        value: "1.0.0"
+      - key: API_URL
+        value: https://pipways-api.onrender.com
 
-  # Future API (commented out - uncomment when ready)
-  # - type: web
-  #   name: pipways-api
-  #   runtime: python
-  #   buildCommand: pip install -r requirements.txt
-  #   startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+  # Backend (Python API)
+  - type: web
+    name: pipways-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pipways-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false  # You'll add this manually in Render dashboard
+      - key: PYTHON_VERSION
+        value: "3.11.0"
 
-  # Future Database (commented out)
-  # databases:
-  #   - name: pipways-db
-  #     databaseName: pipways
-  #     user: pipways
-  #     plan: free
+  # Database (PostgreSQL)
+databases:
+  - name: pipways-db
+    databaseName: pipways
+    user: pipways
+    plan: free
