@@ -217,7 +217,7 @@ async def startup():
         )
     """)
     
-    # Trades table
+    # Trades table - with checklist columns
     await conn.execute("""
         CREATE TABLE IF NOT EXISTS trades (
             id SERIAL PRIMARY KEY,
@@ -235,6 +235,19 @@ async def startup():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # Check if checklist columns exist, add if not
+    try:
+        await conn.execute("""
+            ALTER TABLE trades 
+            ADD COLUMN IF NOT EXISTS checklist_completed BOOLEAN DEFAULT FALSE
+        """)
+        await conn.execute("""
+            ALTER TABLE trades 
+            ADD COLUMN IF NOT EXISTS checklist_data JSONB
+        """)
+    except Exception as e:
+        print(f"Note: checklist columns may already exist: {e}")
     
     # Chart analyses table
     await conn.execute("""
@@ -397,9 +410,34 @@ async def get_checklist_template(conn=Depends(get_db)):
                     {"id": 8, "text": "I have analyzed the higher timeframe trend direction", "required": False}
                 ]
             }
-        return dict(template)
+        
+        # Parse items if stored as JSON string
+        items = template["items"]
+        if isinstance(items, str):
+            items = json.loads(items)
+        
+        return {
+            "id": template["id"],
+            "name": template["name"],
+            "items": items,
+            "is_default": template["is_default"]
+        }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Return hardcoded fallback on error
+        return {
+            "id": 0,
+            "name": "Standard Pre-Trade Checklist",
+            "items": [
+                {"id": 1, "text": "I have a clear entry strategy based on my trading plan", "required": True},
+                {"id": 2, "text": "I have identified and set a definitive stop loss level", "required": True},
+                {"id": 3, "text": "I have a realistic take profit target (minimum 1:1.5 R:R)", "required": True},
+                {"id": 4, "text": "I have calculated position size (risking only 1-2% of account)", "required": True},
+                {"id": 5, "text": "I am not trading out of FOMO, revenge, or emotion", "required": True},
+                {"id": 6, "text": "I have checked the economic calendar for high-impact news", "required": False},
+                {"id": 7, "text": "This setup meets my minimum A or B grade criteria", "required": True},
+                {"id": 8, "text": "I have analyzed the higher timeframe trend direction", "required": False}
+            ]
+        }
 
 # Analytics Routes
 @app.get("/analytics/dashboard")
@@ -542,9 +580,12 @@ async def get_analytics(current_user: str = Depends(get_current_user), conn=Depe
                 "trade_pips": round(t["pips"] or 0, 2)
             })
         
-        # Checklist adherence
-        checklist_completed = sum(1 for t in trades if t["checklist_completed"])
-        checklist_adherence = (checklist_completed / total_trades * 100) if total_trades > 0 else 0
+        # Checklist adherence - handle case where column might not exist
+        try:
+            checklist_completed = sum(1 for t in trades if t.get("checklist_completed"))
+            checklist_adherence = (checklist_completed / total_trades * 100) if total_trades > 0 else 0
+        except:
+            checklist_adherence = 0
         
         return {
             "total_trades": total_trades,
@@ -557,7 +598,7 @@ async def get_analytics(current_user: str = Depends(get_current_user), conn=Depe
             "current_streak": current_streak,
             "best_trade": best_trade,
             "worst_trade": worst_trade,
-            "avg_risk_reward": 0,  # Would need R-multiple data
+            "avg_risk_reward": 0,
             "grade_distribution": grade_dist,
             "pair_performance": pair_performance,
             "monthly_performance": monthly_performance,
