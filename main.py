@@ -16,10 +16,15 @@ from pydantic import BaseModel
 
 app = FastAPI(title="Pipways API")
 
-# CORS
+# CORS - Update with your custom domain when ready
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://pipways-web-nhem.onrender.com",
+        "https://www.pipways.com",  # Your custom domain
+        "https://pipways.com",
+        "http://localhost:8000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -103,7 +108,7 @@ def openrouter_chat(messages, model="anthropic/claude-3.5-sonnet"):
     data = {
         "model": model,
         "messages": messages,
-        "max_tokens": 1000
+        "max_tokens": 2000
     }
     
     try:
@@ -111,7 +116,7 @@ def openrouter_chat(messages, model="anthropic/claude-3.5-sonnet"):
             f"{OPENROUTER_BASE_URL}/chat/completions",
             headers=headers,
             json=data,
-            timeout=30
+            timeout=60
         )
         response.raise_for_status()
         result = response.json()
@@ -260,6 +265,23 @@ async def startup():
         )
     """)
     
+    # Performance analyses table - NEW
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS performance_analyses (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id),
+            file_name VARCHAR(255),
+            file_data TEXT,
+            analysis_result JSONB,
+            trader_type VARCHAR(50),
+            performance_score INTEGER,
+            risk_appetite VARCHAR(20),
+            recommendations TEXT[],
+            courses_recommended JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
     # Blog posts table
     await conn.execute("""
         CREATE TABLE IF NOT EXISTS blog_posts (
@@ -332,7 +354,7 @@ async def startup():
 async def health():
     return {
         "status": "ok", 
-        "version": "1.0.0",
+        "version": "1.1.0",
         "openrouter_configured": bool(OPENROUTER_API_KEY)
     }
 
@@ -608,6 +630,194 @@ async def get_analytics(current_user: str = Depends(get_current_user), conn=Depe
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Analytics error: {str(e)}")
+
+# NEW: Performance Analysis Routes
+@app.post("/performance/analyze")
+async def analyze_performance(
+    file: UploadFile = File(...),
+    current_user: str = Depends(get_current_user),
+    conn=Depends(get_db)
+):
+    """Upload trading history for AI performance analysis"""
+    try:
+        contents = await file.read()
+        
+        # Handle both images and text files
+        file_ext = file.filename.split('.')[-1].lower()
+        is_image = file_ext in ['png', 'jpg', 'jpeg', 'gif', 'webp']
+        
+        if is_image:
+            base64_data = base64.b64encode(contents).decode('utf-8')
+            file_content = f"[IMAGE_DATA:{base64_data}]"
+        else:
+            # Text/CSV file
+            try:
+                file_content = contents.decode('utf-8')
+            except:
+                file_content = base64.b64encode(contents).decode('utf-8')
+        
+        # Get user's trade history for context
+        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
+        user_id = user["id"]
+        
+        trades = await conn.fetch(
+            "SELECT * FROM trades WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50",
+            user_id
+        )
+        
+        trade_summary = {
+            "total_trades": len(trades),
+            "win_rate": 0,
+            "avg_pips": 0,
+            "favorite_pairs": []
+        }
+        
+        if trades:
+            wins = [t for t in trades if t["pips"] and t["pips"] > 0]
+            trade_summary["win_rate"] = round(len(wins) / len(trades) * 100, 1)
+            trade_summary["avg_pips"] = round(sum(t["pips"] or 0 for t in trades) / len(trades), 2)
+            
+            pairs = {}
+            for t in trades:
+                pairs[t["pair"]] = pairs.get(t["pair"], 0) + 1
+            trade_summary["favorite_pairs"] = sorted(pairs.items(), key=lambda x: x[1], reverse=True)[:3]
+        
+        # AI Analysis Prompt
+        messages = [
+            {
+                "role": "system",
+                "content": """You are an expert trading performance analyst. Analyze the trader's history and provide a comprehensive assessment. Respond in this exact JSON format:
+{
+    "trader_type": "Scalper/Day Trader/Swing Trader/Position Trader/Mixed",
+    "performance_score": 75,
+    "score_breakdown": {
+        "profitability": 80,
+        "risk_management": 70,
+        "consistency": 75,
+        "psychology": 65
+    },
+    "risk_appetite": "Conservative/Moderate/Aggressive/Very Aggressive",
+    "strengths": ["Good risk management", "Consistent entries"],
+    "weaknesses": ["Overtrading", "Poor exit timing"],
+    "key_insights": "You tend to perform better in trending markets...",
+    "improvement_plan": [
+        "Set maximum daily loss limits",
+        "Wait for confirmation before entering"
+    ],
+    "recommended_courses": [
+        {"title": "Advanced Risk Management", "level": "Intermediate", "priority": "High"},
+        {"title": "Trading Psychology Mastery", "level": "Beginner", "priority": "Medium"}
+    ],
+    "monthly_goal": "Improve win rate by 5% while maintaining current R:R ratio"
+}"""
+            },
+            {
+                "role": "user",
+                "content": f"""Analyze this trader's performance:
+
+Trading History Summary:
+- Total Trades: {trade_summary['total_trades']}
+- Win Rate: {trade_summary['win_rate']}%
+- Average Pips per Trade: {trade_summary['avg_pips']}
+- Most Traded Pairs: {', '.join([p[0] for p in trade_summary['favorite_pairs']])}
+
+Uploaded File Content ({file.filename}):
+{file_content[:5000] if not is_image else '[Trading history screenshot provided]'}"""
+            }
+        ]
+        
+        analysis_text, error = openrouter_chat(messages)
+        
+        if error:
+            return {
+                "success": False,
+                "error": error,
+                "fallback_analysis": generate_fallback_analysis(trade_summary)
+            }
+        
+        # Parse AI response
+        try:
+            json_match = re.search(r'\{.*\}', analysis_text, re.DOTALL)
+            if json_match:
+                analysis_result = json.loads(json_match.group())
+            else:
+                analysis_result = generate_fallback_analysis(trade_summary)
+        except:
+            analysis_result = generate_fallback_analysis(trade_summary)
+        
+        # Store in database
+        await conn.execute("""
+            INSERT INTO performance_analyses 
+            (user_id, file_name, file_data, analysis_result, trader_type, performance_score, risk_appetite, recommendations, courses_recommended)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        """, 
+            user_id,
+            file.filename,
+            file_content[:1000] if not is_image else None,
+            json.dumps(analysis_result),
+            analysis_result.get("trader_type", "Unknown"),
+            analysis_result.get("performance_score", 0),
+            analysis_result.get("risk_appetite", "Unknown"),
+            analysis_result.get("improvement_plan", []),
+            json.dumps(analysis_result.get("recommended_courses", []))
+        )
+        
+        return {
+            "success": True,
+            "analysis": analysis_result,
+            "trade_summary": trade_summary
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "fallback_analysis": generate_fallback_analysis({"total_trades": 0})
+        }
+
+def generate_fallback_analysis(trade_summary):
+    """Generate fallback analysis when AI fails"""
+    return {
+        "trader_type": "Analyzing...",
+        "performance_score": 50,
+        "score_breakdown": {
+            "profitability": 50,
+            "risk_management": 50,
+            "consistency": 50,
+            "psychology": 50
+        },
+        "risk_appetite": "Moderate",
+        "strengths": ["Keep logging trades to get personalized insights"],
+        "weaknesses": ["Not enough data for full analysis"],
+        "key_insights": f"You have {trade_summary['total_trades']} trades logged. Continue journaling for detailed AI analysis.",
+        "improvement_plan": [
+            "Log all trades consistently",
+            "Complete pre-trade checklist",
+            "Review weekly performance"
+        ],
+        "recommended_courses": [
+            {"title": "Trading Fundamentals", "level": "Beginner", "priority": "High"},
+            {"title": "Risk Management Basics", "level": "Beginner", "priority": "High"}
+        ],
+        "monthly_goal": "Log 20+ trades with complete checklist"
+    }
+
+@app.get("/performance/history")
+async def get_performance_history(current_user: str = Depends(get_current_user), conn=Depends(get_db)):
+    """Get user's performance analysis history"""
+    try:
+        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
+        analyses = await conn.fetch(
+            """SELECT id, file_name, analysis_result, trader_type, performance_score, 
+                      risk_appetite, created_at 
+               FROM performance_analyses 
+               WHERE user_id = $1 
+               ORDER BY created_at DESC""",
+            user["id"]
+        )
+        return [dict(a) for a in analyses]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/trades")
 async def get_trades(current_user: str = Depends(get_current_user), conn=Depends(get_db)):
