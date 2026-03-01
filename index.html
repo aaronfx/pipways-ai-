@@ -123,10 +123,10 @@
 
 <script>
 // CORRECT API URL - NO SPACES, NO TRAILING SLASH
-const API_URL = 'https://pipways-api-nhem.onrender.com';
+const API_URL='https://pipways-api-nhem.onrender.com';
 
-let authToken = localStorage.getItem('pipways_token');
-let currentUser = JSON.parse(localStorage.getItem('pipways_user') || '{}');
+let authToken=localStorage.getItem('pipways_token');
+let currentUser=JSON.parse(localStorage.getItem('pipways_user') || '{}');
 
 if (authToken) {
     showApp();
