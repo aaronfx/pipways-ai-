@@ -23,20 +23,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Custom exception handler for validation errors
-@app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
-    return JSONResponse(
-        status_code=500,
-        content={"detail": str(exc)}
-    )
-
 # Security
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Use bcrypt with truncate to handle passwords longer than 72 bytes
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    truncate_error=False  # Automatically truncate passwords to 72 bytes
+)
 security = HTTPBearer()
 
 # OpenRouter Configuration
@@ -45,6 +42,10 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 # Database
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Default admin credentials
+DEFAULT_ADMIN_EMAIL = "admin@pipways.com"
+DEFAULT_ADMIN_PASSWORD = "admin123"
 
 async def get_db():
     conn = await asyncpg.connect(DATABASE_URL, ssl="require")
@@ -133,7 +134,7 @@ def openrouter_vision(image_base64, prompt, model="anthropic/claude-3.5-sonnet")
     except Exception as e:
         return None, str(e)
 
-# Startup - create tables
+# Startup - create tables and default admin
 @app.on_event("startup")
 async def startup():
     conn = await asyncpg.connect(DATABASE_URL, ssl="require")
@@ -166,6 +167,16 @@ async def startup():
         )
     """)
     
+    # Create default admin user if it doesn't exist
+    existing_admin = await conn.fetchrow("SELECT id FROM users WHERE email = $1", DEFAULT_ADMIN_EMAIL)
+    if not existing_admin:
+        hashed = pwd_context.hash(DEFAULT_ADMIN_PASSWORD)
+        await conn.execute(
+            "INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3)",
+            DEFAULT_ADMIN_EMAIL, hashed, "Admin"
+        )
+        print(f"Default admin created: {DEFAULT_ADMIN_EMAIL} / {DEFAULT_ADMIN_PASSWORD}")
+    
     await conn.close()
 
 # Auth helpers
@@ -173,7 +184,11 @@ def verify_password(plain, hashed):
     return pwd_context.verify(plain, hashed)
 
 def get_password_hash(password):
-    return pwd_context.hash(password)
+    # Truncate password to 72 bytes before hashing (bcrypt limit)
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+    return pwd_context.hash(password_bytes.decode('utf-8', errors='ignore'))
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -214,6 +229,11 @@ async def register(
         if existing:
             raise HTTPException(status_code=400, detail="Email already registered")
         
+        # Validate password length (max 72 bytes for bcrypt)
+        password_bytes = password.encode('utf-8')
+        if len(password_bytes) > 72:
+            raise HTTPException(status_code=400, detail="Password is too long (max 72 characters)")
+        
         # Create user
         hashed = get_password_hash(password)
         user_id = await conn.fetchval(
@@ -236,7 +256,16 @@ async def login(
 ):
     try:
         user = await conn.fetchrow("SELECT id, password_hash, name FROM users WHERE email = $1", email)
-        if not user or not verify_password(password, user["password_hash"]):
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        # Verify password (handle truncation)
+        password_bytes = password.encode('utf-8')
+        if len(password_bytes) > 72:
+            password_bytes = password_bytes[:72]
+        truncated_password = password_bytes.decode('utf-8', errors='ignore')
+        
+        if not verify_password(truncated_password, user["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid credentials")
         
         token = create_access_token({"sub": email})
