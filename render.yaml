@@ -10,7 +10,7 @@ services:
         source: /*
         destination: /index.html
 
-  # Backend (Python API) - THIS MUST BE HERE
+  # Backend (Python API)
   - type: web
     name: pipways-api
     runtime: python
@@ -28,7 +28,6 @@ services:
       - key: PYTHON_VERSION
         value: "3.11.0"
 
-# Database - THIS MUST BE HERE TOO
 databases:
   - name: pipways-db
     databaseName: pipways
