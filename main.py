@@ -9,12 +9,13 @@ import os
 import base64
 import requests
 import bcrypt
-from typing import Optional
 import json
+import re
+from typing import Optional
 
 app = FastAPI(title="Pipways API")
 
-# CORS - Allow all origins for Render deployment flexibility
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,7 +28,6 @@ app.add_middleware(
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30
-
 security = HTTPBearer()
 
 # OpenRouter Configuration
@@ -48,9 +48,8 @@ async def get_db():
     finally:
         await conn.close()
 
-# Password hashing using bcrypt directly
+# Password hashing
 def get_password_hash(password: str) -> str:
-    # bcrypt has a 72 byte limit
     password_bytes = password.encode('utf-8')
     if len(password_bytes) > 72:
         password_bytes = password_bytes[:72]
@@ -82,7 +81,6 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-# OpenRouter API Helper
 def openrouter_chat(messages, model="anthropic/claude-3.5-sonnet"):
     """Call OpenRouter API for chat completions"""
     if not OPENROUTER_API_KEY:
@@ -98,7 +96,7 @@ def openrouter_chat(messages, model="anthropic/claude-3.5-sonnet"):
     data = {
         "model": model,
         "messages": messages,
-        "max_tokens": 500
+        "max_tokens": 1000
     }
     
     try:
@@ -131,7 +129,19 @@ def openrouter_vision(image_base64, prompt, model="anthropic/claude-3.5-sonnet")
         "messages": [
             {
                 "role": "system",
-                "content": "You are a professional forex trading analyst. Analyze trading charts and extract: pair name, direction (LONG/SHORT), entry price, exit price, stop loss, take profit, and grade the trade setup (A, B, or C). Be concise and return structured data."
+                "content": """You are a professional forex trading analyst. Analyze the provided chart and respond in this exact JSON format:
+{
+    "pair": "EURUSD",
+    "direction": "LONG/SHORT",
+    "setup_quality": "A/B/C",
+    "entry_price": "1.0850",
+    "stop_loss": "1.0820",
+    "take_profit": "1.0900",
+    "risk_reward": "1:1.67",
+    "analysis": "Clear trendline break with volume confirmation...",
+    "key_levels": ["1.0850", "1.0820", "1.0900"],
+    "recommendations": "Wait for pullback to 1.0840 before entering..."
+}"""
             },
             {
                 "role": "user",
@@ -146,7 +156,7 @@ def openrouter_vision(image_base64, prompt, model="anthropic/claude-3.5-sonnet")
                 ]
             }
         ],
-        "max_tokens": 500
+        "max_tokens": 1000
     }
     
     try:
@@ -161,6 +171,30 @@ def openrouter_vision(image_base64, prompt, model="anthropic/claude-3.5-sonnet")
         return result["choices"][0]["message"]["content"], None
     except Exception as e:
         return None, str(e)
+
+def parse_analysis_response(analysis_text):
+    """Parse AI response into structured format"""
+    try:
+        # Try to extract JSON from response
+        json_match = re.search(r'\{.*\}', analysis_text, re.DOTALL)
+        if json_match:
+            return json.loads(json_match.group())
+    except:
+        pass
+    
+    # Fallback: return structured fallback
+    return {
+        "pair": "Unknown",
+        "direction": "Unknown",
+        "setup_quality": "N/A",
+        "entry_price": "N/A",
+        "stop_loss": "N/A",
+        "take_profit": "N/A",
+        "risk_reward": "N/A",
+        "analysis": analysis_text,
+        "key_levels": [],
+        "recommendations": "Please review manually"
+    }
 
 # Startup - create tables and default admin
 @app.on_event("startup")
@@ -191,6 +225,17 @@ async def startup():
             grade VARCHAR(5),
             screenshot_url TEXT,
             ai_analysis TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Chart analyses table
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS chart_analyses (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id),
+            image_data TEXT,
+            analysis_result JSONB,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -227,17 +272,14 @@ async def register(
     conn=Depends(get_db)
 ):
     try:
-        # Check if exists
         existing = await conn.fetchrow("SELECT id FROM users WHERE email = $1", email)
         if existing:
             raise HTTPException(status_code=400, detail="Email already registered")
         
-        # Validate password length (max 72 bytes for bcrypt)
         password_bytes = password.encode('utf-8')
         if len(password_bytes) > 72:
             raise HTTPException(status_code=400, detail="Password is too long (max 72 characters)")
         
-        # Create user
         hashed = get_password_hash(password)
         user_id = await conn.fetchval(
             "INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id",
@@ -309,39 +351,70 @@ async def create_trade(
 @app.post("/analyze-chart")
 async def analyze_chart(
     file: UploadFile = File(...),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
+    conn=Depends(get_db)
 ):
-    """Upload trading chart screenshot for AI analysis via OpenRouter"""
+    """Upload trading chart screenshot for AI analysis"""
     
     try:
-        # Read image
+        # Read and encode image
         contents = await file.read()
         base64_image = base64.b64encode(contents).decode('utf-8')
         
         # Call OpenRouter Vision API
-        analysis, error = openrouter_vision(
+        analysis_text, error = openrouter_vision(
             base64_image,
-            "Analyze this trading chart screenshot. Extract: pair name, direction (LONG/SHORT), entry price, exit price, stop loss, take profit. Grade the setup A/B/C and explain why."
+            "Analyze this trading chart. Identify the currency pair, trend direction, key support/resistance levels, and provide a trade setup grade (A/B/C)."
         )
         
         if error:
             return {
-                "analysis": "AI analysis temporarily unavailable. Please enter trade details manually.",
+                "success": False,
+                "analysis": None,
+                "raw_response": None,
                 "error": error,
-                "fallback": True
+                "image_data": base64_image
             }
         
+        # Parse structured response
+        parsed_analysis = parse_analysis_response(analysis_text)
+        
+        # Save to database
+        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
+        await conn.execute(
+            "INSERT INTO chart_analyses (user_id, image_data, analysis_result) VALUES ($1, $2, $3)",
+            user["id"], base64_image, json.dumps(parsed_analysis)
+        )
+        
         return {
-            "analysis": analysis,
-            "filename": file.filename,
-            "model": "claude-3.5-sonnet"
+            "success": True,
+            "analysis": parsed_analysis,
+            "raw_response": analysis_text,
+            "image_data": base64_image,
+            "error": None
         }
+        
     except Exception as e:
         return {
-            "analysis": "Failed to analyze image. Please try again or enter details manually.",
+            "success": False,
+            "analysis": None,
+            "raw_response": None,
             "error": str(e),
-            "fallback": True
+            "image_data": None
         }
+
+@app.get("/chart-analyses")
+async def get_chart_analyses(current_user: str = Depends(get_current_user), conn=Depends(get_db)):
+    """Get user's chart analysis history"""
+    try:
+        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
+        analyses = await conn.fetch(
+            "SELECT id, analysis_result, created_at FROM chart_analyses WHERE user_id = $1 ORDER BY created_at DESC",
+            user["id"]
+        )
+        return [dict(a) for a in analyses]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch analyses: {str(e)}")
 
 @app.get("/mentor-chat")
 async def mentor_chat(message: str, current_user: str = Depends(get_current_user)):
@@ -362,7 +435,6 @@ async def mentor_chat(message: str, current_user: str = Depends(get_current_user
         response, error = openrouter_chat(messages)
         
         if error:
-            # Fallback responses
             fallbacks = [
                 "Focus on your process, not the outcome. Did you follow your trading plan?",
                 "Risk management is key. Never risk more than 1-2% per trade.",
@@ -387,29 +459,6 @@ async def mentor_chat(message: str, current_user: str = Depends(get_current_user
             "fallback": True,
             "error": str(e)
         }
-
-@app.get("/models")
-async def list_models(current_user: str = Depends(get_current_user)):
-    """List available models on OpenRouter"""
-    if not OPENROUTER_API_KEY:
-        return {"error": "OpenRouter not configured"}
-    
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "HTTP-Referer": "https://pipways-web.onrender.com",
-        "X-Title": "Pipways Trading Platform"
-    }
-    
-    try:
-        response = requests.get(
-            "https://openrouter.ai/api/v1/models",
-            headers=headers,
-            timeout=10
-        )
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        return {"error": str(e)}
 
 if __name__ == "__main__":
     import uvicorn
