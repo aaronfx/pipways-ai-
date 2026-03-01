@@ -122,8 +122,10 @@
     </div>
 
 <script>
-// CORRECT API URL - NO SPACES, NO TRAILING SLASH
-const API_URL='https://pipways-api-nhem.onrender.com';
+// TO THIS (if you haven't deployed the backend yet):
+const API_URL = window.location.hostname === 'localhost' 
+    ? 'http://127.0.0.1:8000' 
+    : 'https://pipways-api-nhem.onrender.com'; // Use your ACTUAL backend URL from Render
 
 let authToken=localStorage.getItem('pipways_token');
 let currentUser=JSON.parse(localStorage.getItem('pipways_user') || '{}');
