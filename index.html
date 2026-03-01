@@ -2,15 +2,37 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="Pipways - Professional trading journal and analytics platform for institutional trader development">
+    <meta name="keywords" content="trading journal, forex, analytics, trading psychology, risk management">
+    <meta name="author" content="Pipways">
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Pipways - Institutional Trader Development">
+    <meta property="og:description" content="Professional trading journal with AI-powered analytics and discipline tracking">
+    <meta property="og:image" content="https://pipways-web.onrender.com/og-image.png">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Pipways - Institutional Trader Development">
+    <meta name="twitter:description" content="Professional trading journal with AI-powered analytics">
+    
     <title>Pipways - Institutional Trader Development</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
         
-        * { font-family: 'Inter', sans-serif; }
+        * { 
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
         .mono { font-family: 'JetBrains Mono', monospace; }
         
         .glass { 
@@ -40,6 +62,10 @@
         .btn-primary:hover {
             transform: translateY(-1px);
             box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
         }
         
         .card-hover {
@@ -99,21 +125,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        .analysis-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-        }
-        
-        @media (max-width: 1024px) {
-            .analysis-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        .hidden { display: none !important; }
-        
-        /* Checklist styles */
         .checklist-item {
             transition: all 0.2s ease;
         }
@@ -131,7 +142,6 @@
             color: #64748b;
         }
         
-        /* Progress ring */
         .progress-ring {
             transform: rotate(-90deg);
         }
@@ -141,7 +151,6 @@
             transform-origin: 50% 50%;
         }
         
-        /* Blog styles */
         .blog-card {
             transition: all 0.3s ease;
         }
@@ -154,18 +163,137 @@
         .admin-badge {
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         }
+        
+        /* Mobile Bottom Navigation */
+        .mobile-sidebar {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.98);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem calc(0.5rem + env(safe-area-inset-bottom));
+            z-index: 50;
+        }
+        
+        .nav-btn-mobile {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.5rem;
+            color: #64748b;
+            transition: all 0.2s;
+            font-size: 0.65rem;
+            flex: 1;
+        }
+        
+        .nav-btn-mobile.active {
+            color: #3b82f6;
+        }
+        
+        .nav-btn-mobile i {
+            width: 24px;
+            height: 24px;
+        }
+        
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(15, 23, 42, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem;
+            color: white;
+            font-size: 0.875rem;
+            z-index: 100;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            max-width: 90vw;
+            text-align: center;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        
+        /* Upload Zone */
+        .upload-zone {
+            transition: all 0.3s ease;
+        }
+        
+        .upload-zone.dragover {
+            border-color: #3b82f6 !important;
+            background: rgba(59, 130, 246, 0.1) !important;
+        }
+        
+        /* Image Preview */
+        .image-preview {
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 0.5rem;
+        }
+        
+        /* Responsive Utilities */
+        @media (max-width: 1024px) {
+            .desktop-sidebar {
+                display: none;
+            }
+            .mobile-sidebar {
+                display: flex;
+            }
+            #content {
+                padding-bottom: 80px;
+            }
+        }
+        
+        @media (min-width: 1025px) {
+            .mobile-sidebar {
+                display: none !important;
+            }
+        }
+        
+        /* Touch-friendly improvements */
+        @media (pointer: coarse) {
+            .checklist-checkbox {
+                width: 24px !important;
+                height: 24px !important;
+            }
+            button, input, select, textarea, label {
+                min-height: 44px;
+            }
+            .nav-btn-mobile {
+                min-height: 56px;
+            }
+        }
+        
+        /* Safe area for notched devices */
+        @supports (padding-top: env(safe-area-inset-top)) {
+            .mobile-sidebar {
+                padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+            }
+        }
+        
+        .hidden { display: none !important; }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200 antialiased">
     
     <!-- Auth Screen -->
     <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-        <div class="glass-strong rounded-2xl p-8 w-full max-w-md shadow-2xl">
-            <div class="text-center mb-8">
-                <div class="w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
-                    <i data-lucide="trending-up" class="w-8 h-8 text-white"></i>
+        <div class="glass-strong rounded-2xl p-6 md:p-8 w-full max-w-md shadow-2xl mx-4">
+            <div class="text-center mb-6 md:mb-8">
+                <div class="w-14 h-14 md:w-16 md:h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
+                    <i data-lucide="trending-up" class="w-7 h-7 md:w-8 md:h-8 text-white"></i>
                 </div>
-                <h1 class="text-3xl font-bold gradient-text mb-2">Pipways</h1>
+                <h1 class="text-2xl md:text-3xl font-bold gradient-text mb-2">Pipways</h1>
                 <p class="text-slate-400 text-sm">Institutional Trader Development</p>
             </div>
             
@@ -178,13 +306,13 @@
             <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Email</label>
-                    <input type="email" name="email" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="admin@pipways.com">
+                    <input type="email" name="email" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="admin@pipways.com">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Password</label>
-                    <input type="password" name="password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="••••••••">
+                    <input type="password" name="password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="••••••••">
                 </div>
-                <button type="submit" class="w-full btn-primary rounded-lg py-2.5 font-medium text-white shadow-lg">
+                <button type="submit" class="w-full btn-primary rounded-lg py-3 font-medium text-white shadow-lg">
                     Sign In
                 </button>
             </form>
@@ -193,18 +321,18 @@
             <form id="register-form" onsubmit="handleRegister(event)" class="hidden space-y-4">
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Full Name</label>
-                    <input type="text" name="name" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="John Doe">
+                    <input type="text" name="name" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="John Doe">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Email</label>
-                    <input type="email" name="email" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="john@example.com">
+                    <input type="email" name="email" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="john@example.com">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Password</label>
-                    <input type="password" name="password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="••••••••">
+                    <input type="password" name="password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="••••••••">
                     <p class="text-xs text-slate-500 mt-1">Max 72 characters</p>
                 </div>
-                <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 rounded-lg py-2.5 font-medium text-white shadow-lg transition-all">
+                <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 rounded-lg py-3 font-medium text-white shadow-lg transition-all">
                     Create Account
                 </button>
             </form>
@@ -223,8 +351,8 @@
 
     <!-- Main App -->
     <div id="app" class="hidden h-screen flex overflow-hidden">
-        <!-- Sidebar -->
-        <aside class="w-64 bg-slate-900/50 border-r border-slate-800 flex flex-col backdrop-blur-xl">
+        <!-- Desktop Sidebar -->
+        <aside class="desktop-sidebar w-64 bg-slate-900/50 border-r border-slate-800 flex-col backdrop-blur-xl">
             <div class="p-6 border-b border-slate-800">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
@@ -259,7 +387,7 @@
                 <button onclick="showPage('blog')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
                     <i data-lucide="newspaper" class="w-5 h-5"></i> Blog
                 </button>
-                <div id="admin-menu-item" class="hidden">
+                <div id="admin-menu-item-desktop" class="hidden">
                     <button onclick="showPage('admin')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-amber-400 border-amber-500/30">
                         <i data-lucide="settings" class="w-5 h-5"></i> Admin
                     </button>
@@ -284,6 +412,35 @@
 
         <!-- Main Content -->
         <main class="flex-1 overflow-y-auto bg-gradient-to-br from-slate-950 to-slate-900" id="content"></main>
+
+        <!-- Mobile Bottom Navigation -->
+        <nav class="mobile-sidebar">
+            <button onclick="showPage('dashboard')" class="nav-btn-mobile" data-page="dashboard">
+                <i data-lucide="layout-dashboard"></i>
+                <span>Home</span>
+            </button>
+            <button onclick="showPage('analytics')" class="nav-btn-mobile" data-page="analytics">
+                <i data-lucide="bar-chart-3"></i>
+                <span>Stats</span>
+            </button>
+            <button onclick="showPage('journal')" class="nav-btn-mobile" data-page="journal">
+                <i data-lucide="plus-circle"></i>
+                <span>Trade</span>
+            </button>
+            <button onclick="showPage('analysis')" class="nav-btn-mobile" data-page="analysis">
+                <i data-lucide="scan-eye"></i>
+                <span>Scan</span>
+            </button>
+            <button onclick="showPage('blog')" class="nav-btn-mobile" data-page="blog">
+                <i data-lucide="newspaper"></i>
+                <span>Blog</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <span id="toast-message"></span>
     </div>
 
 <script>
@@ -291,11 +448,22 @@ const API_URL = 'https://pipways-api-nhem.onrender.com';
 let authToken = localStorage.getItem('pipways_token');
 let currentUser = JSON.parse(localStorage.getItem('pipways_user') || '{}');
 let checklistData = {};
+let currentPage = 'dashboard';
 
 if (authToken) {
     showApp();
 } else {
     showAuth();
+}
+
+function showToast(message, duration = 3000) {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toast-message');
+    toastMessage.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, duration);
 }
 
 function showAuth() {
@@ -307,9 +475,8 @@ function showApp() {
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
     
-    // Show admin menu if user is admin
     if (currentUser.is_admin) {
-        document.getElementById('admin-menu-item').classList.remove('hidden');
+        document.getElementById('admin-menu-item-desktop')?.classList.remove('hidden');
     }
     
     showPage('dashboard');
@@ -455,35 +622,45 @@ async function apiCall(endpoint, options = {}) {
 }
 
 async function showPage(page) {
+    currentPage = page;
     const content = document.getElementById('content');
     
-    document.querySelectorAll('.nav-btn').forEach(btn => {
+    // Update desktop sidebar
+    document.querySelectorAll('.sidebar-link').forEach(btn => {
         btn.classList.remove('active');
     });
     
-    if (event && event.target) {
-        event.target.closest('.nav-btn').classList.add('active');
-    } else {
-        document.querySelector(`[onclick="showPage('${page}')"]`)?.classList.add('active');
+    // Update mobile nav
+    document.querySelectorAll('.nav-btn-mobile').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Set active states
+    const desktopBtn = document.querySelector(`.desktop-sidebar [onclick="showPage('${page}')"]`);
+    if (desktopBtn) desktopBtn.classList.add('active');
+    
+    const mobileBtn = document.querySelector(`.nav-btn-mobile[data-page="${page}"]`);
+    if (mobileBtn) mobileBtn.classList.add('active');
+    
+    // Route to page
+    const pageRenderers = {
+        'dashboard': renderDashboard,
+        'analytics': renderAnalytics,
+        'journal': renderJournal,
+        'analysis': renderChartAnalysis,
+        'discipline': renderDiscipline,
+        'mentor': renderMentor,
+        'blog': renderBlog,
+        'admin': renderAdmin
+    };
+    
+    if (pageRenderers[page]) {
+        await pageRenderers[page](content);
     }
-
-    if (page === 'dashboard') {
-        await renderDashboard(content);
-    } else if (page === 'analytics') {
-        await renderAnalytics(content);
-    } else if (page === 'journal') {
-        await renderJournal(content);
-    } else if (page === 'analysis') {
-        renderChartAnalysis(content);
-    } else if (page === 'discipline') {
-        renderDiscipline(content);
-    } else if (page === 'mentor') {
-        renderMentor(content);
-    } else if (page === 'blog') {
-        await renderBlog(content);
-    } else if (page === 'admin') {
-        await renderAdmin(content);
-    }
+    
+    // Scroll to top
+    content.scrollTop = 0;
+    
     lucide.createIcons();
 }
 
@@ -502,137 +679,119 @@ async function renderDashboard(content) {
         const winRate = trades.length ? (wins / trades.length * 100).toFixed(0) : 0;
         
         content.innerHTML = `
-            <div class="p-8 max-w-7xl mx-auto">
-                <div class="flex items-center justify-between mb-8">
+            <div class="p-4 md:p-8 max-w-7xl mx-auto">
+                <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-8 gap-4">
                     <div>
-                        <h2 class="text-3xl font-bold text-white mb-1">Dashboard</h2>
-                        <p class="text-slate-400">Welcome back, ${currentUser.name || 'Trader'}</p>
+                        <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">Dashboard</h2>
+                        <p class="text-slate-400 text-sm">Welcome back, ${currentUser.name || 'Trader'}</p>
                     </div>
-                    <button onclick="showPage('journal')" class="btn-primary px-6 py-2.5 rounded-lg text-white font-medium flex items-center gap-2">
-                        <i data-lucide="plus" class="w-4 h-4"></i> New Trade
+                    <button onclick="showPage('journal')" class="btn-primary px-4 md:px-6 py-2.5 rounded-lg text-white font-medium flex items-center justify-center gap-2">
+                        <i data-lucide="plus" class="w-4 h-4"></i> <span class="hidden md:inline">New Trade</span><span class="md:hidden">Add Trade</span>
                     </button>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="metric-card rounded-xl p-6 card-hover">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                                <i data-lucide="shield" class="w-6 h-6 text-blue-400"></i>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
+                    <div class="metric-card rounded-xl p-4 md:p-6 card-hover">
+                        <div class="flex items-center justify-between mb-2 md:mb-4">
+                            <div class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                                <i data-lucide="shield" class="w-5 h-5 md:w-6 md:h-6 text-blue-400"></i>
                             </div>
-                            <span class="text-xs font-medium text-emerald-400 flex items-center gap-1">
-                                <i data-lucide="trending-up" class="w-3 h-3"></i> +12%
-                            </span>
                         </div>
-                        <div class="text-slate-400 text-sm mb-1">Discipline Score</div>
-                        <div class="text-3xl font-bold text-white">87<span class="text-lg text-slate-500">/100</span></div>
+                        <div class="text-slate-400 text-xs md:text-sm mb-1">Discipline Score</div>
+                        <div class="text-xl md:text-3xl font-bold text-white">87<span class="text-sm md:text-lg text-slate-500">/100</span></div>
                     </div>
                     
-                    <div class="metric-card rounded-xl p-6 card-hover">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="w-12 h-12 rounded-lg bg-violet-500/20 flex items-center justify-center">
-                                <i data-lucide="target" class="w-6 h-6 text-violet-400"></i>
+                    <div class="metric-card rounded-xl p-4 md:p-6 card-hover">
+                        <div class="flex items-center justify-between mb-2 md:mb-4">
+                            <div class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-violet-500/20 flex items-center justify-center">
+                                <i data-lucide="target" class="w-5 h-5 md:w-6 md:h-6 text-violet-400"></i>
                             </div>
-                            <span class="text-xs font-medium text-slate-500">All time</span>
                         </div>
-                        <div class="text-slate-400 text-sm mb-1">Win Rate</div>
-                        <div class="text-3xl font-bold text-white">${winRate}<span class="text-lg text-slate-500">%</span></div>
+                        <div class="text-slate-400 text-xs md:text-sm mb-1">Win Rate</div>
+                        <div class="text-xl md:text-3xl font-bold text-white">${winRate}<span class="text-sm md:text-lg text-slate-500">%</span></div>
                     </div>
                     
-                    <div class="metric-card rounded-xl p-6 card-hover">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="w-12 h-12 rounded-lg ${totalPips >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20'} flex items-center justify-center">
-                                <i data-lucide="activity" class="w-6 h-6 ${totalPips >= 0 ? 'text-emerald-400' : 'text-red-400'}"></i>
+                    <div class="metric-card rounded-xl p-4 md:p-6 card-hover">
+                        <div class="flex items-center justify-between mb-2 md:mb-4">
+                            <div class="w-10 h-10 md:w-12 md:h-12 rounded-lg ${totalPips >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20'} flex items-center justify-center">
+                                <i data-lucide="activity" class="w-5 h-5 md:w-6 md:h-6 ${totalPips >= 0 ? 'text-emerald-400' : 'text-red-400'}"></i>
                             </div>
-                            <span class="text-xs font-medium text-slate-500">Total</span>
                         </div>
-                        <div class="text-slate-400 text-sm mb-1">Total Pips</div>
-                        <div class="text-3xl font-bold ${totalPips >= 0 ? 'text-emerald-400' : 'text-red-400'}">
+                        <div class="text-slate-400 text-xs md:text-sm mb-1">Total Pips</div>
+                        <div class="text-xl md:text-3xl font-bold ${totalPips >= 0 ? 'text-emerald-400' : 'text-red-400'}">
                             ${totalPips > 0 ? '+' : ''}${totalPips}
                         </div>
                     </div>
                     
-                    <div class="metric-card rounded-xl p-6 card-hover">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="w-12 h-12 rounded-lg bg-orange-500/20 flex items-center justify-center">
-                                <i data-lucide="bar-chart-2" class="w-6 h-6 text-orange-400"></i>
+                    <div class="metric-card rounded-xl p-4 md:p-6 card-hover">
+                        <div class="flex items-center justify-between mb-2 md:mb-4">
+                            <div class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                                <i data-lucide="bar-chart-2" class="w-5 h-5 md:w-6 md:h-6 text-orange-400"></i>
                             </div>
-                            <span class="text-xs font-medium text-slate-500">This month</span>
                         </div>
-                        <div class="text-slate-400 text-sm mb-1">Total Trades</div>
-                        <div class="text-3xl font-bold text-white">${trades.length}</div>
+                        <div class="text-slate-400 text-xs md:text-sm mb-1">Trades</div>
+                        <div class="text-xl md:text-3xl font-bold text-white">${trades.length}</div>
                     </div>
                 </div>
                 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-2 glass rounded-xl p-6">
-                        <div class="flex items-center justify-between mb-6">
-                            <h3 class="text-lg font-semibold text-white">Recent Trades</h3>
-                            <button onclick="showPage('journal')" class="text-sm text-blue-400 hover:text-blue-300 font-medium">View All</button>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+                    <div class="lg:col-span-2 glass rounded-xl p-4 md:p-6">
+                        <div class="flex items-center justify-between mb-4 md:mb-6">
+                            <h3 class="text-base md:text-lg font-semibold text-white">Recent Trades</h3>
+                            <button onclick="showPage('journal')" class="text-xs md:text-sm text-blue-400 hover:text-blue-300 font-medium">View All</button>
                         </div>
-                        <div class="space-y-3">
+                        <div class="space-y-2 md:space-y-3">
                             ${trades.slice(0, 5).map(t => `
-                                <div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-slate-600 transition-colors">
-                                    <div class="flex items-center gap-4">
-                                        <div class="text-center min-w-[60px]">
+                                <div class="flex items-center justify-between p-3 md:p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-slate-600 transition-colors">
+                                    <div class="flex items-center gap-2 md:gap-4">
+                                        <div class="text-center min-w-[50px] md:min-w-[60px]">
                                             <div class="text-xs text-slate-500">${new Date(t.created_at).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}</div>
                                             <div class="text-xs text-slate-600">${new Date(t.created_at).getFullYear()}</div>
                                         </div>
-                                        <div class="w-px h-8 bg-slate-700"></div>
+                                        <div class="w-px h-6 md:h-8 bg-slate-700"></div>
                                         <div>
-                                            <div class="font-bold text-white">${t.pair}</div>
-                                            <div class="flex items-center gap-2 mt-1">
-                                                <span class="status-badge ${t.direction === 'LONG' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}">
+                                            <div class="font-bold text-white text-sm md:text-base">${t.pair}</div>
+                                            <div class="flex items-center gap-1 md:gap-2 mt-1">
+                                                <span class="status-badge ${t.direction === 'LONG' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'} text-xs">
                                                     ${t.direction}
                                                 </span>
-                                                <span class="text-xs text-slate-500">Grade ${t.grade}</span>
+                                                <span class="text-xs text-slate-500 hidden md:inline">Grade ${t.grade}</span>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="text-right">
-                                        <div class="font-mono font-bold ${t.pips >= 0 ? 'text-emerald-400' : 'text-red-400'} text-lg">
-                                            ${t.pips > 0 ? '+' : ''}${t.pips} <span class="text-xs text-slate-500">pips</span>
+                                        <div class="font-mono font-bold ${t.pips >= 0 ? 'text-emerald-400' : 'text-red-400'} text-base md:text-lg">
+                                            ${t.pips > 0 ? '+' : ''}${t.pips} <span class="text-xs text-slate-500 hidden md:inline">pips</span>
                                         </div>
                                     </div>
                                 </div>
-                            `).join('') || '<div class="text-center py-12 text-slate-500"><i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-50"></i><p>No trades recorded yet</p></div>'}
+                            `).join('') || '<div class="text-center py-8 md:py-12 text-slate-500"><i data-lucide="inbox" class="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 opacity-50"></i><p class="text-sm">No trades recorded yet</p></div>'}
                         </div>
                     </div>
                     
-                    <div class="glass rounded-xl p-6">
-                        <h3 class="text-lg font-semibold text-white mb-6">Quick Actions</h3>
-                        <div class="space-y-3">
-                            <button onclick="showPage('analysis')" class="w-full p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-blue-500/50 hover:bg-slate-800 transition-all text-left group">
+                    <div class="glass rounded-xl p-4 md:p-6">
+                        <h3 class="text-base md:text-lg font-semibold text-white mb-4 md:mb-6">Quick Actions</h3>
+                        <div class="space-y-2 md:space-y-3">
+                            <button onclick="showPage('analysis')" class="w-full p-3 md:p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-blue-500/50 hover:bg-slate-800 transition-all text-left group">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/30 transition-colors">
-                                        <i data-lucide="scan-eye" class="w-5 h-5 text-blue-400"></i>
+                                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/30 transition-colors">
+                                        <i data-lucide="scan-eye" class="w-4 h-4 md:w-5 md:h-5 text-blue-400"></i>
                                     </div>
                                     <div>
-                                        <div class="font-medium text-white">Analyze Chart</div>
-                                        <div class="text-xs text-slate-400">AI-powered setup review</div>
+                                        <div class="font-medium text-white text-sm md:text-base">Analyze Chart</div>
+                                        <div class="text-xs text-slate-400 hidden md:block">AI-powered setup review</div>
                                     </div>
                                 </div>
                             </button>
                             
-                            <button onclick="showPage('mentor')" class="w-full p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-violet-500/50 hover:bg-slate-800 transition-all text-left group">
+                            <button onclick="showPage('mentor')" class="w-full p-3 md:p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-violet-500/50 hover:bg-slate-800 transition-all text-left group">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center group-hover:bg-violet-500/30 transition-colors">
-                                        <i data-lucide="message-circle" class="w-5 h-5 text-violet-400"></i>
+                                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-violet-500/20 flex items-center justify-center group-hover:bg-violet-500/30 transition-colors">
+                                        <i data-lucide="message-circle" class="w-4 h-4 md:w-5 md:h-5 text-violet-400"></i>
                                     </div>
                                     <div>
-                                        <div class="font-medium text-white">Ask Mentor</div>
-                                        <div class="text-xs text-slate-400">Trading psychology help</div>
-                                    </div>
-                                </div>
-                            </button>
-                            
-                            <button onclick="showPage('analytics')" class="w-full p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-emerald-500/50 hover:bg-slate-800 transition-all text-left group">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/30 transition-colors">
-                                        <i data-lucide="bar-chart-3" class="w-5 h-5 text-emerald-400"></i>
-                                    </div>
-                                    <div>
-                                        <div class="font-medium text-white">View Analytics</div>
-                                        <div class="text-xs text-slate-400">Performance insights</div>
+                                        <div class="font-medium text-white text-sm md:text-base">Ask Mentor</div>
+                                        <div class="text-xs text-slate-400 hidden md:block">Trading psychology help</div>
                                     </div>
                                 </div>
                             </button>
@@ -642,7 +801,7 @@ async function renderDashboard(content) {
             </div>
         `;
     } catch (err) {
-        content.innerHTML = `<div class="p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">${err.message}</div></div>`;
+        content.innerHTML = `<div class="p-4 md:p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">${err.message}</div></div>`;
     }
 }
 
@@ -657,70 +816,63 @@ async function renderAnalytics(content) {
         }
         
         content.innerHTML = `
-            <div class="p-8 max-w-7xl mx-auto fade-in">
-                <div class="flex items-center justify-between mb-8">
+            <div class="p-4 md:p-8 max-w-7xl mx-auto fade-in">
+                <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-8 gap-4">
                     <div>
-                        <h2 class="text-3xl font-bold text-white mb-1">Trading Analytics</h2>
-                        <p class="text-slate-400">Comprehensive performance insights</p>
+                        <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">Trading Analytics</h2>
+                        <p class="text-slate-400 text-sm">Comprehensive performance insights</p>
                     </div>
-                    <button onclick="exportAnalytics()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-sm font-medium flex items-center gap-2 transition-colors">
-                        <i data-lucide="download" class="w-4 h-4"></i> Export CSV
+                    <button onclick="exportAnalytics()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-sm font-medium flex items-center justify-center gap-2 transition-colors">
+                        <i data-lucide="download" class="w-4 h-4"></i> <span class="hidden md:inline">Export CSV</span>
                     </button>
                 </div>
                 
                 <!-- Key Metrics Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="metric-card rounded-xl p-6">
-                        <div class="text-slate-400 text-sm mb-1">Total Trades</div>
-                        <div class="text-3xl font-bold text-white">${data.total_trades}</div>
-                        <div class="text-xs text-slate-500 mt-1">All time</div>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
+                    <div class="metric-card rounded-xl p-4 md:p-6">
+                        <div class="text-slate-400 text-xs md:text-sm mb-1">Total Trades</div>
+                        <div class="text-xl md:text-3xl font-bold text-white">${data.total_trades}</div>
                     </div>
                     
-                    <div class="metric-card rounded-xl p-6">
-                        <div class="text-slate-400 text-sm mb-1">Win Rate</div>
-                        <div class="text-3xl font-bold ${data.win_rate >= 50 ? 'text-emerald-400' : 'text-orange-400'}">${data.win_rate}%</div>
-                        <div class="text-xs text-slate-500 mt-1">${data.winning_streak} win streak</div>
+                    <div class="metric-card rounded-xl p-4 md:p-6">
+                        <div class="text-slate-400 text-xs md:text-sm mb-1">Win Rate</div>
+                        <div class="text-xl md:text-3xl font-bold ${data.win_rate >= 50 ? 'text-emerald-400' : 'text-orange-400'}">${data.win_rate}%</div>
                     </div>
                     
-                    <div class="metric-card rounded-xl p-6">
-                        <div class="text-slate-400 text-sm mb-1">Total Pips</div>
-                        <div class="text-3xl font-bold ${data.total_pips >= 0 ? 'text-emerald-400' : 'text-red-400'}">
+                    <div class="metric-card rounded-xl p-4 md:p-6">
+                        <div class="text-slate-400 text-xs md:text-sm mb-1">Total Pips</div>
+                        <div class="text-xl md:text-3xl font-bold ${data.total_pips >= 0 ? 'text-emerald-400' : 'text-red-400'}">
                             ${data.total_pips > 0 ? '+' : ''}${data.total_pips}
                         </div>
-                        <div class="text-xs text-slate-500 mt-1">Avg: ${data.avg_pips_per_trade} pips/trade</div>
                     </div>
                     
-                    <div class="metric-card rounded-xl p-6">
-                        <div class="text-slate-400 text-sm mb-1">Profit Factor</div>
-                        <div class="text-3xl font-bold text-blue-400">${data.profit_factor}</div>
-                        <div class="text-xs text-slate-500 mt-1">Gross wins / Gross losses</div>
+                    <div class="metric-card rounded-xl p-4 md:p-6">
+                        <div class="text-slate-400 text-xs md:text-sm mb-1">Profit Factor</div>
+                        <div class="text-xl md:text-3xl font-bold text-blue-400">${data.profit_factor}</div>
                     </div>
                 </div>
                 
                 <!-- Charts Row -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <!-- Equity Curve -->
-                    <div class="glass rounded-xl p-6">
-                        <h3 class="text-lg font-semibold text-white mb-4">Equity Curve</h3>
-                        <div class="h-64">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
+                    <div class="glass rounded-xl p-4 md:p-6">
+                        <h3 class="text-base md:text-lg font-semibold text-white mb-4">Equity Curve</h3>
+                        <div class="h-48 md:h-64">
                             <canvas id="equityChart"></canvas>
                         </div>
                     </div>
                     
-                    <!-- Monthly Performance -->
-                    <div class="glass rounded-xl p-6">
-                        <h3 class="text-lg font-semibold text-white mb-4">Monthly Performance</h3>
-                        <div class="h-64">
+                    <div class="glass rounded-xl p-4 md:p-6">
+                        <h3 class="text-base md:text-lg font-semibold text-white mb-4">Monthly Performance</h3>
+                        <div class="h-48 md:h-64">
                             <canvas id="monthlyChart"></canvas>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Grade Distribution & Pair Performance -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    <!-- Grade Distribution -->
-                    <div class="glass rounded-xl p-6">
-                        <h3 class="text-lg font-semibold text-white mb-4">Grade Distribution</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+                    <div class="glass rounded-xl p-4 md:p-6">
+                        <h3 class="text-base md:text-lg font-semibold text-white mb-4">Grade Distribution</h3>
                         <div class="space-y-3">
                             ${Object.entries(data.grade_distribution).map(([grade, count]) => {
                                 const percentage = data.total_trades ? (count / data.total_trades * 100).toFixed(0) : 0;
@@ -729,7 +881,7 @@ async function renderAnalytics(content) {
                                     <div>
                                         <div class="flex items-center justify-between mb-1">
                                             <span class="text-sm font-medium text-white">Grade ${grade}</span>
-                                            <span class="text-sm text-slate-400">${count} trades (${percentage}%)</span>
+                                            <span class="text-sm text-slate-400">${count} (${percentage}%)</span>
                                         </div>
                                         <div class="w-full bg-slate-700 rounded-full h-2">
                                             <div class="${colors[grade]} h-2 rounded-full transition-all" style="width: ${percentage}%"></div>
@@ -740,48 +892,44 @@ async function renderAnalytics(content) {
                         </div>
                     </div>
                     
-                    <!-- Pair Performance -->
-                    <div class="lg:col-span-2 glass rounded-xl p-6">
-                        <h3 class="text-lg font-semibold text-white mb-4">Performance by Pair</h3>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm">
-                                <thead>
-                                    <tr class="text-slate-400 border-b border-slate-700">
-                                        <th class="text-left py-2">Pair</th>
-                                        <th class="text-center py-2">Trades</th>
-                                        <th class="text-center py-2">Win Rate</th>
-                                        <th class="text-right py-2">Total Pips</th>
+                    <div class="lg:col-span-2 glass rounded-xl p-4 md:p-6 overflow-x-auto">
+                        <h3 class="text-base md:text-lg font-semibold text-white mb-4">Performance by Pair</h3>
+                        <table class="w-full text-sm min-w-[300px]">
+                            <thead>
+                                <tr class="text-slate-400 border-b border-slate-700">
+                                    <th class="text-left py-2">Pair</th>
+                                    <th class="text-center py-2">Trades</th>
+                                    <th class="text-center py-2">Win Rate</th>
+                                    <th class="text-right py-2">Pips</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.pair_performance.map(pair => `
+                                    <tr class="border-b border-slate-800/50">
+                                        <td class="py-2 md:py-3 font-medium text-white">${pair.pair}</td>
+                                        <td class="py-2 md:py-3 text-center text-slate-400">${pair.trades}</td>
+                                        <td class="py-2 md:py-3 text-center">
+                                            <span class="${pair.win_rate >= 50 ? 'text-emerald-400' : 'text-red-400'}">${pair.win_rate}%</span>
+                                        </td>
+                                        <td class="py-2 md:py-3 text-right font-mono ${pair.total_pips >= 0 ? 'text-emerald-400' : 'text-red-400'}">
+                                            ${pair.total_pips > 0 ? '+' : ''}${pair.total_pips}
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    ${data.pair_performance.map(pair => `
-                                        <tr class="border-b border-slate-800/50 hover:bg-slate-800/30">
-                                            <td class="py-3 font-medium text-white">${pair.pair}</td>
-                                            <td class="py-3 text-center text-slate-400">${pair.trades}</td>
-                                            <td class="py-3 text-center">
-                                                <span class="${pair.win_rate >= 50 ? 'text-emerald-400' : 'text-red-400'}">${pair.win_rate}%</span>
-                                            </td>
-                                            <td class="py-3 text-right font-mono ${pair.total_pips >= 0 ? 'text-emerald-400' : 'text-red-400'}">
-                                                ${pair.total_pips > 0 ? '+' : ''}${pair.total_pips}
-                                            </td>
-                                        </tr>
-                                    `).join('') || '<tr><td colspan="4" class="py-4 text-center text-slate-500">No data available</td></tr>'}
-                                </tbody>
-                            </table>
-                        </div>
+                                `).join('') || '<tr><td colspan="4" class="py-4 text-center text-slate-500">No data</td></tr>'}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
                 
                 <!-- Checklist Adherence -->
-                <div class="glass rounded-xl p-6">
+                <div class="glass rounded-xl p-4 md:p-6">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-white">Pre-Trade Checklist Adherence</h3>
-                        <span class="text-2xl font-bold ${data.checklist_adherence >= 80 ? 'text-emerald-400' : data.checklist_adherence >= 50 ? 'text-yellow-400' : 'text-red-400'}">${data.checklist_adherence}%</span>
+                        <h3 class="text-base md:text-lg font-semibold text-white">Pre-Trade Checklist Adherence</h3>
+                        <span class="text-xl md:text-2xl font-bold ${data.checklist_adherence >= 80 ? 'text-emerald-400' : data.checklist_adherence >= 50 ? 'text-yellow-400' : 'text-red-400'}">${data.checklist_adherence}%</span>
                     </div>
                     <div class="w-full bg-slate-700 rounded-full h-3">
                         <div class="bg-gradient-to-r from-blue-500 to-violet-500 h-3 rounded-full transition-all" style="width: ${data.checklist_adherence}%"></div>
                     </div>
-                    <p class="text-sm text-slate-400 mt-2">Percentage of trades logged with completed pre-trade checklist</p>
                 </div>
             </div>
         `;
@@ -795,12 +943,14 @@ async function renderAnalytics(content) {
         }
         
     } catch (err) {
-        content.innerHTML = `<div class="p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">${err.message}</div></div>`;
+        content.innerHTML = `<div class="p-4 md:p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">${err.message}</div></div>`;
     }
 }
 
 function renderEquityChart(equityData) {
-    const ctx = document.getElementById('equityChart').getContext('2d');
+    const ctx = document.getElementById('equityChart');
+    if (!ctx) return;
+
     new Chart(ctx, {
         type: 'line',
         data: {
@@ -811,7 +961,9 @@ function renderEquityChart(equityData) {
                 borderColor: '#3b82f6',
                 backgroundColor: 'rgba(59, 130, 246, 0.1)',
                 fill: true,
-                tension: 0.4
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 4
             }]
         },
         options: {
@@ -821,24 +973,36 @@ function renderEquityChart(equityData) {
                 legend: { display: false }
             },
             scales: {
-                x: { display: false },
+                x: { 
+                    display: false,
+                    grid: { display: false }
+                },
                 y: {
                     grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    ticks: { color: '#64748b' }
+                    ticks: { 
+                        color: '#64748b',
+                        font: { size: 10 }
+                    }
                 }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
             }
         }
     });
 }
 
 function renderMonthlyChart(monthlyData) {
-    const ctx = document.getElementById('monthlyChart').getContext('2d');
+    const ctx = document.getElementById('monthlyChart');
+    if (!ctx) return;
+
     new Chart(ctx, {
         type: 'bar',
         data: {
             labels: monthlyData.map(d => {
                 const [year, month] = d.month.split('-');
-                return `${month}/${year}`;
+                return `${month}/${year.slice(2)}`;
             }),
             datasets: [{
                 label: 'Pips',
@@ -856,11 +1020,17 @@ function renderMonthlyChart(monthlyData) {
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: { color: '#64748b' }
+                    ticks: { 
+                        color: '#64748b',
+                        font: { size: 10 }
+                    }
                 },
                 y: {
                     grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    ticks: { color: '#64748b' }
+                    ticks: { 
+                        color: '#64748b',
+                        font: { size: 10 }
+                    }
                 }
             }
         }
@@ -868,56 +1038,85 @@ function renderMonthlyChart(monthlyData) {
 }
 
 function exportAnalytics() {
-    alert('Export functionality coming soon!');
+    showToast('Export feature coming soon!');
 }
 
-// Trade Journal with Pre-Trade Checklist
+// Trade Journal with Pre-Trade Checklist - FIXED VERSION
 async function renderJournal(content) {
     try {
         // Fetch checklist template
         const checklistRes = await apiCall('/checklist/template');
-        const checklist = await checklistRes.json();
+        const checklistData = await checklistRes.json();
+        
+        // Ensure items is an array - handle both formats
+        let checklistItems = [];
+        if (Array.isArray(checklistData)) {
+            checklistItems = checklistData;
+        } else if (checklistData.items && Array.isArray(checklistData.items)) {
+            checklistItems = checklistData.items;
+        } else if (checklistData.items && typeof checklistData.items === 'string') {
+            // Parse if stored as JSON string
+            try {
+                checklistItems = JSON.parse(checklistData.items);
+            } catch (e) {
+                checklistItems = [];
+            }
+        }
+        
+        // Fallback to default if empty
+        if (checklistItems.length === 0) {
+            checklistItems = [
+                {id: 1, text: "I have a clear entry strategy based on my trading plan", required: true},
+                {id: 2, text: "I have identified and set a definitive stop loss level", required: true},
+                {id: 3, text: "I have a realistic take profit target (minimum 1:1.5 R:R)", required: true},
+                {id: 4, text: "I have calculated position size (risking only 1-2% of account)", required: true},
+                {id: 5, text: "I am not trading out of FOMO, revenge, or emotion", required: true},
+                {id: 6, text: "I have checked the economic calendar for high-impact news", required: false},
+                {id: 7, text: "This setup meets my minimum A or B grade criteria", required: true},
+                {id: 8, text: "I have analyzed the higher timeframe trend direction", required: false}
+            ];
+        }
         
         content.innerHTML = `
-            <div class="p-8 max-w-4xl mx-auto fade-in">
-                <div class="flex items-center justify-between mb-8">
+            <div class="p-4 md:p-8 max-w-4xl mx-auto fade-in pb-24 md:pb-8">
+                <div class="flex items-center justify-between mb-6 md:mb-8">
                     <div>
-                        <h2 class="text-3xl font-bold text-white mb-1">Trade Journal</h2>
-                        <p class="text-slate-400">Log your trades with discipline</p>
+                        <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">Trade Journal</h2>
+                        <p class="text-slate-400 text-sm">Log your trades with discipline</p>
                     </div>
                 </div>
                 
                 <!-- Pre-Trade Checklist -->
-                <div class="glass rounded-xl p-6 mb-6 border border-yellow-500/20 bg-yellow-500/5">
+                <div class="glass rounded-xl p-4 md:p-6 mb-4 md:mb-6 border border-yellow-500/20 bg-yellow-500/5">
                     <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+                        <div class="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
                             <i data-lucide="clipboard-check" class="w-5 h-5 text-yellow-400"></i>
                         </div>
-                        <div>
-                            <h3 class="text-lg font-semibold text-white">Pre-Trade Checklist</h3>
-                            <p class="text-sm text-slate-400">Complete all required items before logging trade</p>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-base md:text-lg font-semibold text-white truncate">Pre-Trade Checklist</h3>
+                            <p class="text-xs md:text-sm text-slate-400 truncate">Complete required items before logging</p>
                         </div>
-                        <div class="ml-auto">
-                            <div class="relative w-16 h-16">
-                                <svg class="progress-ring w-16 h-16">
-                                    <circle class="text-slate-700" stroke-width="4" stroke="currentColor" fill="transparent" r="28" cx="32" cy="32"/>
-                                    <circle id="progress-circle" class="progress-ring-circle text-yellow-400" stroke-width="4" stroke-dasharray="175.9" stroke-dashoffset="175.9" stroke-linecap="round" stroke="currentColor" fill="transparent" r="28" cx="32" cy="32"/>
+                        <div class="flex-shrink-0">
+                            <div class="relative w-14 h-14 md:w-16 md:h-16">
+                                <svg class="progress-ring w-14 h-14 md:w-16 md:h-16" viewBox="0 0 64 64">
+                                    <circle class="text-slate-700" stroke-width="3" stroke="currentColor" fill="transparent" r="26" cx="32" cy="32"/>
+                                    <circle id="progress-circle" class="progress-ring-circle text-yellow-400" stroke-width="3" stroke-dasharray="163.36" stroke-dashoffset="163.36" stroke-linecap="round" stroke="currentColor" fill="transparent" r="26" cx="32" cy="32"/>
                                 </svg>
                                 <div class="absolute inset-0 flex items-center justify-center">
-                                    <span id="progress-text" class="text-sm font-bold text-white">0%</span>
+                                    <span id="progress-text" class="text-xs md:text-sm font-bold text-white">0%</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
                     <div class="space-y-2" id="checklist-container">
-                        ${checklist.items.map(item => `
-                            <label class="checklist-item flex items-start gap-3 p-3 rounded-lg cursor-pointer border border-transparent hover:border-slate-700">
-                                <input type="checkbox" class="checklist-checkbox mt-1 w-5 h-5 rounded border-slate-600 bg-slate-800 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0" 
-                                    data-id="${item.id}" ${item.required ? 'data-required="true"' : ''}>
-                                <div class="flex-1">
-                                    <span class="check-text text-sm text-slate-200">${item.text}</span>
-                                    ${item.required ? '<span class="text-xs text-red-400 ml-2">*Required</span>' : ''}
+                        ${checklistItems.map((item, index) => `
+                            <label class="checklist-item flex items-start gap-3 p-2 md:p-3 rounded-lg cursor-pointer border border-transparent hover:border-slate-700">
+                                <input type="checkbox" class="checklist-checkbox mt-0.5 w-5 h-5 rounded border-slate-600 bg-slate-800 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0 flex-shrink-0" 
+                                    data-id="${item.id || index}" ${item.required ? 'data-required="true"' : ''}>
+                                <div class="flex-1 min-w-0">
+                                    <span class="check-text text-sm text-slate-200 leading-relaxed">${item.text}</span>
+                                    ${item.required ? '<span class="text-xs text-red-400 ml-1">*</span>' : ''}
                                 </div>
                             </label>
                         `).join('')}
@@ -925,35 +1124,35 @@ async function renderJournal(content) {
                     
                     <div id="checklist-warning" class="hidden mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
                         <i data-lucide="alert-circle" class="w-4 h-4 inline mr-2"></i>
-                        Please complete all required checklist items before saving the trade.
+                        Please complete all required checklist items before saving.
                     </div>
                 </div>
                 
                 <!-- Trade Entry Form -->
-                <div class="glass rounded-xl p-6">
-                    <h3 class="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                <div class="glass rounded-xl p-4 md:p-6">
+                    <h3 class="text-base md:text-lg font-semibold text-white mb-4 md:mb-6 flex items-center gap-2">
                         <i data-lucide="plus-circle" class="w-5 h-5 text-blue-400"></i>
                         Trade Details
                     </h3>
                     <form id="trade-form" onsubmit="addTrade(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Currency Pair</label>
-                            <input name="pair" placeholder="EURUSD" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all uppercase" required>
+                            <input name="pair" placeholder="EURUSD" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all uppercase" required>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Direction</label>
-                            <select name="direction" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                            <select name="direction" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
                                 <option value="LONG">LONG</option>
                                 <option value="SHORT">SHORT</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Pips (+/-)</label>
-                            <input name="pips" type="number" step="0.1" placeholder="+25 or -10" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" required>
+                            <input name="pips" type="number" step="0.1" placeholder="+25 or -10" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" required>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Grade</label>
-                            <select name="grade" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                            <select name="grade" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
                                 <option value="A">A - Excellent</option>
                                 <option value="B">B - Good</option>
                                 <option value="C">C - Needs Work</option>
@@ -961,14 +1160,14 @@ async function renderJournal(content) {
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Entry Price (Optional)</label>
-                            <input name="entry_price" type="number" step="0.00001" placeholder="1.08500" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                            <input name="entry_price" type="number" step="0.00001" placeholder="1.08500" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Exit Price (Optional)</label>
-                            <input name="exit_price" type="number" step="0.00001" placeholder="1.09000" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                            <input name="exit_price" type="number" step="0.00001" placeholder="1.09000" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
                         </div>
                         <div class="md:col-span-2">
-                            <button type="submit" id="submit-trade-btn" class="w-full bg-emerald-500 hover:bg-emerald-600 rounded-lg py-3 font-medium text-white shadow-lg transition-all flex items-center justify-center gap-2">
+                            <button type="submit" id="submit-trade-btn" class="w-full bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 rounded-lg py-3 font-medium text-white shadow-lg transition-all flex items-center justify-center gap-2">
                                 <i data-lucide="save" class="w-4 h-4"></i> Save Trade Entry
                             </button>
                         </div>
@@ -979,9 +1178,11 @@ async function renderJournal(content) {
         
         // Initialize checklist handlers
         initChecklistHandlers();
+        lucide.createIcons();
         
     } catch (err) {
-        content.innerHTML = `<div class="p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">${err.message}</div></div>`;
+        console.error('Journal render error:', err);
+        content.innerHTML = `<div class="p-4 md:p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">Error loading checklist: ${err.message}</div></div>`;
     }
 }
 
@@ -989,6 +1190,8 @@ function initChecklistHandlers() {
     const checkboxes = document.querySelectorAll('.checklist-checkbox');
     const progressCircle = document.getElementById('progress-circle');
     const progressText = document.getElementById('progress-text');
+    
+    if (!progressCircle || !progressText) return;
     
     checkboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
@@ -1005,9 +1208,9 @@ function initChecklistHandlers() {
     function updateProgress() {
         const total = checkboxes.length;
         const checked = document.querySelectorAll('.checklist-checkbox:checked').length;
-        const percentage = Math.round((checked / total) * 100);
+        const percentage = total > 0 ? Math.round((checked / total) * 100) : 0;
         
-        const circumference = 2 * Math.PI * 28;
+        const circumference = 2 * Math.PI * 26; // r=26
         const offset = circumference - (percentage / 100) * circumference;
         
         progressCircle.style.strokeDashoffset = offset;
@@ -1041,6 +1244,7 @@ async function addTrade(e) {
     if (!allRequiredChecked) {
         warningEl.classList.remove('hidden');
         warningEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast('Complete all required checklist items');
         return;
     }
     
@@ -1074,8 +1278,7 @@ async function addTrade(e) {
         }
         
         btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Saved!';
-        btn.classList.remove('bg-emerald-500');
-        btn.classList.add('bg-emerald-600');
+        showToast('Trade saved successfully!');
         
         setTimeout(() => {
             showPage('dashboard');
@@ -1084,30 +1287,34 @@ async function addTrade(e) {
     } catch (err) {
         btn.innerHTML = originalText;
         btn.disabled = false;
-        alert('Error: ' + err.message);
+        showToast('Error: ' + err.message);
     }
 }
 
 // Chart Analysis
 function renderChartAnalysis(content) {
     content.innerHTML = `
-        <div class="p-8 max-w-6xl mx-auto fade-in">
-            <div class="flex items-center justify-between mb-8">
+        <div class="p-4 md:p-8 max-w-6xl mx-auto fade-in pb-24 md:pb-8">
+            <div class="flex items-center justify-between mb-6 md:mb-8">
                 <div>
-                    <h2 class="text-3xl font-bold text-white mb-1">Chart Analysis</h2>
-                    <p class="text-slate-400">AI-powered trade setup evaluation</p>
+                    <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">Chart Analysis</h2>
+                    <p class="text-slate-400 text-sm">AI-powered trade setup evaluation</p>
                 </div>
             </div>
             
-            <div class="glass rounded-xl p-8 mb-6 border-2 border-dashed border-slate-700 hover:border-blue-500/50 transition-all cursor-pointer" onclick="document.getElementById('chartUpload').click()">
-                <input type="file" id="chartUpload" accept="image/*" class="hidden" onchange="analyzeChart(this)">
+            <div class="glass rounded-xl p-6 md:p-8 mb-6 border-2 border-dashed border-slate-700 hover:border-blue-500/50 transition-all cursor-pointer upload-zone" 
+                onclick="document.getElementById('chartUpload').click()"
+                ondragover="handleDragOver(event)" 
+                ondragleave="handleDragLeave(event)"
+                ondrop="handleDrop(event)">
+                <input type="file" id="chartUpload" accept="image/*" class="hidden" onchange="analyzeChart(this)" capture="environment">
                 <div class="text-center">
-                    <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-blue-500/20 flex items-center justify-center">
-                        <i data-lucide="upload-cloud" class="w-10 h-10 text-blue-400"></i>
+                    <div class="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <i data-lucide="upload-cloud" class="w-8 h-8 md:w-10 md:h-10 text-blue-400"></i>
                     </div>
-                    <p class="text-lg font-medium text-white mb-2">Upload Chart Screenshot</p>
-                    <p class="text-sm text-slate-400 mb-4">Support: TradingView, MT4, MT5, or any chart image</p>
-                    <button class="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium transition-colors">
+                    <p class="text-base md:text-lg font-medium text-white mb-2">Upload Chart Screenshot</p>
+                    <p class="text-xs md:text-sm text-slate-400 mb-4">Tap to upload or drag and drop</p>
+                    <button class="px-4 md:px-6 py-2 md:py-2.5 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium transition-colors text-sm md:text-base">
                         Select Image
                     </button>
                 </div>
@@ -1123,10 +1330,36 @@ function renderChartAnalysis(content) {
     `;
 }
 
+function handleDragOver(e) {
+    e.preventDefault();
+    e.currentTarget.classList.add('dragover');
+}
+
+function handleDragLeave(e) {
+    e.currentTarget.classList.remove('dragover');
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        const input = document.getElementById('chartUpload');
+        input.files = files;
+        analyzeChart(input);
+    }
+}
+
 async function analyzeChart(input) {
     const file = input.files[0];
     if (!file) return;
-    
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('Image too large. Max 5MB');
+        return;
+    }
+
     const loadingDiv = document.getElementById('analysisLoading');
     const resultDiv = document.getElementById('analysisResult');
     
@@ -1170,11 +1403,11 @@ async function analyzeChart(input) {
         const qualityColor = qualityColors[analysis.setup_quality] || qualityColors['B'];
         
         resultDiv.innerHTML = `
-            <div class="analysis-grid">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                 <!-- Chart Display -->
                 <div class="glass rounded-xl overflow-hidden">
                     <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-                        <h3 class="font-semibold text-white flex items-center gap-2">
+                        <h3 class="font-semibold text-white flex items-center gap-2 text-sm md:text-base">
                             <i data-lucide="image" class="w-4 h-4 text-blue-400"></i>
                             Chart Screenshot
                         </h3>
@@ -1188,28 +1421,28 @@ async function analyzeChart(input) {
                 <!-- Analysis Results -->
                 <div class="space-y-4">
                     <!-- Setup Quality Card -->
-                    <div class="glass rounded-xl p-6 border ${qualityColor}">
+                    <div class="glass rounded-xl p-4 md:p-6 border ${qualityColor}">
                         <div class="flex items-center justify-between mb-4">
                             <span class="text-sm font-medium opacity-80">Setup Quality</span>
-                            <div class="w-12 h-12 rounded-full bg-current bg-opacity-20 flex items-center justify-center text-2xl font-bold">
+                            <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-current bg-opacity-20 flex items-center justify-center text-xl md:text-2xl font-bold">
                                 ${analysis.setup_quality}
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <span class="text-slate-400 block text-xs mb-1">PAIR</span>
-                                <span class="font-bold text-white text-lg">${analysis.pair}</span>
+                                <span class="font-bold text-white text-base md:text-lg">${analysis.pair}</span>
                             </div>
                             <div>
                                 <span class="text-slate-400 block text-xs mb-1">DIRECTION</span>
-                                <span class="font-bold ${analysis.direction === 'LONG' ? 'text-emerald-400' : 'text-red-400'} text-lg">${analysis.direction}</span>
+                                <span class="font-bold ${analysis.direction === 'LONG' ? 'text-emerald-400' : 'text-red-400'} text-base md:text-lg">${analysis.direction}</span>
                             </div>
                         </div>
                     </div>
                     
                     <!-- Trade Levels -->
-                    <div class="glass rounded-xl p-6">
-                        <h4 class="font-semibold text-white mb-4 flex items-center gap-2">
+                    <div class="glass rounded-xl p-4 md:p-6">
+                        <h4 class="font-semibold text-white mb-4 flex items-center gap-2 text-sm md:text-base">
                             <i data-lucide="layers" class="w-4 h-4 text-violet-400"></i>
                             Trade Levels
                         </h4>
@@ -1234,8 +1467,8 @@ async function analyzeChart(input) {
                     </div>
                     
                     <!-- Analysis Text -->
-                    <div class="glass rounded-xl p-6">
-                        <h4 class="font-semibold text-white mb-3 flex items-center gap-2">
+                    <div class="glass rounded-xl p-4 md:p-6">
+                        <h4 class="font-semibold text-white mb-3 flex items-center gap-2 text-sm md:text-base">
                             <i data-lucide="file-text" class="w-4 h-4 text-orange-400"></i>
                             Analysis
                         </h4>
@@ -1243,8 +1476,8 @@ async function analyzeChart(input) {
                     </div>
                     
                     <!-- Recommendations -->
-                    <div class="glass rounded-xl p-6 border border-yellow-500/20 bg-yellow-500/5">
-                        <h4 class="font-semibold text-white mb-3 flex items-center gap-2">
+                    <div class="glass rounded-xl p-4 md:p-6 border border-yellow-500/20 bg-yellow-500/5">
+                        <h4 class="font-semibold text-white mb-3 flex items-center gap-2 text-sm md:text-base">
                             <i data-lucide="lightbulb" class="w-4 h-4 text-yellow-400"></i>
                             Recommendations
                         </h4>
@@ -1253,8 +1486,8 @@ async function analyzeChart(input) {
                     
                     <!-- Key Levels -->
                     ${analysis.key_levels && analysis.key_levels.length > 0 ? `
-                    <div class="glass rounded-xl p-6">
-                        <h4 class="font-semibold text-white mb-3 flex items-center gap-2">
+                    <div class="glass rounded-xl p-4 md:p-6">
+                        <h4 class="font-semibold text-white mb-3 flex items-center gap-2 text-sm md:text-base">
                             <i data-lucide="target" class="w-4 h-4 text-pink-400"></i>
                             Key Levels
                         </h4>
@@ -1268,7 +1501,7 @@ async function analyzeChart(input) {
                     
                     <!-- Action Buttons -->
                     <div class="flex gap-3">
-                        <button onclick="saveAnalysisToJournal('${analysis.pair}', '${analysis.direction}', '${analysis.setup_quality}')" class="flex-1 bg-blue-500 hover:bg-blue-600 rounded-lg py-3 font-medium text-white transition-colors flex items-center justify-center gap-2">
+                        <button onclick="saveAnalysisToJournal('${analysis.pair}', '${analysis.direction}', '${analysis.setup_quality}')" class="flex-1 bg-blue-500 hover:bg-blue-600 rounded-lg py-3 font-medium text-white transition-colors flex items-center justify-center gap-2 text-sm md:text-base">
                             <i data-lucide="save" class="w-4 h-4"></i> Save to Journal
                         </button>
                         <button onclick="renderChartAnalysis(document.getElementById('content'))" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition-colors">
@@ -1307,39 +1540,39 @@ function saveAnalysisToJournal(pair, direction, grade) {
         if (directionSelect) directionSelect.value = direction;
         if (gradeSelect) gradeSelect.value = grade;
         
-        alert(`Analysis for ${pair} ${direction} (Grade ${grade}) loaded into journal form!`);
+        showToast(`Analysis for ${pair} ${direction} loaded!`);
     }, 500);
 }
 
 // Discipline Score
 function renderDiscipline(content) {
     content.innerHTML = `
-        <div class="p-8 max-w-4xl mx-auto fade-in">
-            <div class="flex items-center justify-between mb-8">
+        <div class="p-4 md:p-8 max-w-4xl mx-auto fade-in pb-24 md:pb-8">
+            <div class="flex items-center justify-between mb-6 md:mb-8">
                 <div>
-                    <h2 class="text-3xl font-bold text-white mb-1">Discipline Score</h2>
-                    <p class="text-slate-400">Track your trading discipline metrics</p>
+                    <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">Discipline Score</h2>
+                    <p class="text-slate-400 text-sm">Track your trading discipline metrics</p>
                 </div>
             </div>
             
-            <div class="glass rounded-xl p-12 text-center">
-                <div class="w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-2xl shadow-blue-500/20">
-                    <span class="text-5xl font-bold text-white">87</span>
+            <div class="glass rounded-xl p-8 md:p-12 text-center">
+                <div class="w-24 h-24 md:w-32 md:h-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-2xl shadow-blue-500/20">
+                    <span class="text-4xl md:text-5xl font-bold text-white">87</span>
                 </div>
-                <h3 class="text-2xl font-bold text-white mb-2">Disciplined Trader</h3>
-                <p class="text-slate-400 max-w-md mx-auto">You're showing strong discipline in your trading approach. Keep following your process and risk management rules.</p>
+                <h3 class="text-xl md:text-2xl font-bold text-white mb-2">Disciplined Trader</h3>
+                <p class="text-slate-400 max-w-md mx-auto text-sm md:text-base">You're showing strong discipline in your trading approach. Keep following your process and risk management rules.</p>
                 
-                <div class="grid grid-cols-3 gap-6 mt-12 max-w-2xl mx-auto">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mt-8 md:mt-12 max-w-2xl mx-auto">
                     <div class="p-4 bg-slate-800/50 rounded-lg">
-                        <div class="text-2xl font-bold text-emerald-400 mb-1">95%</div>
+                        <div class="text-xl md:text-2xl font-bold text-emerald-400 mb-1">95%</div>
                         <div class="text-xs text-slate-500 uppercase tracking-wider">Plan Adherence</div>
                     </div>
                     <div class="p-4 bg-slate-800/50 rounded-lg">
-                        <div class="text-2xl font-bold text-blue-400 mb-1">88%</div>
+                        <div class="text-xl md:text-2xl font-bold text-blue-400 mb-1">88%</div>
                         <div class="text-xs text-slate-500 uppercase tracking-wider">Risk Management</div>
                     </div>
                     <div class="p-4 bg-slate-800/50 rounded-lg">
-                        <div class="text-2xl font-bold text-orange-400 mb-1">78%</div>
+                        <div class="text-xl md:text-2xl font-bold text-orange-400 mb-1">78%</div>
                         <div class="text-xs text-slate-500 uppercase tracking-wider">Emotional Control</div>
                     </div>
                 </div>
@@ -1351,40 +1584,39 @@ function renderDiscipline(content) {
 // AI Mentor
 function renderMentor(content) {
     content.innerHTML = `
-        <div class="p-8 max-w-4xl mx-auto h-[calc(100vh-2rem)] flex flex-col fade-in">
-            <div class="flex items-center justify-between mb-6">
+        <div class="p-4 md:p-8 max-w-4xl mx-auto h-[calc(100vh-2rem)] flex flex-col fade-in pb-24 md:pb-8">
+            <div class="flex items-center justify-between mb-4 md:mb-6">
                 <div>
-                    <h2 class="text-3xl font-bold text-white mb-1">AI Mentor</h2>
-                    <p class="text-slate-400">Your personal trading psychology coach</p>
+                    <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">AI Mentor</h2>
+                    <p class="text-slate-400 text-sm">Your personal trading psychology coach</p>
                 </div>
             </div>
             
             <div class="glass rounded-xl flex-1 flex flex-col overflow-hidden">
-                <div id="chatHistory" class="flex-1 overflow-y-auto p-6 space-y-4">
+                <div id="chatHistory" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
                     <div class="flex gap-3">
-                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
-                            <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+                        <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="bot" class="w-4 h-4 md:w-5 md:h-5 text-white"></i>
                         </div>
-                        <div class="bg-slate-800 rounded-2xl rounded-tl-sm px-5 py-3 max-w-[80%]">
+                        <div class="bg-slate-800 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%] md:max-w-[80%]">
                             <p class="text-slate-200 text-sm leading-relaxed">Hello! I'm your AI trading mentor. I'm here to help you with trading psychology, risk management, and maintaining discipline. What would you like to discuss today?</p>
                         </div>
                     </div>
                 </div>
                 
-                <div class="p-4 border-t border-slate-800 bg-slate-900/50">
-                    <div class="flex gap-3">
-                        <input type="text" id="mentorInput" placeholder="Ask about trading psychology, risk management, or your trading plan..." 
-                            class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-5 py-3 text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                <div class="p-3 md:p-4 border-t border-slate-800 bg-slate-900/50">
+                    <div class="flex gap-2 md:gap-3">
+                        <input type="text" id="mentorInput" placeholder="Ask about trading psychology..." 
+                            class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm"
                             onkeypress="if(event.key==='Enter') askMentor()">
-                        <button onclick="askMentor()" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-xl text-white font-medium transition-colors flex items-center gap-2">
+                        <button onclick="askMentor()" class="px-4 md:px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-xl text-white font-medium transition-colors flex items-center gap-2">
                             <i data-lucide="send" class="w-4 h-4"></i>
                         </button>
                     </div>
-                    <div class="flex gap-2 mt-3 overflow-x-auto pb-1">
+                    <div class="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide">
                         <button onclick="quickAsk('How do I control FOMO?')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">How do I control FOMO?</button>
-                        <button onclick="quickAsk('What is proper risk management?')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">Risk management tips</button>
-                        <button onclick="quickAsk('How to review losing trades?')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">Review losing trades</button>
-                        <button onclick="quickAsk('Trading plan checklist')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">Trading plan checklist</button>
+                        <button onclick="quickAsk('What is proper risk management?')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">Risk management</button>
+                        <button onclick="quickAsk('How to review losing trades?')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">Review losses</button>
                     </div>
                 </div>
             </div>
@@ -1407,10 +1639,10 @@ async function askMentor() {
     // Add user message
     chat.innerHTML += `
         <div class="flex gap-3 flex-row-reverse">
-            <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
-                <i data-lucide="user" class="w-5 h-5 text-slate-300"></i>
+            <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
+                <i data-lucide="user" class="w-4 h-4 md:w-5 md:h-5 text-slate-300"></i>
             </div>
-            <div class="bg-blue-600 rounded-2xl rounded-tr-sm px-5 py-3 max-w-[80%]">
+            <div class="bg-blue-600 rounded-2xl rounded-tr-sm px-4 py-3 max-w-[85%] md:max-w-[80%]">
                 <p class="text-white text-sm leading-relaxed">${message}</p>
             </div>
         </div>
@@ -1424,10 +1656,10 @@ async function askMentor() {
     const typingId = 'typing-' + Date.now();
     chat.innerHTML += `
         <div id="${typingId}" class="flex gap-3">
-            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
-                <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+            <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+                <i data-lucide="bot" class="w-4 h-4 md:w-5 md:h-5 text-white"></i>
             </div>
-            <div class="bg-slate-800 rounded-2xl rounded-tl-sm px-5 py-3">
+            <div class="bg-slate-800 rounded-2xl rounded-tl-sm px-4 py-3">
                 <div class="flex gap-1">
                     <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce"></div>
                     <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
@@ -1451,10 +1683,10 @@ async function askMentor() {
         
         chat.innerHTML += `
             <div class="flex gap-3">
-                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
-                    <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+                <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="bot" class="w-4 h-4 md:w-5 md:h-5 text-white"></i>
                 </div>
-                <div class="bg-slate-800 rounded-2xl rounded-tl-sm px-5 py-3 max-w-[80%]">
+                <div class="bg-slate-800 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%] md:max-w-[80%]">
                     <p class="text-slate-200 text-sm leading-relaxed">${data.response}</p>
                     ${data.fallback ? '<span class="text-xs text-slate-600 mt-2 block">Offline mode</span>' : ''}
                 </div>
@@ -1465,10 +1697,10 @@ async function askMentor() {
         document.getElementById(typingId).remove();
         chat.innerHTML += `
             <div class="flex gap-3">
-                <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                    <i data-lucide="alert-circle" class="w-5 h-5 text-red-400"></i>
+                <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="alert-circle" class="w-4 h-4 md:w-5 md:h-5 text-red-400"></i>
                 </div>
-                <div class="bg-red-500/10 border border-red-500/20 rounded-2xl rounded-tl-sm px-5 py-3 max-w-[80%]">
+                <div class="bg-red-500/10 border border-red-500/20 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%] md:max-w-[80%]">
                     <p class="text-red-400 text-sm">Sorry, I'm having trouble connecting. Please try again.</p>
                 </div>
             </div>
@@ -1486,29 +1718,32 @@ async function renderBlog(content) {
         const posts = await response.json();
         
         content.innerHTML = `
-            <div class="p-8 max-w-7xl mx-auto fade-in">
-                <div class="flex items-center justify-between mb-8">
+            <div class="p-4 md:p-8 max-w-7xl mx-auto fade-in pb-24 md:pb-8">
+                <div class="flex items-center justify-between mb-6 md:mb-8">
                     <div>
-                        <h2 class="text-3xl font-bold text-white mb-1">Trading Blog</h2>
-                        <p class="text-slate-400">Insights, strategies, and market analysis</p>
+                        <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">Trading Blog</h2>
+                        <p class="text-slate-400 text-sm">Insights, strategies, and market analysis</p>
                     </div>
                 </div>
                 
                 <!-- Featured Post -->
                 ${posts.length > 0 ? `
-                <div class="glass rounded-2xl overflow-hidden mb-8 blog-card cursor-pointer" onclick="showBlogPost('${posts[0].slug}')">
+                <div class="glass rounded-2xl overflow-hidden mb-6 md:mb-8 blog-card cursor-pointer" onclick="showBlogPost('${posts[0].slug}')">
                     <div class="grid grid-cols-1 lg:grid-cols-2">
-                        <div class="h-64 lg:h-auto bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center">
-                            <i data-lucide="newspaper" class="w-20 h-20 text-white/30"></i>
+                        <div class="h-48 md:h-64 lg:h-auto bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center">
+                            ${posts[0].featured_image ? 
+                                `<img src="${posts[0].featured_image}" class="w-full h-full object-cover" alt="${posts[0].title}">` :
+                                `<i data-lucide="newspaper" class="w-16 h-16 md:w-20 md:h-20 text-white/30"></i>`
+                            }
                         </div>
-                        <div class="p-8 flex flex-col justify-center">
+                        <div class="p-6 md:p-8 flex flex-col justify-center">
                             <div class="flex items-center gap-2 mb-3">
                                 <span class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs font-medium">${posts[0].category || 'General'}</span>
                                 <span class="text-xs text-slate-500">${new Date(posts[0].created_at).toLocaleDateString()}</span>
                             </div>
-                            <h3 class="text-2xl font-bold text-white mb-3">${posts[0].title}</h3>
-                            <p class="text-slate-400 mb-4 line-clamp-3">${posts[0].excerpt}</p>
-                            <div class="flex items-center gap-2 text-blue-400 font-medium">
+                            <h3 class="text-xl md:text-2xl font-bold text-white mb-3 line-clamp-2">${posts[0].title}</h3>
+                            <p class="text-slate-400 mb-4 line-clamp-3 text-sm md:text-base">${posts[0].excerpt}</p>
+                            <div class="flex items-center gap-2 text-blue-400 font-medium text-sm md:text-base">
                                 Read Article <i data-lucide="arrow-right" class="w-4 h-4"></i>
                             </div>
                         </div>
@@ -1517,18 +1752,21 @@ async function renderBlog(content) {
                 ` : ''}
                 
                 <!-- Post Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                     ${posts.slice(1).map(post => `
                         <div class="glass rounded-xl overflow-hidden blog-card cursor-pointer" onclick="showBlogPost('${post.slug}')">
-                            <div class="h-40 bg-gradient-to-br from-slate-800 to-slate-700 flex items-center justify-center">
-                                <i data-lucide="file-text" class="w-12 h-12 text-slate-600"></i>
+                            <div class="h-40 md:h-48 bg-gradient-to-br from-slate-800 to-slate-700 flex items-center justify-center overflow-hidden">
+                                ${post.featured_image ? 
+                                    `<img src="${post.featured_image}" class="w-full h-full object-cover" alt="${post.title}">` :
+                                    `<i data-lucide="file-text" class="w-12 h-12 text-slate-600"></i>`
+                                }
                             </div>
-                            <div class="p-6">
+                            <div class="p-4 md:p-6">
                                 <div class="flex items-center gap-2 mb-2">
                                     <span class="px-2 py-1 bg-slate-700 text-slate-300 rounded text-xs">${post.category || 'General'}</span>
                                 </div>
-                                <h4 class="font-semibold text-white mb-2 line-clamp-2">${post.title}</h4>
-                                <p class="text-sm text-slate-400 line-clamp-2 mb-4">${post.excerpt}</p>
+                                <h4 class="font-semibold text-white mb-2 line-clamp-2 text-sm md:text-base">${post.title}</h4>
+                                <p class="text-xs md:text-sm text-slate-400 line-clamp-2 mb-4">${post.excerpt}</p>
                                 <div class="flex items-center justify-between text-xs text-slate-500">
                                     <span>${new Date(post.created_at).toLocaleDateString()}</span>
                                     <span class="flex items-center gap-1">
@@ -1537,12 +1775,12 @@ async function renderBlog(content) {
                                 </div>
                             </div>
                         </div>
-                    `).join('') || '<div class="col-span-3 text-center py-12 text-slate-500">No blog posts yet</div>'}
+                    `).join('') || '<div class="col-span-full text-center py-12 text-slate-500">No blog posts yet</div>'}
                 </div>
             </div>
         `;
     } catch (err) {
-        content.innerHTML = `<div class="p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">Failed to load blog posts</div></div>`;
+        content.innerHTML = `<div class="p-4 md:p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">Failed to load blog posts</div></div>`;
     }
 }
 
@@ -1554,21 +1792,34 @@ async function showBlogPost(slug) {
         
         if (!response.ok) throw new Error('Post not found');
         
+        // Update page title for SEO
+        document.title = `${post.title} | Pipways Blog`;
+        
         content.innerHTML = `
-            <div class="p-8 max-w-4xl mx-auto fade-in">
-                <button onclick="showPage('blog')" class="mb-6 flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+            <div class="p-4 md:p-8 max-w-4xl mx-auto fade-in pb-24 md:pb-8">
+                <button onclick="showPage('blog'); document.title='Pipways - Institutional Trader Development'" class="mb-4 md:mb-6 flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm">
                     <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Blog
                 </button>
                 
-                <article class="glass rounded-2xl p-8">
+                <article class="glass rounded-2xl p-6 md:p-8">
+                    <!-- SEO Meta for this post -->
                     <div class="flex items-center gap-3 mb-4">
                         <span class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm font-medium">${post.category || 'General'}</span>
                         <span class="text-slate-500 text-sm">${new Date(post.created_at).toLocaleDateString()}</span>
+                        <span class="text-slate-500 text-sm flex items-center gap-1">
+                            <i data-lucide="eye" class="w-4 h-4"></i> ${post.view_count || 0} views
+                        </span>
                     </div>
                     
-                    <h1 class="text-4xl font-bold text-white mb-6">${post.title}</h1>
+                    <h1 class="text-2xl md:text-4xl font-bold text-white mb-6">${post.title}</h1>
                     
-                    <div class="prose prose-invert max-w-none text-slate-300 leading-relaxed">
+                    ${post.featured_image ? `
+                    <div class="mb-6 rounded-xl overflow-hidden">
+                        <img src="${post.featured_image}" class="w-full h-48 md:h-64 object-cover" alt="${post.title}">
+                    </div>
+                    ` : ''}
+                    
+                    <div class="prose prose-invert max-w-none text-slate-300 leading-relaxed text-sm md:text-base">
                         ${post.content.replace(/\n/g, '<br>')}
                     </div>
                     
@@ -1581,19 +1832,40 @@ async function showBlogPost(slug) {
                         </div>
                     </div>
                     ` : ''}
+                    
+                    <!-- Share buttons for SEO/Social -->
+                    <div class="mt-8 pt-6 border-t border-slate-800 flex items-center gap-4">
+                        <span class="text-slate-400 text-sm">Share:</span>
+                        <button onclick="sharePost('${post.title}', '${slug}')" class="p-2 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors">
+                            <i data-lucide="share-2" class="w-4 h-4 text-slate-300"></i>
+                        </button>
+                    </div>
                 </article>
             </div>
         `;
         lucide.createIcons();
     } catch (err) {
-        content.innerHTML = `<div class="p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">Post not found</div></div>`;
+        content.innerHTML = `<div class="p-4 md:p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">Post not found</div></div>`;
     }
 }
 
-// Admin Dashboard
+function sharePost(title, slug) {
+    const url = `${window.location.origin}/blog/${slug}`;
+    if (navigator.share) {
+        navigator.share({
+            title: title,
+            url: url
+        });
+    } else {
+        navigator.clipboard.writeText(url);
+        showToast('Link copied to clipboard!');
+    }
+}
+
+// Admin Dashboard with Media Upload
 async function renderAdmin(content) {
     if (!currentUser.is_admin) {
-        content.innerHTML = `<div class="p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">Access denied. Admin only.</div></div>`;
+        content.innerHTML = `<div class="p-4 md:p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">Access denied. Admin only.</div></div>`;
         return;
     }
     
@@ -1607,74 +1879,74 @@ async function renderAdmin(content) {
         const posts = await postsRes.json();
         
         content.innerHTML = `
-            <div class="p-8 max-w-7xl mx-auto fade-in">
-                <div class="flex items-center justify-between mb-8">
+            <div class="p-4 md:p-8 max-w-7xl mx-auto fade-in pb-24 md:pb-8">
+                <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-8 gap-4">
                     <div>
-                        <h2 class="text-3xl font-bold text-white mb-1">Admin Dashboard</h2>
-                        <p class="text-slate-400">Manage blog posts and view platform stats</p>
+                        <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">Admin Dashboard</h2>
+                        <p class="text-slate-400 text-sm">Manage blog posts and view platform stats</p>
                     </div>
-                    <div class="admin-badge px-4 py-2 rounded-lg text-white font-medium flex items-center gap-2">
+                    <div class="admin-badge px-4 py-2 rounded-lg text-white font-medium flex items-center gap-2 text-sm md:text-base">
                         <i data-lucide="shield" class="w-4 h-4"></i> Admin
                     </div>
                 </div>
                 
                 <!-- Stats Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <div class="glass rounded-xl p-6">
-                        <div class="text-slate-400 text-sm mb-1">Total Users</div>
-                        <div class="text-3xl font-bold text-white">${stats.users}</div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
+                    <div class="glass rounded-xl p-4 md:p-6">
+                        <div class="text-slate-400 text-xs md:text-sm mb-1">Total Users</div>
+                        <div class="text-xl md:text-3xl font-bold text-white">${stats.users}</div>
                     </div>
-                    <div class="glass rounded-xl p-6">
-                        <div class="text-slate-400 text-sm mb-1">Total Trades</div>
-                        <div class="text-3xl font-bold text-white">${stats.trades}</div>
+                    <div class="glass rounded-xl p-4 md:p-6">
+                        <div class="text-slate-400 text-xs md:text-sm mb-1">Total Trades</div>
+                        <div class="text-xl md:text-3xl font-bold text-white">${stats.trades}</div>
                     </div>
-                    <div class="glass rounded-xl p-6">
-                        <div class="text-slate-400 text-sm mb-1">Blog Posts</div>
-                        <div class="text-3xl font-bold text-white">${stats.blog_posts.total}</div>
+                    <div class="glass rounded-xl p-4 md:p-6">
+                        <div class="text-slate-400 text-xs md:text-sm mb-1">Blog Posts</div>
+                        <div class="text-xl md:text-3xl font-bold text-white">${stats.blog_posts.total}</div>
                         <div class="text-xs text-slate-500 mt-1">${stats.blog_posts.published} published</div>
                     </div>
-                    <div class="glass rounded-xl p-6">
-                        <div class="text-slate-400 text-sm mb-1">Total Views</div>
-                        <div class="text-3xl font-bold text-white">${stats.blog_posts.total_views || 0}</div>
+                    <div class="glass rounded-xl p-4 md:p-6">
+                        <div class="text-slate-400 text-xs md:text-sm mb-1">Total Views</div>
+                        <div class="text-xl md:text-3xl font-bold text-white">${stats.blog_posts.total_views || 0}</div>
                     </div>
                 </div>
                 
                 <!-- Blog Management -->
-                <div class="glass rounded-xl p-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-lg font-semibold text-white">Blog Management</h3>
+                <div class="glass rounded-xl p-4 md:p-6 mb-6">
+                    <div class="flex items-center justify-between mb-4 md:mb-6">
+                        <h3 class="text-base md:text-lg font-semibold text-white">Blog Management</h3>
                         <button onclick="showNewPostForm()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white text-sm font-medium flex items-center gap-2">
                             <i data-lucide="plus" class="w-4 h-4"></i> New Post
                         </button>
                     </div>
                     
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
+                    <div class="overflow-x-auto -mx-4 px-4">
+                        <table class="w-full text-sm min-w-[500px]">
                             <thead>
                                 <tr class="text-slate-400 border-b border-slate-700">
-                                    <th class="text-left py-3">Title</th>
-                                    <th class="text-left py-3">Category</th>
-                                    <th class="text-center py-3">Status</th>
-                                    <th class="text-center py-3">Views</th>
-                                    <th class="text-right py-3">Actions</th>
+                                    <th class="text-left py-2">Title</th>
+                                    <th class="text-left py-2 hidden md:table-cell">Category</th>
+                                    <th class="text-center py-2">Status</th>
+                                    <th class="text-center py-2">Views</th>
+                                    <th class="text-right py-2">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${posts.map(post => `
-                                    <tr class="border-b border-slate-800/50 hover:bg-slate-800/30">
-                                        <td class="py-3">
-                                            <div class="font-medium text-white">${post.title}</div>
+                                    <tr class="border-b border-slate-800/50">
+                                        <td class="py-2 md:py-3">
+                                            <div class="font-medium text-white text-sm">${post.title}</div>
                                             <div class="text-xs text-slate-500">/${post.slug}</div>
                                         </td>
-                                        <td class="py-3 text-slate-400">${post.category || '-'}</td>
-                                        <td class="py-3 text-center">
+                                        <td class="py-2 md:py-3 text-slate-400 hidden md:table-cell">${post.category || '-'}</td>
+                                        <td class="py-2 md:py-3 text-center">
                                             <span class="px-2 py-1 rounded text-xs ${post.published ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400'}">
                                                 ${post.published ? 'Published' : 'Draft'}
                                             </span>
                                         </td>
-                                        <td class="py-3 text-center text-slate-400">${post.view_count || 0}</td>
-                                        <td class="py-3 text-right">
-                                            <button onclick="deletePost(${post.id})" class="text-red-400 hover:text-red-300 transition-colors">
+                                        <td class="py-2 md:py-3 text-center text-slate-400">${post.view_count || 0}</td>
+                                        <td class="py-2 md:py-3 text-right">
+                                            <button onclick="deletePost(${post.id})" class="text-red-400 hover:text-red-300 transition-colors p-2">
                                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                                             </button>
                                         </td>
@@ -1686,48 +1958,111 @@ async function renderAdmin(content) {
                 </div>
                 
                 <!-- New Post Form (Hidden by default) -->
-                <div id="new-post-form" class="hidden glass rounded-xl p-6 mt-6">
-                    <h3 class="text-lg font-semibold text-white mb-4">Create New Post</h3>
+                <div id="new-post-form" class="hidden glass rounded-xl p-4 md:p-6">
+                    <h3 class="text-base md:text-lg font-semibold text-white mb-4">Create New Post</h3>
                     <form onsubmit="createBlogPost(event)" class="space-y-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Title</label>
-                                <input name="title" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none">
+                                <input name="title" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-sm" oninput="generateSlug(this.value)">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Slug (URL)</label>
-                                <input name="slug" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none" placeholder="my-post-title">
+                                <input name="slug" id="post-slug" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-sm font-mono" placeholder="my-post-title">
                             </div>
                         </div>
+                        
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Category</label>
-                                <input name="category" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none" placeholder="Strategy">
+                                <input name="category" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-sm" placeholder="Strategy">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Tags (comma separated)</label>
-                                <input name="tags" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none" placeholder="forex, psychology, risk">
+                                <input name="tags" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-sm" placeholder="forex, psychology, risk">
                             </div>
                         </div>
+                        
+                        <!-- Featured Image Upload -->
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Featured Image</label>
+                            <div class="space-y-3">
+                                <div class="flex gap-2">
+                                    <input type="file" id="featured-image-input" accept="image/*" class="hidden" onchange="handleImageUpload(this)">
+                                    <button type="button" onclick="document.getElementById('featured-image-input').click()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-sm flex items-center gap-2">
+                                        <i data-lucide="image-plus" class="w-4 h-4"></i> Upload Image
+                                    </button>
+                                    <span id="image-filename" class="text-slate-400 text-sm self-center"></span>
+                                </div>
+                                <input type="hidden" name="featured_image" id="featured-image-data">
+                                <div id="image-preview-container" class="hidden">
+                                    <img id="image-preview" class="image-preview max-h-48 rounded-lg border border-slate-700">
+                                    <button type="button" onclick="removeImage()" class="mt-2 text-xs text-red-400 hover:text-red-300">Remove image</button>
+                                </div>
+                                <p class="text-xs text-slate-500">Max 2MB. Recommended: 1200x630px for social sharing.</p>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Excerpt</label>
+                            <textarea name="excerpt" rows="2" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-sm" placeholder="Brief summary for SEO and previews..."></textarea>
+                        </div>
+                        
                         <div>
                             <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Content</label>
-                            <textarea name="content" required rows="6" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none"></textarea>
+                            <textarea name="content" required rows="6" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-sm"></textarea>
                         </div>
+                        
                         <div class="flex items-center gap-3">
                             <input type="checkbox" name="published" id="publish-check" class="w-5 h-5 rounded border-slate-600 bg-slate-800 text-blue-500">
                             <label for="publish-check" class="text-sm text-slate-300">Publish immediately</label>
                         </div>
+                        
                         <div class="flex gap-3">
-                            <button type="submit" class="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium">Create Post</button>
-                            <button type="button" onclick="document.getElementById('new-post-form').classList.add('hidden')" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 font-medium">Cancel</button>
+                            <button type="submit" class="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium text-sm">Create Post</button>
+                            <button type="button" onclick="document.getElementById('new-post-form').classList.add('hidden')" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 font-medium text-sm">Cancel</button>
                         </div>
                     </form>
                 </div>
             </div>
         `;
     } catch (err) {
-        content.innerHTML = `<div class="p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">${err.message}</div></div>`;
+        content.innerHTML = `<div class="p-4 md:p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">${err.message}</div></div>`;
     }
+}
+
+function generateSlug(title) {
+    const slug = title.toLowerCase()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .substring(0, 60);
+    document.getElementById('post-slug').value = slug;
+}
+
+function handleImageUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    if (file.size > 2 * 1024 * 1024) {
+        showToast('Image too large. Max 2MB');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById('featured-image-data').value = e.target.result;
+        document.getElementById('image-preview').src = e.target.result;
+        document.getElementById('image-preview-container').classList.remove('hidden');
+        document.getElementById('image-filename').textContent = file.name;
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeImage() {
+    document.getElementById('featured-image-input').value = '';
+    document.getElementById('featured-image-data').value = '';
+    document.getElementById('image-preview-container').classList.add('hidden');
+    document.getElementById('image-filename').textContent = '';
 }
 
 function showNewPostForm() {
@@ -1749,8 +2084,10 @@ async function createBlogPost(e) {
         formData.append('title', f.title.value);
         formData.append('slug', f.slug.value);
         formData.append('content', f.content.value);
+        formData.append('excerpt', f.excerpt.value);
         formData.append('category', f.category.value);
         formData.append('tags', f.tags.value);
+        formData.append('featured_image', document.getElementById('featured-image-data').value);
         formData.append('published', f.published.checked);
         
         const response = await apiCall('/admin/blog/posts', {
@@ -1765,11 +2102,11 @@ async function createBlogPost(e) {
             throw new Error(getErrorMessage(data));
         }
         
-        alert('Blog post created successfully!');
+        showToast('Blog post created successfully!');
         renderAdmin(document.getElementById('content'));
         
     } catch (err) {
-        alert('Error: ' + err.message);
+        showToast('Error: ' + err.message);
         btn.textContent = originalText;
         btn.disabled = false;
     }
@@ -1785,14 +2122,16 @@ async function deletePost(postId) {
         
         if (response.ok) {
             renderAdmin(document.getElementById('content'));
+            showToast('Post deleted');
         } else {
             throw new Error('Failed to delete');
         }
     } catch (err) {
-        alert('Error deleting post: ' + err.message);
+        showToast('Error deleting post: ' + err.message);
     }
 }
 
+// Initialize icons on load
 lucide.createIcons();
 </script>
 </body>
