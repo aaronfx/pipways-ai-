@@ -10,13 +10,8 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
         
-        * { 
-            font-family: 'Inter', sans-serif; 
-        }
-        
-        .mono { 
-            font-family: 'JetBrains Mono', monospace; 
-        }
+        * { font-family: 'Inter', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
         
         .glass { 
             background: rgba(30, 41, 59, 0.7); 
@@ -104,13 +99,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        .chart-container {
-            position: relative;
-            overflow: hidden;
-            border-radius: 0.75rem;
-            background: #0f172a;
-        }
-        
         .analysis-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -124,6 +112,48 @@
         }
         
         .hidden { display: none !important; }
+        
+        /* Checklist styles */
+        .checklist-item {
+            transition: all 0.2s ease;
+        }
+        
+        .checklist-item:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+        
+        .checklist-item.checked {
+            opacity: 0.7;
+        }
+        
+        .checklist-item.checked .check-text {
+            text-decoration: line-through;
+            color: #64748b;
+        }
+        
+        /* Progress ring */
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.35s;
+            transform-origin: 50% 50%;
+        }
+        
+        /* Blog styles */
+        .blog-card {
+            transition: all 0.3s ease;
+        }
+        
+        .blog-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .admin-badge {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200 antialiased">
@@ -211,6 +241,9 @@
                 <button onclick="showPage('dashboard')" class="nav-btn sidebar-link active w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
                     <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
                 </button>
+                <button onclick="showPage('analytics')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="bar-chart-3" class="w-5 h-5"></i> Analytics
+                </button>
                 <button onclick="showPage('journal')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
                     <i data-lucide="book-open" class="w-5 h-5"></i> Trade Journal
                 </button>
@@ -223,6 +256,14 @@
                 <button onclick="showPage('mentor')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
                     <i data-lucide="bot" class="w-5 h-5"></i> AI Mentor
                 </button>
+                <button onclick="showPage('blog')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="newspaper" class="w-5 h-5"></i> Blog
+                </button>
+                <div id="admin-menu-item" class="hidden">
+                    <button onclick="showPage('admin')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-amber-400 border-amber-500/30">
+                        <i data-lucide="settings" class="w-5 h-5"></i> Admin
+                    </button>
+                </div>
             </nav>
             
             <div class="p-4 border-t border-slate-800 space-y-3">
@@ -249,6 +290,7 @@
 const API_URL = 'https://pipways-api-nhem.onrender.com';
 let authToken = localStorage.getItem('pipways_token');
 let currentUser = JSON.parse(localStorage.getItem('pipways_user') || '{}');
+let checklistData = {};
 
 if (authToken) {
     showApp();
@@ -264,6 +306,12 @@ function showAuth() {
 function showApp() {
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
+    
+    // Show admin menu if user is admin
+    if (currentUser.is_admin) {
+        document.getElementById('admin-menu-item').classList.remove('hidden');
+    }
+    
     showPage('dashboard');
 }
 
@@ -333,6 +381,7 @@ async function handleLogin(e) {
         }
         
         authToken = data.access_token;
+        currentUser = data;
         localStorage.setItem('pipways_token', authToken);
         localStorage.setItem('pipways_user', JSON.stringify(data));
         showApp();
@@ -367,6 +416,7 @@ async function handleRegister(e) {
         }
         
         authToken = data.access_token;
+        currentUser = data;
         localStorage.setItem('pipways_token', authToken);
         localStorage.setItem('pipways_user', JSON.stringify(data));
         showApp();
@@ -407,7 +457,6 @@ async function apiCall(endpoint, options = {}) {
 async function showPage(page) {
     const content = document.getElementById('content');
     
-    // Update sidebar active state
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('active');
     });
@@ -415,24 +464,30 @@ async function showPage(page) {
     if (event && event.target) {
         event.target.closest('.nav-btn').classList.add('active');
     } else {
-        // Default to dashboard if no event
         document.querySelector(`[onclick="showPage('${page}')"]`)?.classList.add('active');
     }
 
     if (page === 'dashboard') {
         await renderDashboard(content);
+    } else if (page === 'analytics') {
+        await renderAnalytics(content);
     } else if (page === 'journal') {
-        renderJournal(content);
+        await renderJournal(content);
     } else if (page === 'analysis') {
         renderChartAnalysis(content);
     } else if (page === 'discipline') {
         renderDiscipline(content);
     } else if (page === 'mentor') {
         renderMentor(content);
+    } else if (page === 'blog') {
+        await renderBlog(content);
+    } else if (page === 'admin') {
+        await renderAdmin(content);
     }
     lucide.createIcons();
 }
 
+// Dashboard
 async function renderDashboard(content) {
     try {
         const response = await apiCall('/trades');
@@ -445,7 +500,6 @@ async function renderDashboard(content) {
         const totalPips = trades.reduce((a, b) => a + (b.pips || 0), 0);
         const wins = trades.filter(t => t.pips > 0).length;
         const winRate = trades.length ? (wins / trades.length * 100).toFixed(0) : 0;
-        const avgPips = trades.length ? (totalPips / trades.length).toFixed(1) : 0;
         
         content.innerHTML = `
             <div class="p-8 max-w-7xl mx-auto">
@@ -570,6 +624,18 @@ async function renderDashboard(content) {
                                     </div>
                                 </div>
                             </button>
+                            
+                            <button onclick="showPage('analytics')" class="w-full p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-emerald-500/50 hover:bg-slate-800 transition-all text-left group">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/30 transition-colors">
+                                        <i data-lucide="bar-chart-3" class="w-5 h-5 text-emerald-400"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-white">View Analytics</div>
+                                        <div class="text-xs text-slate-400">Performance insights</div>
+                                    </div>
+                                </div>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -580,64 +646,449 @@ async function renderDashboard(content) {
     }
 }
 
-function renderJournal(content) {
-    content.innerHTML = `
-        <div class="p-8 max-w-4xl mx-auto fade-in">
-            <div class="flex items-center justify-between mb-8">
-                <div>
-                    <h2 class="text-3xl font-bold text-white mb-1">Trade Journal</h2>
-                    <p class="text-slate-400">Log and review your trading history</p>
+// Analytics Dashboard
+async function renderAnalytics(content) {
+    try {
+        const response = await apiCall('/analytics/dashboard');
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(getErrorMessage(data));
+        }
+        
+        content.innerHTML = `
+            <div class="p-8 max-w-7xl mx-auto fade-in">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white mb-1">Trading Analytics</h2>
+                        <p class="text-slate-400">Comprehensive performance insights</p>
+                    </div>
+                    <button onclick="exportAnalytics()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-sm font-medium flex items-center gap-2 transition-colors">
+                        <i data-lucide="download" class="w-4 h-4"></i> Export CSV
+                    </button>
+                </div>
+                
+                <!-- Key Metrics Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="metric-card rounded-xl p-6">
+                        <div class="text-slate-400 text-sm mb-1">Total Trades</div>
+                        <div class="text-3xl font-bold text-white">${data.total_trades}</div>
+                        <div class="text-xs text-slate-500 mt-1">All time</div>
+                    </div>
+                    
+                    <div class="metric-card rounded-xl p-6">
+                        <div class="text-slate-400 text-sm mb-1">Win Rate</div>
+                        <div class="text-3xl font-bold ${data.win_rate >= 50 ? 'text-emerald-400' : 'text-orange-400'}">${data.win_rate}%</div>
+                        <div class="text-xs text-slate-500 mt-1">${data.winning_streak} win streak</div>
+                    </div>
+                    
+                    <div class="metric-card rounded-xl p-6">
+                        <div class="text-slate-400 text-sm mb-1">Total Pips</div>
+                        <div class="text-3xl font-bold ${data.total_pips >= 0 ? 'text-emerald-400' : 'text-red-400'}">
+                            ${data.total_pips > 0 ? '+' : ''}${data.total_pips}
+                        </div>
+                        <div class="text-xs text-slate-500 mt-1">Avg: ${data.avg_pips_per_trade} pips/trade</div>
+                    </div>
+                    
+                    <div class="metric-card rounded-xl p-6">
+                        <div class="text-slate-400 text-sm mb-1">Profit Factor</div>
+                        <div class="text-3xl font-bold text-blue-400">${data.profit_factor}</div>
+                        <div class="text-xs text-slate-500 mt-1">Gross wins / Gross losses</div>
+                    </div>
+                </div>
+                
+                <!-- Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <!-- Equity Curve -->
+                    <div class="glass rounded-xl p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Equity Curve</h3>
+                        <div class="h-64">
+                            <canvas id="equityChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Monthly Performance -->
+                    <div class="glass rounded-xl p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Monthly Performance</h3>
+                        <div class="h-64">
+                            <canvas id="monthlyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Grade Distribution & Pair Performance -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- Grade Distribution -->
+                    <div class="glass rounded-xl p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Grade Distribution</h3>
+                        <div class="space-y-3">
+                            ${Object.entries(data.grade_distribution).map(([grade, count]) => {
+                                const percentage = data.total_trades ? (count / data.total_trades * 100).toFixed(0) : 0;
+                                const colors = {A: 'bg-emerald-500', B: 'bg-blue-500', C: 'bg-orange-500'};
+                                return `
+                                    <div>
+                                        <div class="flex items-center justify-between mb-1">
+                                            <span class="text-sm font-medium text-white">Grade ${grade}</span>
+                                            <span class="text-sm text-slate-400">${count} trades (${percentage}%)</span>
+                                        </div>
+                                        <div class="w-full bg-slate-700 rounded-full h-2">
+                                            <div class="${colors[grade]} h-2 rounded-full transition-all" style="width: ${percentage}%"></div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- Pair Performance -->
+                    <div class="lg:col-span-2 glass rounded-xl p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Performance by Pair</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="text-slate-400 border-b border-slate-700">
+                                        <th class="text-left py-2">Pair</th>
+                                        <th class="text-center py-2">Trades</th>
+                                        <th class="text-center py-2">Win Rate</th>
+                                        <th class="text-right py-2">Total Pips</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.pair_performance.map(pair => `
+                                        <tr class="border-b border-slate-800/50 hover:bg-slate-800/30">
+                                            <td class="py-3 font-medium text-white">${pair.pair}</td>
+                                            <td class="py-3 text-center text-slate-400">${pair.trades}</td>
+                                            <td class="py-3 text-center">
+                                                <span class="${pair.win_rate >= 50 ? 'text-emerald-400' : 'text-red-400'}">${pair.win_rate}%</span>
+                                            </td>
+                                            <td class="py-3 text-right font-mono ${pair.total_pips >= 0 ? 'text-emerald-400' : 'text-red-400'}">
+                                                ${pair.total_pips > 0 ? '+' : ''}${pair.total_pips}
+                                            </td>
+                                        </tr>
+                                    `).join('') || '<tr><td colspan="4" class="py-4 text-center text-slate-500">No data available</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Checklist Adherence -->
+                <div class="glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-white">Pre-Trade Checklist Adherence</h3>
+                        <span class="text-2xl font-bold ${data.checklist_adherence >= 80 ? 'text-emerald-400' : data.checklist_adherence >= 50 ? 'text-yellow-400' : 'text-red-400'}">${data.checklist_adherence}%</span>
+                    </div>
+                    <div class="w-full bg-slate-700 rounded-full h-3">
+                        <div class="bg-gradient-to-r from-blue-500 to-violet-500 h-3 rounded-full transition-all" style="width: ${data.checklist_adherence}%"></div>
+                    </div>
+                    <p class="text-sm text-slate-400 mt-2">Percentage of trades logged with completed pre-trade checklist</p>
                 </div>
             </div>
-            
-            <div class="glass rounded-xl p-6 mb-6">
-                <h3 class="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-                    <i data-lucide="plus-circle" class="w-5 h-5 text-blue-400"></i>
-                    New Trade Entry
-                </h3>
-                <form onsubmit="addTrade(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Currency Pair</label>
-                        <input name="pair" placeholder="EURUSD" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all uppercase" required>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Direction</label>
-                        <select name="direction" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
-                            <option value="LONG">LONG</option>
-                            <option value="SHORT">SHORT</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Pips (+/-)</label>
-                        <input name="pips" type="number" step="0.1" placeholder="+25 or -10" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" required>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Grade</label>
-                        <select name="grade" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
-                            <option value="A">A - Excellent</option>
-                            <option value="B">B - Good</option>
-                            <option value="C">C - Needs Work</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Entry Price (Optional)</label>
-                        <input name="entry_price" type="number" step="0.00001" placeholder="1.08500" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Exit Price (Optional)</label>
-                        <input name="exit_price" type="number" step="0.00001" placeholder="1.09000" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
-                    </div>
-                    <div class="md:col-span-2">
-                        <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 rounded-lg py-3 font-medium text-white shadow-lg transition-all flex items-center justify-center gap-2">
-                            <i data-lucide="save" class="w-4 h-4"></i> Save Trade Entry
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
+        `;
+        
+        // Render charts if data exists
+        if (data.equity_curve.length > 0) {
+            renderEquityChart(data.equity_curve);
+        }
+        if (data.monthly_performance.length > 0) {
+            renderMonthlyChart(data.monthly_performance);
+        }
+        
+    } catch (err) {
+        content.innerHTML = `<div class="p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">${err.message}</div></div>`;
+    }
 }
 
+function renderEquityChart(equityData) {
+    const ctx = document.getElementById('equityChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: equityData.map(d => new Date(d.date).toLocaleDateString()),
+            datasets: [{
+                label: 'Cumulative Pips',
+                data: equityData.map(d => d.cumulative_pips),
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: { display: false },
+                y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#64748b' }
+                }
+            }
+        }
+    });
+}
+
+function renderMonthlyChart(monthlyData) {
+    const ctx = document.getElementById('monthlyChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: monthlyData.map(d => {
+                const [year, month] = d.month.split('-');
+                return `${month}/${year}`;
+            }),
+            datasets: [{
+                label: 'Pips',
+                data: monthlyData.map(d => d.pips),
+                backgroundColor: monthlyData.map(d => d.pips >= 0 ? 'rgba(16, 185, 129, 0.8)' : 'rgba(239, 68, 68, 0.8)'),
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#64748b' }
+                },
+                y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#64748b' }
+                }
+            }
+        }
+    });
+}
+
+function exportAnalytics() {
+    alert('Export functionality coming soon!');
+}
+
+// Trade Journal with Pre-Trade Checklist
+async function renderJournal(content) {
+    try {
+        // Fetch checklist template
+        const checklistRes = await apiCall('/checklist/template');
+        const checklist = await checklistRes.json();
+        
+        content.innerHTML = `
+            <div class="p-8 max-w-4xl mx-auto fade-in">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white mb-1">Trade Journal</h2>
+                        <p class="text-slate-400">Log your trades with discipline</p>
+                    </div>
+                </div>
+                
+                <!-- Pre-Trade Checklist -->
+                <div class="glass rounded-xl p-6 mb-6 border border-yellow-500/20 bg-yellow-500/5">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+                            <i data-lucide="clipboard-check" class="w-5 h-5 text-yellow-400"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-white">Pre-Trade Checklist</h3>
+                            <p class="text-sm text-slate-400">Complete all required items before logging trade</p>
+                        </div>
+                        <div class="ml-auto">
+                            <div class="relative w-16 h-16">
+                                <svg class="progress-ring w-16 h-16">
+                                    <circle class="text-slate-700" stroke-width="4" stroke="currentColor" fill="transparent" r="28" cx="32" cy="32"/>
+                                    <circle id="progress-circle" class="progress-ring-circle text-yellow-400" stroke-width="4" stroke-dasharray="175.9" stroke-dashoffset="175.9" stroke-linecap="round" stroke="currentColor" fill="transparent" r="28" cx="32" cy="32"/>
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <span id="progress-text" class="text-sm font-bold text-white">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2" id="checklist-container">
+                        ${checklist.items.map(item => `
+                            <label class="checklist-item flex items-start gap-3 p-3 rounded-lg cursor-pointer border border-transparent hover:border-slate-700">
+                                <input type="checkbox" class="checklist-checkbox mt-1 w-5 h-5 rounded border-slate-600 bg-slate-800 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0" 
+                                    data-id="${item.id}" ${item.required ? 'data-required="true"' : ''}>
+                                <div class="flex-1">
+                                    <span class="check-text text-sm text-slate-200">${item.text}</span>
+                                    ${item.required ? '<span class="text-xs text-red-400 ml-2">*Required</span>' : ''}
+                                </div>
+                            </label>
+                        `).join('')}
+                    </div>
+                    
+                    <div id="checklist-warning" class="hidden mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                        <i data-lucide="alert-circle" class="w-4 h-4 inline mr-2"></i>
+                        Please complete all required checklist items before saving the trade.
+                    </div>
+                </div>
+                
+                <!-- Trade Entry Form -->
+                <div class="glass rounded-xl p-6">
+                    <h3 class="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                        <i data-lucide="plus-circle" class="w-5 h-5 text-blue-400"></i>
+                        Trade Details
+                    </h3>
+                    <form id="trade-form" onsubmit="addTrade(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Currency Pair</label>
+                            <input name="pair" placeholder="EURUSD" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all uppercase" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Direction</label>
+                            <select name="direction" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                                <option value="LONG">LONG</option>
+                                <option value="SHORT">SHORT</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Pips (+/-)</label>
+                            <input name="pips" type="number" step="0.1" placeholder="+25 or -10" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Grade</label>
+                            <select name="grade" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                                <option value="A">A - Excellent</option>
+                                <option value="B">B - Good</option>
+                                <option value="C">C - Needs Work</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Entry Price (Optional)</label>
+                            <input name="entry_price" type="number" step="0.00001" placeholder="1.08500" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Exit Price (Optional)</label>
+                            <input name="exit_price" type="number" step="0.00001" placeholder="1.09000" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                        </div>
+                        <div class="md:col-span-2">
+                            <button type="submit" id="submit-trade-btn" class="w-full bg-emerald-500 hover:bg-emerald-600 rounded-lg py-3 font-medium text-white shadow-lg transition-all flex items-center justify-center gap-2">
+                                <i data-lucide="save" class="w-4 h-4"></i> Save Trade Entry
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        
+        // Initialize checklist handlers
+        initChecklistHandlers();
+        
+    } catch (err) {
+        content.innerHTML = `<div class="p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">${err.message}</div></div>`;
+    }
+}
+
+function initChecklistHandlers() {
+    const checkboxes = document.querySelectorAll('.checklist-checkbox');
+    const progressCircle = document.getElementById('progress-circle');
+    const progressText = document.getElementById('progress-text');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const parent = this.closest('.checklist-item');
+            if (this.checked) {
+                parent.classList.add('checked');
+            } else {
+                parent.classList.remove('checked');
+            }
+            updateProgress();
+        });
+    });
+    
+    function updateProgress() {
+        const total = checkboxes.length;
+        const checked = document.querySelectorAll('.checklist-checkbox:checked').length;
+        const percentage = Math.round((checked / total) * 100);
+        
+        const circumference = 2 * Math.PI * 28;
+        const offset = circumference - (percentage / 100) * circumference;
+        
+        progressCircle.style.strokeDashoffset = offset;
+        progressText.textContent = `${percentage}%`;
+        
+        // Store checklist data
+        checklistData = {
+            completed: checked,
+            total: total,
+            items: Array.from(checkboxes).map(cb => ({
+                id: cb.dataset.id,
+                checked: cb.checked,
+                required: cb.dataset.required === 'true'
+            }))
+        };
+    }
+    
+    updateProgress();
+}
+
+async function addTrade(e) {
+    e.preventDefault();
+    const f = e.target;
+    const btn = document.getElementById('submit-trade-btn');
+    const warningEl = document.getElementById('checklist-warning');
+    
+    // Validate checklist
+    const requiredCheckboxes = document.querySelectorAll('.checklist-checkbox[data-required="true"]');
+    const allRequiredChecked = Array.from(requiredCheckboxes).every(cb => cb.checked);
+    
+    if (!allRequiredChecked) {
+        warningEl.classList.remove('hidden');
+        warningEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+    
+    warningEl.classList.add('hidden');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<div class="loading-spinner w-5 h-5 border-2"></div> Saving...';
+    btn.disabled = true;
+    
+    try {
+        const formData = new URLSearchParams();
+        formData.append('pair', f.pair.value.toUpperCase());
+        formData.append('direction', f.direction.value);
+        formData.append('pips', f.pips.value);
+        formData.append('grade', f.grade.value);
+        formData.append('checklist_completed', 'true');
+        formData.append('checklist_data', JSON.stringify(checklistData));
+        if (f.entry_price.value) formData.append('entry_price', f.entry_price.value);
+        if (f.exit_price.value) formData.append('exit_price', f.exit_price.value);
+        
+        const response = await apiCall('/trades', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData.toString()
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(getErrorMessage(data));
+        }
+        
+        btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Saved!';
+        btn.classList.remove('bg-emerald-500');
+        btn.classList.add('bg-emerald-600');
+        
+        setTimeout(() => {
+            showPage('dashboard');
+        }, 1000);
+        
+    } catch (err) {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        alert('Error: ' + err.message);
+    }
+}
+
+// Chart Analysis
 function renderChartAnalysis(content) {
     content.innerHTML = `
         <div class="p-8 max-w-6xl mx-auto fade-in">
@@ -846,58 +1297,21 @@ async function analyzeChart(input) {
 }
 
 function saveAnalysisToJournal(pair, direction, grade) {
-    // Pre-fill the journal form with analysis data
     showPage('journal');
-    // You could implement localStorage or state management here to pre-fill the form
-    alert(`Analysis for ${pair} ${direction} (Grade ${grade}) ready to save to journal!`);
+    setTimeout(() => {
+        const pairInput = document.querySelector('input[name="pair"]');
+        const directionSelect = document.querySelector('select[name="direction"]');
+        const gradeSelect = document.querySelector('select[name="grade"]');
+        
+        if (pairInput) pairInput.value = pair;
+        if (directionSelect) directionSelect.value = direction;
+        if (gradeSelect) gradeSelect.value = grade;
+        
+        alert(`Analysis for ${pair} ${direction} (Grade ${grade}) loaded into journal form!`);
+    }, 500);
 }
 
-async function addTrade(e) {
-    e.preventDefault();
-    const f = e.target;
-    const btn = f.querySelector('button[type="submit"]');
-    const originalText = btn.innerHTML;
-    
-    btn.innerHTML = '<div class="loading-spinner w-5 h-5 border-2"></div> Saving...';
-    btn.disabled = true;
-    
-    try {
-        const formData = new URLSearchParams();
-        formData.append('pair', f.pair.value.toUpperCase());
-        formData.append('direction', f.direction.value);
-        formData.append('pips', f.pips.value);
-        formData.append('grade', f.grade.value);
-        if (f.entry_price.value) formData.append('entry_price', f.entry_price.value);
-        if (f.exit_price.value) formData.append('exit_price', f.exit_price.value);
-        
-        const response = await apiCall('/trades', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: formData.toString()
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(getErrorMessage(data));
-        }
-        
-        // Show success and redirect to dashboard
-        btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Saved!';
-        btn.classList.remove('bg-emerald-500');
-        btn.classList.add('bg-emerald-600');
-        
-        setTimeout(() => {
-            showPage('dashboard');
-        }, 1000);
-        
-    } catch (err) {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        alert('Error: ' + err.message);
-    }
-}
-
+// Discipline Score
 function renderDiscipline(content) {
     content.innerHTML = `
         <div class="p-8 max-w-4xl mx-auto fade-in">
@@ -934,6 +1348,7 @@ function renderDiscipline(content) {
     `;
 }
 
+// AI Mentor
 function renderMentor(content) {
     content.innerHTML = `
         <div class="p-8 max-w-4xl mx-auto h-[calc(100vh-2rem)] flex flex-col fade-in">
@@ -1062,6 +1477,320 @@ async function askMentor() {
     
     lucide.createIcons();
     chat.scrollTop = chat.scrollHeight;
+}
+
+// Blog Section
+async function renderBlog(content) {
+    try {
+        const response = await fetch(`${API_URL}/blog/posts?limit=6`);
+        const posts = await response.json();
+        
+        content.innerHTML = `
+            <div class="p-8 max-w-7xl mx-auto fade-in">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white mb-1">Trading Blog</h2>
+                        <p class="text-slate-400">Insights, strategies, and market analysis</p>
+                    </div>
+                </div>
+                
+                <!-- Featured Post -->
+                ${posts.length > 0 ? `
+                <div class="glass rounded-2xl overflow-hidden mb-8 blog-card cursor-pointer" onclick="showBlogPost('${posts[0].slug}')">
+                    <div class="grid grid-cols-1 lg:grid-cols-2">
+                        <div class="h-64 lg:h-auto bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center">
+                            <i data-lucide="newspaper" class="w-20 h-20 text-white/30"></i>
+                        </div>
+                        <div class="p-8 flex flex-col justify-center">
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs font-medium">${posts[0].category || 'General'}</span>
+                                <span class="text-xs text-slate-500">${new Date(posts[0].created_at).toLocaleDateString()}</span>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white mb-3">${posts[0].title}</h3>
+                            <p class="text-slate-400 mb-4 line-clamp-3">${posts[0].excerpt}</p>
+                            <div class="flex items-center gap-2 text-blue-400 font-medium">
+                                Read Article <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <!-- Post Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    ${posts.slice(1).map(post => `
+                        <div class="glass rounded-xl overflow-hidden blog-card cursor-pointer" onclick="showBlogPost('${post.slug}')">
+                            <div class="h-40 bg-gradient-to-br from-slate-800 to-slate-700 flex items-center justify-center">
+                                <i data-lucide="file-text" class="w-12 h-12 text-slate-600"></i>
+                            </div>
+                            <div class="p-6">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="px-2 py-1 bg-slate-700 text-slate-300 rounded text-xs">${post.category || 'General'}</span>
+                                </div>
+                                <h4 class="font-semibold text-white mb-2 line-clamp-2">${post.title}</h4>
+                                <p class="text-sm text-slate-400 line-clamp-2 mb-4">${post.excerpt}</p>
+                                <div class="flex items-center justify-between text-xs text-slate-500">
+                                    <span>${new Date(post.created_at).toLocaleDateString()}</span>
+                                    <span class="flex items-center gap-1">
+                                        <i data-lucide="eye" class="w-3 h-3"></i> ${post.view_count || 0}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('') || '<div class="col-span-3 text-center py-12 text-slate-500">No blog posts yet</div>'}
+                </div>
+            </div>
+        `;
+    } catch (err) {
+        content.innerHTML = `<div class="p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">Failed to load blog posts</div></div>`;
+    }
+}
+
+async function showBlogPost(slug) {
+    const content = document.getElementById('content');
+    try {
+        const response = await fetch(`${API_URL}/blog/posts/${slug}`);
+        const post = await response.json();
+        
+        if (!response.ok) throw new Error('Post not found');
+        
+        content.innerHTML = `
+            <div class="p-8 max-w-4xl mx-auto fade-in">
+                <button onclick="showPage('blog')" class="mb-6 flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Blog
+                </button>
+                
+                <article class="glass rounded-2xl p-8">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm font-medium">${post.category || 'General'}</span>
+                        <span class="text-slate-500 text-sm">${new Date(post.created_at).toLocaleDateString()}</span>
+                    </div>
+                    
+                    <h1 class="text-4xl font-bold text-white mb-6">${post.title}</h1>
+                    
+                    <div class="prose prose-invert max-w-none text-slate-300 leading-relaxed">
+                        ${post.content.replace(/\n/g, '<br>')}
+                    </div>
+                    
+                    ${post.tags && post.tags.length > 0 ? `
+                    <div class="mt-8 pt-6 border-t border-slate-800">
+                        <div class="flex flex-wrap gap-2">
+                            ${post.tags.map(tag => `
+                                <span class="px-3 py-1 bg-slate-800 text-slate-400 rounded-full text-sm">#${tag}</span>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                </article>
+            </div>
+        `;
+        lucide.createIcons();
+    } catch (err) {
+        content.innerHTML = `<div class="p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">Post not found</div></div>`;
+    }
+}
+
+// Admin Dashboard
+async function renderAdmin(content) {
+    if (!currentUser.is_admin) {
+        content.innerHTML = `<div class="p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">Access denied. Admin only.</div></div>`;
+        return;
+    }
+    
+    try {
+        const [statsRes, postsRes] = await Promise.all([
+            apiCall('/admin/stats'),
+            apiCall('/admin/blog/posts')
+        ]);
+        
+        const stats = await statsRes.json();
+        const posts = await postsRes.json();
+        
+        content.innerHTML = `
+            <div class="p-8 max-w-7xl mx-auto fade-in">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white mb-1">Admin Dashboard</h2>
+                        <p class="text-slate-400">Manage blog posts and view platform stats</p>
+                    </div>
+                    <div class="admin-badge px-4 py-2 rounded-lg text-white font-medium flex items-center gap-2">
+                        <i data-lucide="shield" class="w-4 h-4"></i> Admin
+                    </div>
+                </div>
+                
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="glass rounded-xl p-6">
+                        <div class="text-slate-400 text-sm mb-1">Total Users</div>
+                        <div class="text-3xl font-bold text-white">${stats.users}</div>
+                    </div>
+                    <div class="glass rounded-xl p-6">
+                        <div class="text-slate-400 text-sm mb-1">Total Trades</div>
+                        <div class="text-3xl font-bold text-white">${stats.trades}</div>
+                    </div>
+                    <div class="glass rounded-xl p-6">
+                        <div class="text-slate-400 text-sm mb-1">Blog Posts</div>
+                        <div class="text-3xl font-bold text-white">${stats.blog_posts.total}</div>
+                        <div class="text-xs text-slate-500 mt-1">${stats.blog_posts.published} published</div>
+                    </div>
+                    <div class="glass rounded-xl p-6">
+                        <div class="text-slate-400 text-sm mb-1">Total Views</div>
+                        <div class="text-3xl font-bold text-white">${stats.blog_posts.total_views || 0}</div>
+                    </div>
+                </div>
+                
+                <!-- Blog Management -->
+                <div class="glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold text-white">Blog Management</h3>
+                        <button onclick="showNewPostForm()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white text-sm font-medium flex items-center gap-2">
+                            <i data-lucide="plus" class="w-4 h-4"></i> New Post
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-slate-400 border-b border-slate-700">
+                                    <th class="text-left py-3">Title</th>
+                                    <th class="text-left py-3">Category</th>
+                                    <th class="text-center py-3">Status</th>
+                                    <th class="text-center py-3">Views</th>
+                                    <th class="text-right py-3">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${posts.map(post => `
+                                    <tr class="border-b border-slate-800/50 hover:bg-slate-800/30">
+                                        <td class="py-3">
+                                            <div class="font-medium text-white">${post.title}</div>
+                                            <div class="text-xs text-slate-500">/${post.slug}</div>
+                                        </td>
+                                        <td class="py-3 text-slate-400">${post.category || '-'}</td>
+                                        <td class="py-3 text-center">
+                                            <span class="px-2 py-1 rounded text-xs ${post.published ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400'}">
+                                                ${post.published ? 'Published' : 'Draft'}
+                                            </span>
+                                        </td>
+                                        <td class="py-3 text-center text-slate-400">${post.view_count || 0}</td>
+                                        <td class="py-3 text-right">
+                                            <button onclick="deletePost(${post.id})" class="text-red-400 hover:text-red-300 transition-colors">
+                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join('') || '<tr><td colspan="5" class="py-4 text-center text-slate-500">No posts yet</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- New Post Form (Hidden by default) -->
+                <div id="new-post-form" class="hidden glass rounded-xl p-6 mt-6">
+                    <h3 class="text-lg font-semibold text-white mb-4">Create New Post</h3>
+                    <form onsubmit="createBlogPost(event)" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Title</label>
+                                <input name="title" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Slug (URL)</label>
+                                <input name="slug" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none" placeholder="my-post-title">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Category</label>
+                                <input name="category" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none" placeholder="Strategy">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Tags (comma separated)</label>
+                                <input name="tags" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none" placeholder="forex, psychology, risk">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Content</label>
+                            <textarea name="content" required rows="6" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none"></textarea>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" name="published" id="publish-check" class="w-5 h-5 rounded border-slate-600 bg-slate-800 text-blue-500">
+                            <label for="publish-check" class="text-sm text-slate-300">Publish immediately</label>
+                        </div>
+                        <div class="flex gap-3">
+                            <button type="submit" class="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium">Create Post</button>
+                            <button type="button" onclick="document.getElementById('new-post-form').classList.add('hidden')" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 font-medium">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+    } catch (err) {
+        content.innerHTML = `<div class="p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">${err.message}</div></div>`;
+    }
+}
+
+function showNewPostForm() {
+    document.getElementById('new-post-form').classList.remove('hidden');
+    document.getElementById('new-post-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function createBlogPost(e) {
+    e.preventDefault();
+    const f = e.target;
+    const btn = f.querySelector('button[type="submit"]');
+    const originalText = btn.textContent;
+    
+    btn.textContent = 'Creating...';
+    btn.disabled = true;
+    
+    try {
+        const formData = new URLSearchParams();
+        formData.append('title', f.title.value);
+        formData.append('slug', f.slug.value);
+        formData.append('content', f.content.value);
+        formData.append('category', f.category.value);
+        formData.append('tags', f.tags.value);
+        formData.append('published', f.published.checked);
+        
+        const response = await apiCall('/admin/blog/posts', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData.toString()
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(getErrorMessage(data));
+        }
+        
+        alert('Blog post created successfully!');
+        renderAdmin(document.getElementById('content'));
+        
+    } catch (err) {
+        alert('Error: ' + err.message);
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function deletePost(postId) {
+    if (!confirm('Are you sure you want to delete this post?')) return;
+    
+    try {
+        const response = await apiCall(`/admin/blog/posts/${postId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            renderAdmin(document.getElementById('content'));
+        } else {
+            throw new Error('Failed to delete');
+        }
+    } catch (err) {
+        alert('Error deleting post: ' + err.message);
+    }
 }
 
 lucide.createIcons();
