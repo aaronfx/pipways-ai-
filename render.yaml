@@ -5,17 +5,21 @@ services:
     runtime: static
     buildCommand: ""
     staticPublishPath: ./
+    pullRequestPreviewsEnabled: true
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
+    envVars:
+      - key: API_URL
+        value: https://pipways-api.onrender.com
 
   # Backend (Python API)
   - type: web
     name: pipways-api
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -24,7 +28,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: OPENROUTER_API_KEY
-        sync: false
+        sync: false # You will add your API key manually in the Render Dashboard
       - key: PYTHON_VERSION
         value: "3.11.0"
 
