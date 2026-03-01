@@ -3,12 +3,12 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from datetime import datetime, timedelta
 import asyncpg
 import os
 import base64
 import requests
+import bcrypt
 from typing import Optional
 import json
 
@@ -28,12 +28,6 @@ SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30
 
-# Use bcrypt with truncate to handle passwords longer than 72 bytes
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
-    truncate_error=False  # Automatically truncate passwords to 72 bytes
-)
 security = HTTPBearer()
 
 # OpenRouter Configuration
@@ -53,6 +47,40 @@ async def get_db():
         yield conn
     finally:
         await conn.close()
+
+# Password hashing using bcrypt directly
+def get_password_hash(password: str) -> str:
+    # bcrypt has a 72 byte limit
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    password_bytes = plain_password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+    hashed_bytes = hashed_password.encode('utf-8')
+    return bcrypt.checkpw(password_bytes, hashed_bytes)
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return email
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 # OpenRouter API Helper
 def openrouter_chat(messages, model="anthropic/claude-3.5-sonnet"):
@@ -168,44 +196,19 @@ async def startup():
     """)
     
     # Create default admin user if it doesn't exist
-    existing_admin = await conn.fetchrow("SELECT id FROM users WHERE email = $1", DEFAULT_ADMIN_EMAIL)
-    if not existing_admin:
-        hashed = pwd_context.hash(DEFAULT_ADMIN_PASSWORD)
-        await conn.execute(
-            "INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3)",
-            DEFAULT_ADMIN_EMAIL, hashed, "Admin"
-        )
-        print(f"Default admin created: {DEFAULT_ADMIN_EMAIL} / {DEFAULT_ADMIN_PASSWORD}")
+    try:
+        existing_admin = await conn.fetchrow("SELECT id FROM users WHERE email = $1", DEFAULT_ADMIN_EMAIL)
+        if not existing_admin:
+            hashed = get_password_hash(DEFAULT_ADMIN_PASSWORD)
+            await conn.execute(
+                "INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3)",
+                DEFAULT_ADMIN_EMAIL, hashed, "Admin"
+            )
+            print(f"Default admin created: {DEFAULT_ADMIN_EMAIL} / {DEFAULT_ADMIN_PASSWORD}")
+    except Exception as e:
+        print(f"Error creating admin: {e}")
     
     await conn.close()
-
-# Auth helpers
-def verify_password(plain, hashed):
-    return pwd_context.verify(plain, hashed)
-
-def get_password_hash(password):
-    # Truncate password to 72 bytes before hashing (bcrypt limit)
-    password_bytes = password.encode('utf-8')
-    if len(password_bytes) > 72:
-        password_bytes = password_bytes[:72]
-    return pwd_context.hash(password_bytes.decode('utf-8', errors='ignore'))
-
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    token = credentials.credentials
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        return email
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
 
 # Routes
 @app.get("/health")
@@ -259,13 +262,7 @@ async def login(
         if not user:
             raise HTTPException(status_code=401, detail="Invalid credentials")
         
-        # Verify password (handle truncation)
-        password_bytes = password.encode('utf-8')
-        if len(password_bytes) > 72:
-            password_bytes = password_bytes[:72]
-        truncated_password = password_bytes.decode('utf-8', errors='ignore')
-        
-        if not verify_password(truncated_password, user["password_hash"]):
+        if not verify_password(password, user["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid credentials")
         
         token = create_access_token({"sub": email})
