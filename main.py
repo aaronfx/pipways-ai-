@@ -1,409 +1,390 @@
-<script>
-const API_URL = 'https://pipways-api-nhem.onrender.com';
-let authToken = localStorage.getItem('pipways_token');
-let currentUser = JSON.parse(localStorage.getItem('pipways_user') || '{}');
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, status, Form
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from datetime import datetime, timedelta
+import asyncpg
+import os
+import base64
+import requests
+from typing import Optional
+import json
 
-if (authToken) {
-    showApp();
-} else {
-    showAuth();
-}
+app = FastAPI(title="Pipways API")
 
-function showAuth() {
-    document.getElementById('auth-screen').classList.remove('hidden');
-    document.getElementById('app').classList.add('hidden');
-}
+# CORS - Allow all origins for Render deployment flexibility
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-function showApp() {
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
-    showPage('dashboard');
-}
+# Custom exception handler for validation errors
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)}
+    )
 
-function showAuthTab(tab) {
-    const loginBtn = document.getElementById('tab-login');
-    const registerBtn = document.getElementById('tab-register');
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
+# Security
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_DAYS = 30
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
+
+# OpenRouter Configuration
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
+# Database
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+async def get_db():
+    conn = await asyncpg.connect(DATABASE_URL, ssl="require")
+    try:
+        yield conn
+    finally:
+        await conn.close()
+
+# OpenRouter API Helper
+def openrouter_chat(messages, model="anthropic/claude-3.5-sonnet"):
+    """Call OpenRouter API for chat completions"""
+    if not OPENROUTER_API_KEY:
+        return None, "OpenRouter API key not configured"
     
-    if (tab === 'login') {
-        loginBtn.classList.add('bg-blue-500', 'text-white');
-        loginBtn.classList.remove('bg-slate-800', 'text-slate-400');
-        registerBtn.classList.remove('bg-blue-500', 'text-white');
-        registerBtn.classList.add('bg-slate-800', 'text-slate-400');
-        loginForm.classList.remove('hidden');
-        registerForm.classList.add('hidden');
-    } else {
-        registerBtn.classList.add('bg-blue-500', 'text-white');
-        registerBtn.classList.remove('bg-slate-800', 'text-slate-400');
-        loginBtn.classList.remove('bg-blue-500', 'text-white');
-        loginBtn.classList.add('bg-slate-800', 'text-slate-400');
-        registerForm.classList.remove('hidden');
-        loginForm.classList.add('hidden');
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://pipways-web.onrender.com",
+        "X-Title": "Pipways Trading Platform"
     }
-    document.getElementById('auth-error').classList.add('hidden');
-}
+    
+    data = {
+        "model": model,
+        "messages": messages,
+        "max_tokens": 500
+    }
+    
+    try:
+        response = requests.post(
+            f"{OPENROUTER_BASE_URL}/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=30
+        )
+        response.raise_for_status()
+        result = response.json()
+        return result["choices"][0]["message"]["content"], None
+    except Exception as e:
+        return None, str(e)
 
-// Helper function to extract error message from various error formats
-function getErrorMessage(data) {
-    if (typeof data === 'string') return data;
-    if (data.detail) {
-        if (typeof data.detail === 'string') return data.detail;
-        if (Array.isArray(data.detail)) {
-            return data.detail.map(err => {
-                if (typeof err === 'string') return err;
-                if (err.msg) return err.msg;
-                if (err.message) return err.message;
-                return JSON.stringify(err);
-            }).join(', ');
+def openrouter_vision(image_base64, prompt, model="anthropic/claude-3.5-sonnet"):
+    """Call OpenRouter API for vision/image analysis"""
+    if not OPENROUTER_API_KEY:
+        return None, "OpenRouter API key not configured"
+    
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://pipways-web.onrender.com",
+        "X-Title": "Pipways Trading Platform"
+    }
+    
+    data = {
+        "model": model,
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are a professional forex trading analyst. Analyze trading charts and extract: pair name, direction (LONG/SHORT), entry price, exit price, stop loss, take profit, and grade the trade setup (A, B, or C). Be concise and return structured data."
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{image_base64}"
+                        }
+                    }
+                ]
+            }
+        ],
+        "max_tokens": 500
+    }
+    
+    try:
+        response = requests.post(
+            f"{OPENROUTER_BASE_URL}/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=30
+        )
+        response.raise_for_status()
+        result = response.json()
+        return result["choices"][0]["message"]["content"], None
+    except Exception as e:
+        return None, str(e)
+
+# Startup - create tables
+@app.on_event("startup")
+async def startup():
+    conn = await asyncpg.connect(DATABASE_URL, ssl="require")
+    
+    # Users table
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            name VARCHAR(100),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Trades table
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS trades (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id),
+            pair VARCHAR(10) NOT NULL,
+            direction VARCHAR(10) NOT NULL,
+            entry_price DECIMAL(10,5),
+            exit_price DECIMAL(10,5),
+            pips INTEGER,
+            grade VARCHAR(5),
+            screenshot_url TEXT,
+            ai_analysis TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    await conn.close()
+
+# Auth helpers
+def verify_password(plain, hashed):
+    return pwd_context.verify(plain, hashed)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return email
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+# Routes
+@app.get("/health")
+async def health():
+    return {
+        "status": "ok", 
+        "version": "1.0.0",
+        "openrouter_configured": bool(OPENROUTER_API_KEY)
+    }
+
+@app.post("/auth/register")
+async def register(
+    email: str = Form(...),
+    password: str = Form(...),
+    name: str = Form(...),
+    conn=Depends(get_db)
+):
+    try:
+        # Check if exists
+        existing = await conn.fetchrow("SELECT id FROM users WHERE email = $1", email)
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        
+        # Create user
+        hashed = get_password_hash(password)
+        user_id = await conn.fetchval(
+            "INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id",
+            email, hashed, name
+        )
+        
+        token = create_access_token({"sub": email})
+        return {"access_token": token, "user_id": user_id, "email": email, "name": name}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
+
+@app.post("/auth/login")
+async def login(
+    email: str = Form(...),
+    password: str = Form(...),
+    conn=Depends(get_db)
+):
+    try:
+        user = await conn.fetchrow("SELECT id, password_hash, name FROM users WHERE email = $1", email)
+        if not user or not verify_password(password, user["password_hash"]):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        token = create_access_token({"sub": email})
+        return {"access_token": token, "user_id": user["id"], "name": user["name"], "email": email}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
+
+@app.get("/trades")
+async def get_trades(current_user: str = Depends(get_current_user), conn=Depends(get_db)):
+    try:
+        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
+        trades = await conn.fetch(
+            "SELECT * FROM trades WHERE user_id = $1 ORDER BY created_at DESC",
+            user["id"]
+        )
+        return [dict(t) for t in trades]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch trades: {str(e)}")
+
+@app.post("/trades")
+async def create_trade(
+    pair: str = Form(...),
+    direction: str = Form(...),
+    pips: int = Form(...),
+    grade: str = Form(...),
+    entry_price: Optional[float] = Form(None),
+    exit_price: Optional[float] = Form(None),
+    current_user: str = Depends(get_current_user),
+    conn=Depends(get_db)
+):
+    try:
+        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
+        trade_id = await conn.fetchval("""
+            INSERT INTO trades (user_id, pair, direction, entry_price, exit_price, pips, grade)
+            VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+        """, user["id"], pair, direction, entry_price, exit_price, pips, grade)
+        
+        return {"id": trade_id, "message": "Trade saved"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save trade: {str(e)}")
+
+@app.post("/analyze-chart")
+async def analyze_chart(
+    file: UploadFile = File(...),
+    current_user: str = Depends(get_current_user)
+):
+    """Upload trading chart screenshot for AI analysis via OpenRouter"""
+    
+    try:
+        # Read image
+        contents = await file.read()
+        base64_image = base64.b64encode(contents).decode('utf-8')
+        
+        # Call OpenRouter Vision API
+        analysis, error = openrouter_vision(
+            base64_image,
+            "Analyze this trading chart screenshot. Extract: pair name, direction (LONG/SHORT), entry price, exit price, stop loss, take profit. Grade the setup A/B/C and explain why."
+        )
+        
+        if error:
+            return {
+                "analysis": "AI analysis temporarily unavailable. Please enter trade details manually.",
+                "error": error,
+                "fallback": True
+            }
+        
+        return {
+            "analysis": analysis,
+            "filename": file.filename,
+            "model": "claude-3.5-sonnet"
         }
-        return JSON.stringify(data.detail);
-    }
-    if (data.message) return data.message;
-    if (data.error) return data.error;
-    return JSON.stringify(data);
-}
-
-async function handleLogin(e) {
-    e.preventDefault();
-    const form = e.target;
-    const errorEl = document.getElementById('auth-error');
-    
-    try {
-        const formData = new URLSearchParams();
-        formData.append('email', form.email.value);
-        formData.append('password', form.password.value);
-        
-        const response = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: formData.toString()
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(getErrorMessage(data));
+    except Exception as e:
+        return {
+            "analysis": "Failed to analyze image. Please try again or enter details manually.",
+            "error": str(e),
+            "fallback": True
         }
-        
-        authToken = data.access_token;
-        localStorage.setItem('pipways_token', authToken);
-        localStorage.setItem('pipways_user', JSON.stringify(data));
-        showApp();
-        
-    } catch (err) {
-        errorEl.textContent = err.message;
-        errorEl.classList.remove('hidden');
-    }
-}
 
-async function handleRegister(e) {
-    e.preventDefault();
-    const form = e.target;
-    const errorEl = document.getElementById('auth-error');
+@app.get("/mentor-chat")
+async def mentor_chat(message: str, current_user: str = Depends(get_current_user)):
+    """Get AI mentor response via OpenRouter"""
     
-    try {
-        const formData = new URLSearchParams();
-        formData.append('email', form.email.value);
-        formData.append('password', form.password.value);
-        formData.append('name', form.name.value);
+    try:
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a disciplined forex trading mentor. Focus on risk management, trading psychology, and process adherence. Keep responses concise (2-3 sentences) and actionable. Be encouraging but firm about discipline."
+            },
+            {
+                "role": "user",
+                "content": message
+            }
+        ]
         
-        const response = await fetch(`${API_URL}/auth/register`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: formData.toString()
-        });
+        response, error = openrouter_chat(messages)
         
-        const data = await response.json();
+        if error:
+            # Fallback responses
+            fallbacks = [
+                "Focus on your process, not the outcome. Did you follow your trading plan?",
+                "Risk management is key. Never risk more than 1-2% per trade.",
+                "Emotional trading leads to losses. Take a break if you're feeling frustrated.",
+                "Patience is a trader's greatest virtue. Wait for your setup.",
+                "Review your losing trades objectively. What can you learn?"
+            ]
+            import random
+            return {
+                "response": random.choice(fallbacks),
+                "fallback": True,
+                "error": error
+            }
         
-        if (!response.ok) {
-            throw new Error(getErrorMessage(data));
+        return {
+            "response": response,
+            "model": "claude-3.5-sonnet"
         }
-        
-        authToken = data.access_token;
-        localStorage.setItem('pipways_token', authToken);
-        localStorage.setItem('pipways_user', JSON.stringify(data));
-        showApp();
-        
-    } catch (err) {
-        errorEl.textContent = err.message;
-        errorEl.classList.remove('hidden');
-    }
-}
-
-function logout() {
-    localStorage.removeItem('pipways_token');
-    localStorage.removeItem('pipways_user');
-    authToken = null;
-    currentUser = {};
-    showAuth();
-}
-
-async function apiCall(endpoint, options = {}) {
-    const headers = {
-        'Authorization': `Bearer ${authToken}`,
-        ...options.headers
-    };
-    
-    const response = await fetch(`${API_URL}${endpoint}`, {
-        ...options,
-        headers
-    });
-    
-    if (response.status === 401) {
-        logout();
-        throw new Error('Session expired. Please login again.');
-    }
-    
-    return response;
-}
-
-async function showPage(page) {
-    const content = document.getElementById('content');
-    
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('bg-blue-500/10', 'text-blue-400', 'border-r-2', 'border-blue-500');
-        btn.classList.add('text-slate-400');
-    });
-    
-    if (event && event.target) {
-        event.target.closest('.nav-btn').classList.add('bg-blue-500/10', 'text-blue-400', 'border-r-2', 'border-blue-500');
-        event.target.closest('.nav-btn').classList.remove('text-slate-400');
-    }
-
-    if (page === 'dashboard') {
-        await renderDashboard(content);
-    } else if (page === 'journal') {
-        renderJournal(content);
-    } else if (page === 'discipline') {
-        renderDiscipline(content);
-    } else if (page === 'mentor') {
-        renderMentor(content);
-    }
-    lucide.createIcons();
-}
-
-async function renderDashboard(content) {
-    try {
-        const response = await apiCall('/trades');
-        const trades = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(getErrorMessage(trades));
+    except Exception as e:
+        return {
+            "response": "I'm here to help with your trading psychology. What would you like to discuss?",
+            "fallback": True,
+            "error": str(e)
         }
-        
-        const totalPips = trades.reduce((a, b) => a + (b.pips || 0), 0);
-        const wins = trades.filter(t => t.pips > 0).length;
-        const winRate = trades.length ? (wins / trades.length * 100).toFixed(0) : 0;
-        
-        content.innerHTML = `
-            <h2 class="text-3xl font-bold mb-6">Dashboard</h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div class="glass rounded-xl p-6">
-                    <div class="text-slate-400 text-sm mb-1">Discipline Score</div>
-                    <div class="text-3xl font-bold text-blue-400">87</div>
-                </div>
-                <div class="glass rounded-xl p-6">
-                    <div class="text-slate-400 text-sm mb-1">Win Rate</div>
-                    <div class="text-3xl font-bold text-violet-400">${winRate}%</div>
-                </div>
-                <div class="glass rounded-xl p-6">
-                    <div class="text-slate-400 text-sm mb-1">Total Pips</div>
-                    <div class="text-3xl font-bold ${totalPips>=0?'text-emerald-400':'text-red-400'}">${totalPips>0?'+':''}${totalPips}</div>
-                </div>
-                <div class="glass rounded-xl p-6">
-                    <div class="text-slate-400 text-sm mb-1">Trades</div>
-                    <div class="text-3xl font-bold text-orange-400">${trades.length}</div>
-                </div>
-            </div>
-            <div class="glass rounded-xl p-6">
-                <h3 class="font-semibold mb-4">Recent Trades</h3>
-                <div class="space-y-3">
-                    ${trades.slice(0, 5).map(t => `
-                        <div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">
-                            <div class="flex items-center gap-4">
-                                <span class="text-slate-400 text-sm">${new Date(t.created_at).toLocaleDateString()}</span>
-                                <span class="font-bold">${t.pair}</span>
-                                <span class="px-2 py-1 rounded text-xs ${t.direction==='LONG'?'bg-emerald-500/20 text-emerald-400':'bg-red-500/20 text-red-400'}">${t.direction}</span>
-                                <span class="font-mono ${t.pips>=0?'text-emerald-400':'text-red-400'}">${t.pips>0?'+':''}${t.pips}</span>
-                            </div>
-                            <span class="px-2 py-1 rounded bg-slate-700 text-xs font-bold">${t.grade}</span>
-                        </div>
-                    `).join('') || '<p class="text-slate-500">No trades yet.</p>'}
-                </div>
-            </div>
-        `;
-    } catch (err) {
-        content.innerHTML = `<p class="text-red-400">Error: ${err.message}</p>`;
-    }
-}
 
-function renderJournal(content) {
-    content.innerHTML = `
-        <h2 class="text-3xl font-bold mb-6">Trade Journal</h2>
-        
-        <div class="glass rounded-xl p-8 mb-6 border-2 border-dashed border-slate-700 hover:border-blue-500/50 transition-colors text-center">
-            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <i data-lucide="upload-cloud" class="w-8 h-8 text-blue-400"></i>
-            </div>
-            <p class="text-lg mb-4">Upload Chart for AI Analysis</p>
-            <input type="file" id="chartUpload" accept="image/*" class="hidden" onchange="analyzeChart(this)">
-            <button onclick="document.getElementById('chartUpload').click()" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-medium">Select Chart Image</button>
-            <div id="analysisResult" class="hidden mt-6 text-left"></div>
-        </div>
-        
-        <div class="glass rounded-xl p-6">
-            <h3 class="font-semibold mb-4">Manual Entry</h3>
-            <form onsubmit="addTrade(event)" class="grid grid-cols-2 gap-4">
-                <input name="pair" placeholder="Pair (EURUSD)" class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" required>
-                <select name="direction" class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
-                    <option>LONG</option><option>SHORT</option>
-                </select>
-                <input name="pips" type="number" placeholder="Pips (+/-)" class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" required>
-                <select name="grade" class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
-                    <option>A</option><option>B</option><option>C</option>
-                </select>
-                <button type="submit" class="col-span-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg py-2 font-medium">Add Trade</button>
-            </form>
-        </div>
-    `;
-}
-
-async function analyzeChart(input) {
-    const file = input.files[0];
-    if (!file) return;
+@app.get("/models")
+async def list_models(current_user: str = Depends(get_current_user)):
+    """List available models on OpenRouter"""
+    if not OPENROUTER_API_KEY:
+        return {"error": "OpenRouter not configured"}
     
-    const resultDiv = document.getElementById('analysisResult');
-    resultDiv.classList.remove('hidden');
-    resultDiv.innerHTML = '<p class="text-center text-blue-400">Analyzing with AI...</p>';
-    
-    try {
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        const response = await apiCall('/analyze-chart', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(getErrorMessage(data));
-        }
-        
-        resultDiv.innerHTML = `
-            <div class="bg-slate-800/50 rounded-lg p-4">
-                <h4 class="font-semibold mb-2">AI Analysis</h4>
-                <pre class="text-sm text-slate-300 whitespace-pre-wrap">${data.analysis}</pre>
-            </div>
-        `;
-    } catch (err) {
-        resultDiv.innerHTML = `<p class="text-red-400">Error: ${err.message}</p>`;
-    }
-    lucide.createIcons();
-}
-
-async function addTrade(e) {
-    e.preventDefault();
-    const f = e.target;
-    
-    try {
-        const formData = new URLSearchParams();
-        formData.append('pair', f.pair.value);
-        formData.append('direction', f.direction.value);
-        formData.append('pips', f.pips.value);
-        formData.append('grade', f.grade.value);
-        
-        const response = await apiCall('/trades', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: formData.toString()
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(getErrorMessage(data));
-        }
-        
-        showPage('dashboard');
-    } catch (err) {
-        alert('Error: ' + err.message);
-    }
-}
-
-function renderDiscipline(content) {
-    content.innerHTML = `
-        <h2 class="text-3xl font-bold mb-6">Discipline Score</h2>
-        <div class="glass rounded-xl p-12 text-center">
-            <div class="text-5xl font-bold mb-4">87</div>
-            <p class="text-xl text-slate-300">Disciplined Trader</p>
-        </div>
-    `;
-}
-
-function renderMentor(content) {
-    content.innerHTML = `
-        <h2 class="text-3xl font-bold mb-6">AI Mentor</h2>
-        <div class="glass rounded-xl p-6 h-[calc(100vh-200px)] flex flex-col">
-            <div id="chatHistory" class="flex-1 overflow-y-auto space-y-4 mb-4">
-                <div class="flex gap-3">
-                    <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-                        <i data-lucide="bot" class="w-4 h-4 text-blue-400"></i>
-                    </div>
-                    <div class="bg-slate-800 rounded-lg px-4 py-2 max-w-[80%]">
-                        <p class="text-sm">Hello! I'm your AI trading mentor. Ask me anything about trading psychology and risk management.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="flex gap-2">
-                <input type="text" id="mentorInput" placeholder="Ask your mentor..." class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" onkeypress="if(event.key==='Enter') askMentor()">
-                <button onclick="askMentor()" class="px-6 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg"><i data-lucide="send" class="w-5 h-5"></i></button>
-            </div>
-        </div>
-    `;
-}
-
-async function askMentor() {
-    const input = document.getElementById('mentorInput');
-    const message = input.value;
-    if (!message) return;
-    
-    const chat = document.getElementById('chatHistory');
-    
-    chat.innerHTML += `
-        <div class="flex gap-3 flex-row-reverse">
-            <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center"><i data-lucide="user" class="w-4 h-4"></i></div>
-            <div class="bg-blue-600 rounded-lg px-4 py-2 max-w-[80%]"><p class="text-sm">${message}</p></div>
-        </div>
-    `;
-    
-    input.value = '';
-    chat.scrollTop = chat.scrollHeight;
-    
-    try {
-        const response = await apiCall(`/mentor-chat?message=${encodeURIComponent(message)}`);
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(getErrorMessage(data));
-        }
-        
-        chat.innerHTML += `
-            <div class="flex gap-3">
-                <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center"><i data-lucide="bot" class="w-4 h-4 text-blue-400"></i></div>
-                <div class="bg-slate-800 rounded-lg px-4 py-2 max-w-[80%]"><p class="text-sm">${data.response}</p></div>
-            </div>
-        `;
-        
-    } catch (err) {
-        chat.innerHTML += `<div class="text-red-400 text-sm">Error: ${err.message}</div>`;
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "HTTP-Referer": "https://pipways-web.onrender.com",
+        "X-Title": "Pipways Trading Platform"
     }
     
-    lucide.createIcons();
-    chat.scrollTop = chat.scrollHeight;
-}
+    try:
+        response = requests.get(
+            "https://openrouter.ai/api/v1/models",
+            headers=headers,
+            timeout=10
+        )
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        return {"error": str(e)}
 
-lucide.createIcons();
-</script>
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
