@@ -10,7 +10,7 @@ services:
         source: /*
         destination: /index.html
 
-  # Backend (Python API)
+  # Backend (Python API) - ADD THIS
   - type: web
     name: pipways-api
     runtime: python
@@ -28,6 +28,7 @@ services:
       - key: PYTHON_VERSION
         value: "3.11.0"
 
+# Database - ADD THIS
 databases:
   - name: pipways-db
     databaseName: pipways
