@@ -12,10 +12,11 @@ from typing import Optional
 
 app = FastAPI(title="Pipways API")
 
-# CORS for frontend
+# CORS - Allow all origins for Render deployment flexibility
+# TODO: Restrict to specific domains in production: ["https://yourdomain.com", "http://localhost:8000"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://pipways-web.onrender.com", "http://localhost:8000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
