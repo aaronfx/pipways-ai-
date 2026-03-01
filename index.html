@@ -123,10 +123,7 @@
 
 <script>
 // TO THIS (if you haven't deployed the backend yet):
-const API_URL = window.location.hostname === 'localhost' 
-    ? 'http://127.0.0.1:8000' 
-    : 'https://pipways-api-nhem.onrender.com'; // Use your ACTUAL backend URL from Render
-
+const API_URL = 'https://pipways-api-nhem.onrender.com';
 let authToken=localStorage.getItem('pipways_token');
 let currentUser=JSON.parse(localStorage.getItem('pipways_user') || '{}');
 
