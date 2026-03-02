@@ -622,7 +622,7 @@ async def health_check():
         return {
             "status": "healthy",
             "timestamp": datetime.utcnow().isoformat(),
-            "database": "connected"
+            "database": "connected" if db_pool else "not_connected"
         }
     except Exception as e:
         logger.error(f"Health check failed: {e}")
@@ -635,6 +635,27 @@ async def health_check():
             }
         )
 
+@app.get("/debug")
+async def debug_info():
+    """Debug endpoint - returns system info"""
+    return {
+        "db_pool_initialized": db_pool is not None,
+        "database_url_set": bool(os.getenv("DATABASE_URL")),
+        "secret_key_set": bool(os.getenv("SECRET_KEY")),
+        "openrouter_key_set": bool(os.getenv("OPENROUTER_API_KEY")),
+        "environment": os.getenv("ENVIRONMENT", "unknown"),
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+@app.post("/test/register")
+async def test_register():
+    """Test endpoint for registration debugging"""
+    return {
+        "message": "Test endpoint working",
+        "db_connected": db_pool is not None,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
 # =============================================================================
 # AUTHENTICATION ENDPOINTS
 # =============================================================================
@@ -646,13 +667,14 @@ async def register(
     name: str = Form(...)
 ):
     """Register a new user with 3-day trial"""
+    # Check database connection
+    if db_pool is None:
+        raise HTTPException(status_code=503, detail="Database not connected. Please try again later.")
+    
     try:
         # Validate email format
-        try:
-            email = email.lower().strip()
-            if '@' not in email:
-                raise HTTPException(status_code=400, detail="Invalid email format")
-        except:
+        email = email.lower().strip()
+        if '@' not in email or '.' not in email.split('@')[1]:
             raise HTTPException(status_code=400, detail="Invalid email format")
         
         # Validate password length
@@ -699,9 +721,14 @@ async def register(
             }
     except HTTPException:
         raise
+    except asyncpg.exceptions.UniqueViolationError:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    except asyncpg.exceptions.ForeignKeyViolationError as e:
+        logger.error(f"Registration FK error: {e}")
+        raise HTTPException(status_code=400, detail="Invalid data provided")
     except Exception as e:
-        logger.error(f"Registration error: {e}")
-        raise HTTPException(status_code=500, detail="Registration failed")
+        logger.error(f"Registration error: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)[:100]}")
 
 @app.post("/auth/login", response_model=TokenResponse)
 async def login(
@@ -709,6 +736,10 @@ async def login(
     password: str = Form(...)
 ):
     """Login and return JWT token"""
+    # Check database connection
+    if db_pool is None:
+        raise HTTPException(status_code=503, detail="Database not connected. Please try again later.")
+    
     try:
         # Normalize email
         email = email.lower().strip()
@@ -739,8 +770,8 @@ async def login(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Login error: {e}")
-        raise HTTPException(status_code=500, detail="Login failed")
+        logger.error(f"Login error: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=500, detail=f"Login failed: {str(e)[:100]}")
 
 # =============================================================================
 # TRADES ENDPOINTS
