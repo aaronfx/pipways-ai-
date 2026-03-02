@@ -1,7 +1,7 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, status, Form
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, status, Form, BackgroundTasks, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from jose import JWTError, jwt
 from datetime import datetime, timedelta, date
 import asyncpg
@@ -11,17 +11,21 @@ import requests
 import bcrypt
 import json
 import re
-from typing import Optional, List
+import io
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
 
 app = FastAPI(title="Pipways API")
 
-# CORS - Update with your custom domain when ready
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://pipways-web-nhem.onrender.com",
-        "https://www.pipways.com",  # Your custom domain
+        "https://pipways-web.onrender.com",
+        "https://www.pipways.com",
         "https://pipways.com",
         "http://localhost:8000",
     ],
@@ -36,16 +40,23 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30
 security = HTTPBearer()
 
-# OpenRouter Configuration
+# API Keys
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "sk_test_your_key_here")
+PAYSTACK_PUBLIC_KEY = os.getenv("PAYSTACK_PUBLIC_KEY", "pk_test_your_key_here")
+ZOOM_API_KEY = os.getenv("ZOOM_API_KEY", "your_zoom_key")
+ZOOM_API_SECRET = os.getenv("ZOOM_API_SECRET", "your_zoom_secret")
 
 # Database
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Default admin credentials
+# Default admin
 DEFAULT_ADMIN_EMAIL = "admin@pipways.com"
 DEFAULT_ADMIN_PASSWORD = "admin123"
+
+# Subscription settings
+SUBSCRIPTION_PRICE = 15.00  # USD
+FREE_TRIAL_DAYS = 3
 
 async def get_db():
     conn = await asyncpg.connect(DATABASE_URL, ssl="require")
@@ -54,7 +65,6 @@ async def get_db():
     finally:
         await conn.close()
 
-# Password hashing
 def get_password_hash(password: str) -> str:
     password_bytes = password.encode('utf-8')
     if len(password_bytes) > 72:
@@ -74,1134 +84,1259 @@ def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
+        user_id = payload.get("sub")
+        if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-        return email
+        return int(user_id)
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    email = await get_current_user(credentials)
-    if email != DEFAULT_ADMIN_EMAIL:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return email
+async def get_current_user(user_id: int = Depends(verify_token), db=Depends(get_db)):
+    row = await db.fetchrow("SELECT * FROM users WHERE id = $1", user_id)
+    if not row:
+        raise HTTPException(status_code=401, detail="User not found")
+    return dict(row)
 
-def openrouter_chat(messages, model="anthropic/claude-3.5-sonnet"):
-    """Call OpenRouter API for chat completions"""
-    if not OPENROUTER_API_KEY:
-        return None, "OpenRouter API key not configured"
-    
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://pipways-web.onrender.com",
-        "X-Title": "Pipways Trading Platform"
-    }
-    
-    data = {
-        "model": model,
-        "messages": messages,
-        "max_tokens": 2000
-    }
-    
-    try:
-        response = requests.post(
-            f"{OPENROUTER_BASE_URL}/chat/completions",
-            headers=headers,
-            json=data,
-            timeout=60
-        )
-        response.raise_for_status()
-        result = response.json()
-        return result["choices"][0]["message"]["content"], None
-    except Exception as e:
-        return None, str(e)
+def is_subscription_active(user: dict) -> bool:
+    if user.get("is_admin"):
+        return True
+    if user.get("subscription_status") == "active":
+        return True
+    trial_end = user.get("trial_ends_at")
+    if trial_end and trial_end > datetime.utcnow():
+        return True
+    return False
 
-def openrouter_vision(image_base64, prompt, model="anthropic/claude-3.5-sonnet"):
-    """Call OpenRouter API for vision/image analysis"""
-    if not OPENROUTER_API_KEY:
-        return None, "OpenRouter API key not configured"
-    
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://pipways-web.onrender.com",
-        "X-Title": "Pipways Trading Platform"
-    }
-    
-    data = {
-        "model": model,
-        "messages": [
-            {
-                "role": "system",
-                "content": """You are a professional forex trading analyst. Analyze the provided chart and respond in this exact JSON format:
-{
-    "pair": "EURUSD",
-    "direction": "LONG/SHORT",
-    "setup_quality": "A/B/C",
-    "entry_price": "1.0850",
-    "stop_loss": "1.0820",
-    "take_profit": "1.0900",
-    "risk_reward": "1:1.67",
-    "analysis": "Clear trendline break with volume confirmation...",
-    "key_levels": ["1.0850", "1.0820", "1.0900"],
-    "recommendations": "Wait for pullback to 1.0840 before entering..."
-}"""
-            },
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/png;base64,{image_base64}"
-                        }
-                    }
-                ]
-            }
-        ],
-        "max_tokens": 1000
-    }
-    
-    try:
-        response = requests.post(
-            f"{OPENROUTER_BASE_URL}/chat/completions",
-            headers=headers,
-            json=data,
-            timeout=30
-        )
-        response.raise_for_status()
-        result = response.json()
-        return result["choices"][0]["message"]["content"], None
-    except Exception as e:
-        return None, str(e)
+def is_trial_active(user: dict) -> bool:
+    trial_end = user.get("trial_ends_at")
+    if trial_end and trial_end > datetime.utcnow():
+        return True
+    return False
 
-def parse_analysis_response(analysis_text):
-    """Parse AI response into structured format"""
-    try:
-        json_match = re.search(r'\{.*\}', analysis_text, re.DOTALL)
-        if json_match:
-            return json.loads(json_match.group())
-    except:
-        pass
-    
-    return {
-        "pair": "Unknown",
-        "direction": "Unknown",
-        "setup_quality": "N/A",
-        "entry_price": "N/A",
-        "stop_loss": "N/A",
-        "take_profit": "N/A",
-        "risk_reward": "N/A",
-        "analysis": analysis_text,
-        "key_levels": [],
-        "recommendations": "Please review manually"
-    }
-
-# Startup - create tables and default admin
 @app.on_event("startup")
 async def startup():
     conn = await asyncpg.connect(DATABASE_URL, ssl="require")
-    
-    # Users table
-    await conn.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            email VARCHAR(255) UNIQUE NOT NULL,
-            password_hash VARCHAR(255) NOT NULL,
-            name VARCHAR(100),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    # Trades table - with checklist columns
-    await conn.execute("""
-        CREATE TABLE IF NOT EXISTS trades (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id),
-            pair VARCHAR(10) NOT NULL,
-            direction VARCHAR(10) NOT NULL,
-            entry_price DECIMAL(10,5),
-            exit_price DECIMAL(10,5),
-            pips DECIMAL(10,2),
-            grade VARCHAR(5),
-            screenshot_url TEXT,
-            ai_analysis TEXT,
-            checklist_completed BOOLEAN DEFAULT FALSE,
-            checklist_data JSONB,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    # Check if checklist columns exist, add if not
     try:
+        # Users table
         await conn.execute("""
-            ALTER TABLE trades 
-            ADD COLUMN IF NOT EXISTS checklist_completed BOOLEAN DEFAULT FALSE
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                name VARCHAR(255),
+                is_admin BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                subscription_status VARCHAR(20) DEFAULT 'trial',
+                subscription_ends_at TIMESTAMP,
+                trial_ends_at TIMESTAMP,
+                paystack_customer_code VARCHAR(255),
+                paystack_subscription_code VARCHAR(255)
+            )
         """)
+        
+        # Trades table
         await conn.execute("""
-            ALTER TABLE trades 
-            ADD COLUMN IF NOT EXISTS checklist_data JSONB
+            CREATE TABLE IF NOT EXISTS trades (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                pair VARCHAR(10) NOT NULL,
+                direction VARCHAR(10) NOT NULL,
+                pips NUMERIC,
+                grade VARCHAR(2),
+                entry_price NUMERIC,
+                exit_price NUMERIC,
+                checklist_completed BOOLEAN DEFAULT FALSE,
+                checklist_data JSONB,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
         """)
-    except Exception as e:
-        print(f"Note: checklist columns may already exist: {e}")
-    
-    # Chart analyses table
-    await conn.execute("""
-        CREATE TABLE IF NOT EXISTS chart_analyses (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id),
-            image_data TEXT,
-            analysis_result JSONB,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    # Performance analyses table - NEW
-    await conn.execute("""
-        CREATE TABLE IF NOT EXISTS performance_analyses (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id),
-            file_name VARCHAR(255),
-            file_data TEXT,
-            analysis_result JSONB,
-            trader_type VARCHAR(50),
-            performance_score INTEGER,
-            risk_appetite VARCHAR(20),
-            recommendations TEXT[],
-            courses_recommended JSONB,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    # Blog posts table
-    await conn.execute("""
-        CREATE TABLE IF NOT EXISTS blog_posts (
-            id SERIAL PRIMARY KEY,
-            title VARCHAR(255) NOT NULL,
-            slug VARCHAR(255) UNIQUE NOT NULL,
-            content TEXT NOT NULL,
-            excerpt TEXT,
-            category VARCHAR(50),
-            tags TEXT[],
-            featured_image TEXT,
-            published BOOLEAN DEFAULT FALSE,
-            author_email VARCHAR(255),
-            view_count INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    # Checklist templates table
-    await conn.execute("""
-        CREATE TABLE IF NOT EXISTS checklist_templates (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
-            items JSONB NOT NULL,
-            is_default BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    # Create default admin user if it doesn't exist
-    try:
-        existing_admin = await conn.fetchrow("SELECT id FROM users WHERE email = $1", DEFAULT_ADMIN_EMAIL)
-        if not existing_admin:
-            hashed = get_password_hash(DEFAULT_ADMIN_PASSWORD)
-            await conn.execute(
-                "INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3)",
-                DEFAULT_ADMIN_EMAIL, hashed, "Admin"
+        
+        # Blog posts table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS blog_posts (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500) NOT NULL,
+                slug VARCHAR(500) UNIQUE NOT NULL,
+                content TEXT,
+                excerpt TEXT,
+                category VARCHAR(100),
+                tags TEXT[],
+                featured_image TEXT,
+                published BOOLEAN DEFAULT FALSE,
+                view_count INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-            print(f"Default admin created: {DEFAULT_ADMIN_EMAIL} / {DEFAULT_ADMIN_PASSWORD}")
-    except Exception as e:
-        print(f"Error creating admin: {e}")
-    
-    # Create default checklist template if not exists
-    try:
-        existing_checklist = await conn.fetchrow("SELECT id FROM checklist_templates WHERE is_default = TRUE")
-        if not existing_checklist:
-            default_items = [
-                {"id": 1, "text": "I have a clear entry strategy based on my trading plan", "required": True},
-                {"id": 2, "text": "I have identified and set a definitive stop loss level", "required": True},
-                {"id": 3, "text": "I have a realistic take profit target (minimum 1:1.5 R:R)", "required": True},
-                {"id": 4, "text": "I have calculated position size (risking only 1-2% of account)", "required": True},
-                {"id": 5, "text": "I am not trading out of FOMO, revenge, or emotion", "required": True},
-                {"id": 6, "text": "I have checked the economic calendar for high-impact news", "required": False},
-                {"id": 7, "text": "This setup meets my minimum A or B grade criteria", "required": True},
-                {"id": 8, "text": "I have analyzed the higher timeframe trend direction", "required": False}
-            ]
-            await conn.execute(
-                "INSERT INTO checklist_templates (name, items, is_default) VALUES ($1, $2, $3)",
-                "Standard Pre-Trade Checklist", json.dumps(default_items), True
+        """)
+        
+        # Performance analyses table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS performance_analyses (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                file_name VARCHAR(255),
+                file_data TEXT,
+                analysis_result JSONB,
+                trader_type VARCHAR(50),
+                performance_score INTEGER,
+                risk_appetite VARCHAR(20),
+                recommendations TEXT[],
+                courses_recommended JSONB,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-            print("Default checklist template created")
-    except Exception as e:
-        print(f"Error creating checklist template: {e}")
-    
-    await conn.close()
+        """)
+        
+        # Courses table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS courses (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500) NOT NULL,
+                description TEXT,
+                level VARCHAR(20) NOT NULL, -- beginner, intermediate, advanced
+                thumbnail_url TEXT,
+                lessons JSONB DEFAULT '[]',
+                quiz_questions JSONB DEFAULT '[]',
+                passing_score INTEGER DEFAULT 70,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # User courses progress table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS user_courses (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                course_id INTEGER REFERENCES courses(id),
+                progress_percentage INTEGER DEFAULT 0,
+                completed_lessons INTEGER[] DEFAULT '{}',
+                quiz_score INTEGER,
+                quiz_attempts INTEGER DEFAULT 0,
+                certificate_issued BOOLEAN DEFAULT FALSE,
+                certificate_url TEXT,
+                started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP,
+                last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, course_id)
+            )
+        """)
+        
+        # Webinars table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS webinars (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500) NOT NULL,
+                description TEXT,
+                level VARCHAR(20) NOT NULL, -- beginner, intermediate, advanced
+                scheduled_at TIMESTAMP NOT NULL,
+                zoom_meeting_id VARCHAR(100),
+                zoom_join_url TEXT,
+                zoom_start_url TEXT,
+                recording_url TEXT,
+                is_recorded BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Webinar registrations table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS webinar_registrations (
+                id SERIAL PRIMARY KEY,
+                webinar_id INTEGER REFERENCES webinars(id),
+                user_id INTEGER REFERENCES users(id),
+                registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                attended BOOLEAN DEFAULT FALSE,
+                UNIQUE(webinar_id, user_id)
+            )
+        """)
+        
+        # Payments table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS payments (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                paystack_reference VARCHAR(255),
+                amount NUMERIC,
+                status VARCHAR(50),
+                paid_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Create default admin
+        admin_exists = await conn.fetchval(
+            "SELECT 1 FROM users WHERE email = $1", DEFAULT_ADMIN_EMAIL
+        )
+        if not admin_exists:
+            hashed_pw = get_password_hash(DEFAULT_ADMIN_PASSWORD)
+            await conn.execute("""
+                INSERT INTO users (email, password_hash, name, is_admin, subscription_status)
+                VALUES ($1, $2, 'Admin', TRUE, 'active')
+            """, DEFAULT_ADMIN_EMAIL, hashed_pw)
+            
+        # Insert sample courses if none exist
+        courses_exist = await conn.fetchval("SELECT COUNT(*) FROM courses")
+        if courses_exist == 0:
+            await conn.execute("""
+                INSERT INTO courses (title, description, level, thumbnail_url, lessons, quiz_questions)
+                VALUES 
+                ('Forex Fundamentals', 'Learn the basics of forex trading', 'beginner', 'https://img.youtube.com/vi/sample1/0.jpg', 
+                 '[{"id": 1, "title": "What is Forex?", "type": "video", "content": "https://youtube.com/embed/sample1", "duration_minutes": 15}]',
+                 '[{"id": 1, "question": "What does forex stand for?", "options": ["Foreign exchange", "Fortune exchange", "For export"], "correct": 0}]'),
+                ('Technical Analysis Mastery', 'Advanced chart patterns and indicators', 'intermediate', 'https://img.youtube.com/vi/sample2/0.jpg',
+                 '[{"id": 1, "title": "Support and Resistance", "type": "video", "content": "https://youtube.com/embed/sample2", "duration_minutes": 20}]',
+                 '[{"id": 1, "question": "What indicates a strong support level?", "options": ["Multiple touches", "Single touch", "No touches"], "correct": 0}]'),
+                ('Institutional Trading', 'How banks and institutions trade', 'advanced', 'https://img.youtube.com/vi/sample3/0.jpg',
+                 '[{"id": 1, "title": "Smart Money Concepts", "type": "video", "content": "https://youtube.com/embed/sample3", "duration_minutes": 25}]',
+                 '[{"id": 1, "question": "What is order block?", "options": ["Last opposing candle before move", "Any candle", "First candle"], "correct": 0}]')
+            """)
+            
+    finally:
+        await conn.close()
 
-# Routes
-@app.get("/health")
-async def health():
-    return {
-        "status": "ok", 
-        "version": "1.1.0",
-        "openrouter_configured": bool(OPENROUTER_API_KEY)
-    }
-
+# Auth endpoints
 @app.post("/auth/register")
 async def register(
     email: str = Form(...),
     password: str = Form(...),
     name: str = Form(...),
-    conn=Depends(get_db)
+    db=Depends(get_db)
 ):
-    try:
-        existing = await conn.fetchrow("SELECT id FROM users WHERE email = $1", email)
-        if existing:
-            raise HTTPException(status_code=400, detail="Email already registered")
-        
-        password_bytes = password.encode('utf-8')
-        if len(password_bytes) > 72:
-            raise HTTPException(status_code=400, detail="Password is too long (max 72 characters)")
-        
-        hashed = get_password_hash(password)
-        user_id = await conn.fetchval(
-            "INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id",
-            email, hashed, name
-        )
-        
-        token = create_access_token({"sub": email})
-        return {"access_token": token, "user_id": user_id, "email": email, "name": name}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
-
-@app.post("/auth/login")
-async def login(
-    email: str = Form(...),
-    password: str = Form(...),
-    conn=Depends(get_db)
-):
-    try:
-        user = await conn.fetchrow("SELECT id, password_hash, name FROM users WHERE email = $1", email)
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-        
-        if not verify_password(password, user["password_hash"]):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-        
-        token = create_access_token({"sub": email})
-        return {"access_token": token, "user_id": user["id"], "name": user["name"], "email": email, "is_admin": email == DEFAULT_ADMIN_EMAIL}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
-
-# Checklist Routes
-@app.get("/checklist/template")
-async def get_checklist_template(conn=Depends(get_db)):
-    """Get the default pre-trade checklist template"""
-    try:
-        template = await conn.fetchrow(
-            "SELECT * FROM checklist_templates WHERE is_default = TRUE LIMIT 1"
-        )
-        if not template:
-            # Return hardcoded default if none in DB
-            return {
-                "id": 0,
-                "name": "Standard Pre-Trade Checklist",
-                "items": [
-                    {"id": 1, "text": "I have a clear entry strategy based on my trading plan", "required": True},
-                    {"id": 2, "text": "I have identified and set a definitive stop loss level", "required": True},
-                    {"id": 3, "text": "I have a realistic take profit target (minimum 1:1.5 R:R)", "required": True},
-                    {"id": 4, "text": "I have calculated position size (risking only 1-2% of account)", "required": True},
-                    {"id": 5, "text": "I am not trading out of FOMO, revenge, or emotion", "required": True},
-                    {"id": 6, "text": "I have checked the economic calendar for high-impact news", "required": False},
-                    {"id": 7, "text": "This setup meets my minimum A or B grade criteria", "required": True},
-                    {"id": 8, "text": "I have analyzed the higher timeframe trend direction", "required": False}
-                ]
-            }
-        
-        # Parse items if stored as JSON string
-        items = template["items"]
-        if isinstance(items, str):
-            items = json.loads(items)
-        
-        return {
-            "id": template["id"],
-            "name": template["name"],
-            "items": items,
-            "is_default": template["is_default"]
-        }
-    except Exception as e:
-        # Return hardcoded fallback on error
-        return {
-            "id": 0,
-            "name": "Standard Pre-Trade Checklist",
-            "items": [
-                {"id": 1, "text": "I have a clear entry strategy based on my trading plan", "required": True},
-                {"id": 2, "text": "I have identified and set a definitive stop loss level", "required": True},
-                {"id": 3, "text": "I have a realistic take profit target (minimum 1:1.5 R:R)", "required": True},
-                {"id": 4, "text": "I have calculated position size (risking only 1-2% of account)", "required": True},
-                {"id": 5, "text": "I am not trading out of FOMO, revenge, or emotion", "required": True},
-                {"id": 6, "text": "I have checked the economic calendar for high-impact news", "required": False},
-                {"id": 7, "text": "This setup meets my minimum A or B grade criteria", "required": True},
-                {"id": 8, "text": "I have analyzed the higher timeframe trend direction", "required": False}
-            ]
-        }
-
-# Analytics Routes
-@app.get("/analytics/dashboard")
-async def get_analytics(current_user: str = Depends(get_current_user), conn=Depends(get_db)):
-    """Get comprehensive trading analytics"""
-    try:
-        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
-        user_id = user["id"]
-        
-        # Get all trades
-        trades = await conn.fetch(
-            "SELECT * FROM trades WHERE user_id = $1 ORDER BY created_at ASC",
-            user_id
-        )
-        
-        if not trades:
-            return {
-                "total_trades": 0,
-                "win_rate": 0,
-                "total_pips": 0,
-                "avg_pips_per_trade": 0,
-                "profit_factor": 0,
-                "winning_streak": 0,
-                "losing_streak": 0,
-                "current_streak": 0,
-                "best_trade": None,
-                "worst_trade": None,
-                "avg_risk_reward": 0,
-                "grade_distribution": {"A": 0, "B": 0, "C": 0},
-                "pair_performance": [],
-                "monthly_performance": [],
-                "equity_curve": [],
-                "checklist_adherence": 0
-            }
-        
-        # Basic metrics
-        total_trades = len(trades)
-        winning_trades = [t for t in trades if t["pips"] and t["pips"] > 0]
-        losing_trades = [t for t in trades if t["pips"] and t["pips"] < 0]
-        win_count = len(winning_trades)
-        loss_count = len(losing_trades)
-        
-        win_rate = (win_count / total_trades * 100) if total_trades > 0 else 0
-        total_pips = sum(t["pips"] or 0 for t in trades)
-        avg_pips = total_pips / total_trades if total_trades > 0 else 0
-        
-        # Profit factor
-        total_wins = sum(t["pips"] for t in winning_trades if t["pips"])
-        total_losses = abs(sum(t["pips"] for t in losing_trades if t["pips"]))
-        profit_factor = total_wins / total_losses if total_losses > 0 else float('inf')
-        
-        # Streak calculation
-        current_streak = 0
-        streak_type = None
-        winning_streak = 0
-        losing_streak = 0
-        temp_win_streak = 0
-        temp_loss_streak = 0
-        
-        for trade in trades:
-            if trade["pips"] and trade["pips"] > 0:
-                if streak_type == "loss":
-                    temp_loss_streak = 0
-                streak_type = "win"
-                temp_win_streak += 1
-                winning_streak = max(winning_streak, temp_win_streak)
-                temp_loss_streak = 0
-            elif trade["pips"] and trade["pips"] < 0:
-                if streak_type == "win":
-                    temp_win_streak = 0
-                streak_type = "loss"
-                temp_loss_streak += 1
-                losing_streak = max(losing_streak, temp_loss_streak)
-                temp_win_streak = 0
-        
-        current_streak = temp_win_streak if streak_type == "win" else -temp_loss_streak
-        
-        # Best/worst trades
-        sorted_by_pips = sorted(trades, key=lambda x: x["pips"] or 0, reverse=True)
-        best_trade = dict(sorted_by_pips[0]) if sorted_by_pips else None
-        worst_trade = dict(sorted_by_pips[-1]) if sorted_by_pips else None
-        
-        # Grade distribution
-        grade_dist = {"A": 0, "B": 0, "C": 0}
-        for t in trades:
-            if t["grade"] in grade_dist:
-                grade_dist[t["grade"]] += 1
-        
-        # Pair performance
-        pair_stats = {}
-        for t in trades:
-            pair = t["pair"]
-            if pair not in pair_stats:
-                pair_stats[pair] = {"trades": 0, "wins": 0, "pips": 0}
-            pair_stats[pair]["trades"] += 1
-            if t["pips"] and t["pips"] > 0:
-                pair_stats[pair]["wins"] += 1
-            pair_stats[pair]["pips"] += t["pips"] or 0
-        
-        pair_performance = [
-            {
-                "pair": pair,
-                "trades": stats["trades"],
-                "win_rate": round(stats["wins"] / stats["trades"] * 100, 1),
-                "total_pips": round(stats["pips"], 2)
-            }
-            for pair, stats in pair_stats.items()
-        ]
-        pair_performance.sort(key=lambda x: x["total_pips"], reverse=True)
-        
-        # Monthly performance
-        monthly_stats = {}
-        for t in trades:
-            month_key = t["created_at"].strftime("%Y-%m")
-            if month_key not in monthly_stats:
-                monthly_stats[month_key] = {"trades": 0, "wins": 0, "pips": 0}
-            monthly_stats[month_key]["trades"] += 1
-            if t["pips"] and t["pips"] > 0:
-                monthly_stats[month_key]["wins"] += 1
-            monthly_stats[month_key]["pips"] += t["pips"] or 0
-        
-        monthly_performance = [
-            {
-                "month": month,
-                "trades": stats["trades"],
-                "win_rate": round(stats["wins"] / stats["trades"] * 100, 1) if stats["trades"] > 0 else 0,
-                "pips": round(stats["pips"], 2)
-            }
-            for month, stats in sorted(monthly_stats.items())
-        ]
-        
-        # Equity curve (cumulative pips)
-        equity_curve = []
-        running_total = 0
-        for t in trades:
-            running_total += t["pips"] or 0
-            equity_curve.append({
-                "date": t["created_at"].isoformat(),
-                "cumulative_pips": round(running_total, 2),
-                "trade_pips": round(t["pips"] or 0, 2)
-            })
-        
-        # Checklist adherence - handle case where column might not exist
-        try:
-            checklist_completed = sum(1 for t in trades if t.get("checklist_completed"))
-            checklist_adherence = (checklist_completed / total_trades * 100) if total_trades > 0 else 0
-        except:
-            checklist_adherence = 0
-        
-        return {
-            "total_trades": total_trades,
-            "win_rate": round(win_rate, 1),
-            "total_pips": round(total_pips, 2),
-            "avg_pips_per_trade": round(avg_pips, 2),
-            "profit_factor": round(profit_factor, 2) if profit_factor != float('inf') else "∞",
-            "winning_streak": winning_streak,
-            "losing_streak": losing_streak,
-            "current_streak": current_streak,
-            "best_trade": best_trade,
-            "worst_trade": worst_trade,
-            "avg_risk_reward": 0,
-            "grade_distribution": grade_dist,
-            "pair_performance": pair_performance,
-            "monthly_performance": monthly_performance,
-            "equity_curve": equity_curve,
-            "checklist_adherence": round(checklist_adherence, 1)
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Analytics error: {str(e)}")
-
-# NEW: Performance Analysis Routes
-@app.post("/performance/analyze")
-async def analyze_performance(
-    file: UploadFile = File(...),
-    current_user: str = Depends(get_current_user),
-    conn=Depends(get_db)
-):
-    """Upload trading history for AI performance analysis"""
-    try:
-        contents = await file.read()
-        
-        # Handle both images and text files
-        file_ext = file.filename.split('.')[-1].lower()
-        is_image = file_ext in ['png', 'jpg', 'jpeg', 'gif', 'webp']
-        
-        if is_image:
-            base64_data = base64.b64encode(contents).decode('utf-8')
-            file_content = f"[IMAGE_DATA:{base64_data}]"
-        else:
-            # Text/CSV file
-            try:
-                file_content = contents.decode('utf-8')
-            except:
-                file_content = base64.b64encode(contents).decode('utf-8')
-        
-        # Get user's trade history for context
-        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
-        user_id = user["id"]
-        
-        trades = await conn.fetch(
-            "SELECT * FROM trades WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50",
-            user_id
-        )
-        
-        trade_summary = {
-            "total_trades": len(trades),
-            "win_rate": 0,
-            "avg_pips": 0,
-            "favorite_pairs": []
-        }
-        
-        if trades:
-            wins = [t for t in trades if t["pips"] and t["pips"] > 0]
-            trade_summary["win_rate"] = round(len(wins) / len(trades) * 100, 1)
-            trade_summary["avg_pips"] = round(sum(t["pips"] or 0 for t in trades) / len(trades), 2)
-            
-            pairs = {}
-            for t in trades:
-                pairs[t["pair"]] = pairs.get(t["pair"], 0) + 1
-            trade_summary["favorite_pairs"] = sorted(pairs.items(), key=lambda x: x[1], reverse=True)[:3]
-        
-        # AI Analysis Prompt
-        messages = [
-            {
-                "role": "system",
-                "content": """You are an expert trading performance analyst. Analyze the trader's history and provide a comprehensive assessment. Respond in this exact JSON format:
-{
-    "trader_type": "Scalper/Day Trader/Swing Trader/Position Trader/Mixed",
-    "performance_score": 75,
-    "score_breakdown": {
-        "profitability": 80,
-        "risk_management": 70,
-        "consistency": 75,
-        "psychology": 65
-    },
-    "risk_appetite": "Conservative/Moderate/Aggressive/Very Aggressive",
-    "strengths": ["Good risk management", "Consistent entries"],
-    "weaknesses": ["Overtrading", "Poor exit timing"],
-    "key_insights": "You tend to perform better in trending markets...",
-    "improvement_plan": [
-        "Set maximum daily loss limits",
-        "Wait for confirmation before entering"
-    ],
-    "recommended_courses": [
-        {"title": "Advanced Risk Management", "level": "Intermediate", "priority": "High"},
-        {"title": "Trading Psychology Mastery", "level": "Beginner", "priority": "Medium"}
-    ],
-    "monthly_goal": "Improve win rate by 5% while maintaining current R:R ratio"
-}"""
-            },
-            {
-                "role": "user",
-                "content": f"""Analyze this trader's performance:
-
-Trading History Summary:
-- Total Trades: {trade_summary['total_trades']}
-- Win Rate: {trade_summary['win_rate']}%
-- Average Pips per Trade: {trade_summary['avg_pips']}
-- Most Traded Pairs: {', '.join([p[0] for p in trade_summary['favorite_pairs']])}
-
-Uploaded File Content ({file.filename}):
-{file_content[:5000] if not is_image else '[Trading history screenshot provided]'}"""
-            }
-        ]
-        
-        analysis_text, error = openrouter_chat(messages)
-        
-        if error:
-            return {
-                "success": False,
-                "error": error,
-                "fallback_analysis": generate_fallback_analysis(trade_summary)
-            }
-        
-        # Parse AI response
-        try:
-            json_match = re.search(r'\{.*\}', analysis_text, re.DOTALL)
-            if json_match:
-                analysis_result = json.loads(json_match.group())
-            else:
-                analysis_result = generate_fallback_analysis(trade_summary)
-        except:
-            analysis_result = generate_fallback_analysis(trade_summary)
-        
-        # Store in database
-        await conn.execute("""
-            INSERT INTO performance_analyses 
-            (user_id, file_name, file_data, analysis_result, trader_type, performance_score, risk_appetite, recommendations, courses_recommended)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        """, 
-            user_id,
-            file.filename,
-            file_content[:1000] if not is_image else None,
-            json.dumps(analysis_result),
-            analysis_result.get("trader_type", "Unknown"),
-            analysis_result.get("performance_score", 0),
-            analysis_result.get("risk_appetite", "Unknown"),
-            analysis_result.get("improvement_plan", []),
-            json.dumps(analysis_result.get("recommended_courses", []))
-        )
-        
-        return {
-            "success": True,
-            "analysis": analysis_result,
-            "trade_summary": trade_summary
-        }
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "fallback_analysis": generate_fallback_analysis({"total_trades": 0})
-        }
-
-def generate_fallback_analysis(trade_summary):
-    """Generate fallback analysis when AI fails"""
+    if len(password) > 72:
+        raise HTTPException(status_code=400, detail="Password too long (max 72 characters)")
+    
+    existing = await db.fetchval("SELECT id FROM users WHERE email = $1", email)
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    hashed_pw = get_password_hash(password)
+    trial_ends = datetime.utcnow() + timedelta(days=FREE_TRIAL_DAYS)
+    
+    user_id = await db.fetchval("""
+        INSERT INTO users (email, password_hash, name, trial_ends_at, subscription_status)
+        VALUES ($1, $2, $3, $4, 'trial')
+        RETURNING id
+    """, email, hashed_pw, name, trial_ends)
+    
+    access_token = create_access_token({"sub": str(user_id)})
+    
     return {
-        "trader_type": "Analyzing...",
-        "performance_score": 50,
-        "score_breakdown": {
-            "profitability": 50,
-            "risk_management": 50,
-            "consistency": 50,
-            "psychology": 50
-        },
-        "risk_appetite": "Moderate",
-        "strengths": ["Keep logging trades to get personalized insights"],
-        "weaknesses": ["Not enough data for full analysis"],
-        "key_insights": f"You have {trade_summary['total_trades']} trades logged. Continue journaling for detailed AI analysis.",
-        "improvement_plan": [
-            "Log all trades consistently",
-            "Complete pre-trade checklist",
-            "Review weekly performance"
-        ],
-        "recommended_courses": [
-            {"title": "Trading Fundamentals", "level": "Beginner", "priority": "High"},
-            {"title": "Risk Management Basics", "level": "Beginner", "priority": "High"}
-        ],
-        "monthly_goal": "Log 20+ trades with complete checklist"
+        "access_token": access_token,
+        "token_type": "bearer",
+        "id": user_id,
+        "email": email,
+        "name": name,
+        "is_admin": False,
+        "subscription_status": "trial",
+        "trial_ends_at": trial_ends.isoformat()
     }
 
-@app.get("/performance/history")
-async def get_performance_history(current_user: str = Depends(get_current_user), conn=Depends(get_db)):
-    """Get user's performance analysis history"""
-    try:
-        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
-        analyses = await conn.fetch(
-            """SELECT id, file_name, analysis_result, trader_type, performance_score, 
-                      risk_appetite, created_at 
-               FROM performance_analyses 
-               WHERE user_id = $1 
-               ORDER BY created_at DESC""",
-            user["id"]
-        )
-        return [dict(a) for a in analyses]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.post("/auth/login")
+async def login(email: str = Form(...), password: str = Form(...), db=Depends(get_db)):
+    row = await db.fetchrow("SELECT * FROM users WHERE email = $1", email)
+    if not row or not verify_password(password, row["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    access_token = create_access_token({"sub": str(row["id"])})
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "id": row["id"],
+        "email": row["email"],
+        "name": row["name"],
+        "is_admin": row["is_admin"],
+        "subscription_status": row["subscription_status"],
+        "trial_ends_at": row["trial_ends_at"].isoformat() if row["trial_ends_at"] else None,
+        "subscription_ends_at": row["subscription_ends_at"].isoformat() if row["subscription_ends_at"] else None
+    }
 
+# Trades endpoints
 @app.get("/trades")
-async def get_trades(current_user: str = Depends(get_current_user), conn=Depends(get_db)):
-    try:
-        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
-        trades = await conn.fetch(
-            "SELECT * FROM trades WHERE user_id = $1 ORDER BY created_at DESC",
-            user["id"]
-        )
-        return [dict(t) for t in trades]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch trades: {str(e)}")
+async def get_trades(user=Depends(get_current_user), db=Depends(get_db)):
+    rows = await db.fetch("""
+        SELECT * FROM trades 
+        WHERE user_id = $1 
+        ORDER BY created_at DESC
+    """, user["id"])
+    return [dict(row) for row in rows]
 
 @app.post("/trades")
 async def create_trade(
     pair: str = Form(...),
     direction: str = Form(...),
-    pips: float = Form(...),
+    pips: str = Form(...),
     grade: str = Form(...),
-    entry_price: Optional[float] = Form(None),
-    exit_price: Optional[float] = Form(None),
-    checklist_completed: bool = Form(False),
-    checklist_data: Optional[str] = Form(None),
-    current_user: str = Depends(get_current_user),
-    conn=Depends(get_db)
+    checklist_completed: str = Form("false"),
+    checklist_data: str = Form("{}"),
+    entry_price: Optional[str] = Form(None),
+    exit_price: Optional[str] = Form(None),
+    user=Depends(get_current_user),
+    db=Depends(get_db)
 ):
+    # Check subscription limits
+    if not is_subscription_active(user):
+        raise HTTPException(status_code=403, detail="Subscription required")
+    
+    # Trial users limited to 5 trades
+    if is_trial_active(user) and not user.get("subscription_status") == "active":
+        trade_count = await db.fetchval(
+            "SELECT COUNT(*) FROM trades WHERE user_id = $1", user["id"]
+        )
+        if trade_count >= 5:
+            raise HTTPException(status_code=403, detail="Trial limit reached. Subscribe to continue.")
+    
     try:
-        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
-        
-        checklist_json = None
-        if checklist_data:
-            try:
-                checklist_json = json.loads(checklist_data)
-            except:
-                pass
-        
-        trade_id = await conn.fetchval("""
-            INSERT INTO trades (user_id, pair, direction, entry_price, exit_price, pips, grade, checklist_completed, checklist_data)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
-        """, user["id"], pair.upper(), direction, entry_price, exit_price, pips, grade, checklist_completed, checklist_json)
-        
-        return {"id": trade_id, "message": "Trade saved"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save trade: {str(e)}")
+        pips_val = float(pips)
+        entry_val = float(entry_price) if entry_price else None
+        exit_val = float(exit_price) if exit_price else None
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid numeric value")
+    
+    trade_id = await db.fetchval("""
+        INSERT INTO trades (user_id, pair, direction, pips, grade, entry_price, exit_price, checklist_completed, checklist_data)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING id
+    """, user["id"], pair.upper(), direction, pips_val, grade, entry_val, exit_val, 
+        checklist_completed.lower() == "true", json.loads(checklist_data))
+    
+    return {"id": trade_id, "message": "Trade created successfully"}
 
+# Analytics endpoints
+@app.get("/analytics/dashboard")
+async def get_analytics(user=Depends(get_current_user), db=Depends(get_db)):
+    trades = await db.fetch("SELECT * FROM trades WHERE user_id = $1", user["id"])
+    trades_list = [dict(row) for row in trades]
+    
+    total_trades = len(trades_list)
+    if total_trades == 0:
+        return {
+            "total_trades": 0,
+            "win_rate": 0,
+            "total_pips": 0,
+            "profit_factor": 0,
+            "grade_distribution": {},
+            "pair_performance": [],
+            "equity_curve": [],
+            "monthly_performance": [],
+            "checklist_adherence": 0
+        }
+    
+    wins = sum(1 for t in trades_list if t["pips"] > 0)
+    win_rate = round((wins / total_trades) * 100, 1)
+    total_pips = sum(t["pips"] for t in trades_list)
+    
+    # Profit factor
+    profit_pips = sum(t["pips"] for t in trades_list if t["pips"] > 0)
+    loss_pips = abs(sum(t["pips"] for t in trades_list if t["pips"] < 0))
+    profit_factor = round(profit_pips / loss_pips, 2) if loss_pips > 0 else profit_pips
+    
+    # Grade distribution
+    grade_dist = {}
+    for t in trades_list:
+        g = t["grade"]
+        grade_dist[g] = grade_dist.get(g, 0) + 1
+    
+    # Pair performance
+    pair_stats = {}
+    for t in trades_list:
+        p = t["pair"]
+        if p not in pair_stats:
+            pair_stats[p] = {"trades": 0, "wins": 0, "pips": 0}
+        pair_stats[p]["trades"] += 1
+        if t["pips"] > 0:
+            pair_stats[p]["wins"] += 1
+        pair_stats[p]["pips"] += t["pips"]
+    
+    pair_performance = [
+        {
+            "pair": p,
+            "trades": s["trades"],
+            "win_rate": round((s["wins"] / s["trades"]) * 100, 1),
+            "total_pips": round(s["pips"], 2)
+        }
+        for p, s in pair_stats.items()
+    ]
+    pair_performance.sort(key=lambda x: x["trades"], reverse=True)
+    
+    # Equity curve
+    equity_curve = []
+    cumulative = 0
+    for t in sorted(trades_list, key=lambda x: x["created_at"]):
+        cumulative += t["pips"]
+        equity_curve.append({
+            "date": t["created_at"].isoformat(),
+            "cumulative_pips": round(cumulative, 2)
+        })
+    
+    # Monthly performance
+    monthly = {}
+    for t in trades_list:
+        month_key = t["created_at"].strftime("%Y-%m")
+        if month_key not in monthly:
+            monthly[month_key] = 0
+        monthly[month_key] += t["pips"]
+    
+    monthly_performance = [
+        {"month": m, "pips": round(p, 2)}
+        for m, p in sorted(monthly.items())
+    ]
+    
+    # Checklist adherence
+    checklist_completed = sum(1 for t in trades_list if t.get("checklist_completed"))
+    checklist_adherence = round((checklist_completed / total_trades) * 100, 1)
+    
+    return {
+        "total_trades": total_trades,
+        "win_rate": win_rate,
+        "total_pips": round(total_pips, 2),
+        "profit_factor": profit_factor,
+        "grade_distribution": grade_dist,
+        "pair_performance": pair_performance,
+        "equity_curve": equity_curve,
+        "monthly_performance": monthly_performance,
+        "checklist_adherence": checklist_adherence
+    }
+
+# Checklist endpoints
+@app.get("/checklist/template")
+async def get_checklist_template(user=Depends(get_current_user)):
+    return [
+        {"id": 1, "text": "I have a clear entry strategy based on my trading plan", "required": True},
+        {"id": 2, "text": "I have identified and set a definitive stop loss level", "required": True},
+        {"id": 3, "text": "I have a realistic take profit target (minimum 1:1.5 R:R)", "required": True},
+        {"id": 4, "text": "I have calculated position size (risking only 1-2% of account)", "required": True},
+        {"id": 5, "text": "I am not trading out of FOMO, revenge, or emotion", "required": True},
+        {"id": 6, "text": "I have checked the economic calendar for high-impact news", "required": False},
+        {"id": 7, "text": "This setup meets my minimum A or B grade criteria", "required": True},
+        {"id": 8, "text": "I have analyzed the higher timeframe trend direction", "required": False}
+    ]
+
+# Chart analysis endpoint
 @app.post("/analyze-chart")
 async def analyze_chart(
     file: UploadFile = File(...),
-    current_user: str = Depends(get_current_user),
-    conn=Depends(get_db)
+    user=Depends(get_current_user),
+    db=Depends(get_db)
 ):
-    """Upload trading chart screenshot for AI analysis"""
+    if not is_subscription_active(user):
+        raise HTTPException(status_code=403, detail="Subscription required")
     
-    try:
-        contents = await file.read()
-        base64_image = base64.b64encode(contents).decode('utf-8')
-        
-        analysis_text, error = openrouter_vision(
-            base64_image,
-            "Analyze this trading chart. Identify the currency pair, trend direction, key support/resistance levels, and provide a trade setup grade (A/B/C)."
+    # Trial users limited to 1 analysis
+    if is_trial_active(user) and not user.get("subscription_status") == "active":
+        analysis_count = await db.fetchval(
+            "SELECT COUNT(*) FROM performance_analyses WHERE user_id = $1", user["id"]
         )
+        if analysis_count >= 1:
+            raise HTTPException(status_code=403, detail="Trial analysis limit reached. Subscribe for unlimited access.")
+    
+    contents = await file.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 5MB)")
+    
+    image_b64 = base64.b64encode(contents).decode()
+    
+    # Call OpenRouter for analysis
+    if OPENROUTER_API_KEY:
+        try:
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://pipways.com"
+                },
+                json={
+                    "model": "anthropic/claude-3.5-sonnet",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": """Analyze this trading chart image and provide a detailed trading setup analysis. 
+                                    Return ONLY a JSON object with this exact structure:
+                                    {
+                                        "setup_quality": "A|B|C",
+                                        "pair": "EURUSD",
+                                        "direction": "LONG|SHORT",
+                                        "entry_price": "1.08500",
+                                        "stop_loss": "1.08200",
+                                        "take_profit": "1.09000",
+                                        "risk_reward": "1:1.67",
+                                        "analysis": "Detailed technical analysis...",
+                                        "recommendations": "Specific recommendations...",
+                                        "key_levels": ["1.08500", "1.08200", "1.09000"]
+                                    }"""
+                                },
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": f"data:image/png;base64,{image_b64}"}
+                                }
+                            ]
+                        }
+                    ],
+                    "max_tokens": 1000
+                },
+                timeout=60
+            )
+            
+            result = response.json()
+            content = result["choices"][0]["message"]["content"]
+            
+            # Extract JSON from response
+            json_match = re.search(r'\{.*\}', content, re.DOTALL)
+            if json_match:
+                analysis = json.loads(json_match.group())
+                return {
+                    "success": True,
+                    "analysis": analysis,
+                    "image_data": image_b64[:100] + "..."  # Truncated for response
+                }
+        except Exception as e:
+            print(f"AI analysis error: {e}")
+    
+    # Fallback response
+    return {
+        "success": True,
+        "analysis": {
+            "setup_quality": "B",
+            "pair": "EURUSD",
+            "direction": "LONG",
+            "entry_price": "1.08500",
+            "stop_loss": "1.08200",
+            "take_profit": "1.09000",
+            "risk_reward": "1:1.67",
+            "analysis": "Chart shows potential bullish momentum. Price is testing key support level with bullish candlestick pattern forming. RSI indicates oversold conditions.",
+            "recommendations": "Wait for confirmation candle close above support. Consider partial entry now and add on breakout confirmation.",
+            "key_levels": ["1.08500", "1.08200", "1.09000", "1.09500"]
+        },
+        "image_data": image_b64[:100] + "...",
+        "fallback": True
+    }
+
+# Performance analysis endpoint
+@app.post("/performance/analyze")
+async def analyze_performance(
+    file: UploadFile = File(...),
+    user=Depends(get_current_user),
+    db=Depends(get_db)
+):
+    if not is_subscription_active(user):
+        raise HTTPException(status_code=403, detail="Subscription required")
+    
+    # Trial users limited to 1 analysis
+    if is_trial_active(user) and not user.get("subscription_status") == "active":
+        analysis_count = await db.fetchval(
+            "SELECT COUNT(*) FROM performance_analyses WHERE user_id = $1", user["id"]
+        )
+        if analysis_count >= 1:
+            raise HTTPException(status_code=403, detail="Trial analysis limit reached. Subscribe for unlimited access.")
+    
+    contents = await file.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 5MB)")
+    
+    # Get user's trade summary
+    trades = await db.fetch("SELECT * FROM trades WHERE user_id = $1", user["id"])
+    trades_summary = {
+        "total_trades": len(trades),
+        "win_rate": 0,
+        "avg_pips": 0,
+        "favorite_pairs": []
+    }
+    
+    if trades:
+        wins = sum(1 for t in trades if t["pips"] > 0)
+        trades_summary["win_rate"] = round((wins / len(trades)) * 100, 1)
+        trades_summary["avg_pips"] = round(sum(t["pips"] for t in trades) / len(trades), 2)
         
-        if error:
+        pair_counts = {}
+        for t in trades:
+            pair_counts[t["pair"]] = pair_counts.get(t["pair"], 0) + 1
+        trades_summary["favorite_pairs"] = sorted(pair_counts.items(), key=lambda x: x[1], reverse=True)[:3]
+    
+    file_b64 = base64.b64encode(contents).decode()
+    file_ext = file.filename.split('.')[-1].lower()
+    
+    analysis_result = None
+    
+    if OPENROUTER_API_KEY and file_ext in ['png', 'jpg', 'jpeg', 'pdf']:
+        try:
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://pipways.com"
+                },
+                json={
+                    "model": "anthropic/claude-3.5-sonnet",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": f"""Analyze this trading history file and the user's stats. 
+                                    User stats: {json.dumps(trades_summary)}
+                                    
+                                    Return ONLY a JSON object with this exact structure:
+                                    {{
+                                        "trader_type": "Scalper|Day Trader|Swing Trader|Position Trader|Mixed",
+                                        "performance_score": 75,
+                                        "score_breakdown": {{
+                                            "profitability": 80,
+                                            "risk_management": 70,
+                                            "consistency": 75,
+                                            "psychology": 65
+                                        }},
+                                        "risk_appetite": "Conservative|Moderate|Aggressive",
+                                        "strengths": ["Strength 1", "Strength 2"],
+                                        "weaknesses": ["Weakness 1", "Weakness 2"],
+                                        "key_insights": "Overall insights...",
+                                        "improvement_plan": ["Step 1", "Step 2", "Step 3"],
+                                        "recommended_courses": [
+                                            {{"title": "Course Name", "level": "Beginner|Intermediate|Advanced", "priority": "High|Medium|Low"}}
+                                        ],
+                                        "monthly_goal": "Specific achievable goal..."
+                                    }}"""
+                                },
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": f"data:image/png;base64,{file_b64}"}
+                                }
+                            ]
+                        }
+                    ],
+                    "max_tokens": 1500
+                },
+                timeout=90
+            )
+            
+            result = response.json()
+            content = result["choices"][0]["message"]["content"]
+            
+            json_match = re.search(r'\{.*\}', content, re.DOTALL)
+            if json_match:
+                analysis_result = json.loads(json_match.group())
+        except Exception as e:
+            print(f"AI performance analysis error: {e}")
+    
+    # Fallback or if no AI
+    if not analysis_result:
+        analysis_result = {
+            "trader_type": "Day Trader" if trades_summary["total_trades"] > 10 else "Developing Trader",
+            "performance_score": 65,
+            "score_breakdown": {
+                "profitability": trades_summary["win_rate"],
+                "risk_management": 60,
+                "consistency": 55,
+                "psychology": 70
+            },
+            "risk_appetite": "Moderate",
+            "strengths": ["Consistent journaling", "Following process"],
+            "weaknesses": ["Need more data for detailed analysis"],
+            "key_insights": "Continue logging trades for AI-powered insights.",
+            "improvement_plan": [
+                "Complete pre-trade checklist for every trade",
+                "Review losing trades weekly",
+                "Set specific monthly pip targets"
+            ],
+            "recommended_courses": [
+                {"title": "Trading Psychology Mastery", "level": "Beginner", "priority": "High"},
+                {"title": "Risk Management Fundamentals", "level": "Beginner", "priority": "High"}
+            ],
+            "monthly_goal": f"Log 20 trades with complete checklist. Current: {trades_summary['total_trades']} trades"
+        }
+    
+    # Store analysis
+    await db.execute("""
+        INSERT INTO performance_analyses 
+        (user_id, file_name, file_data, analysis_result, trader_type, performance_score, risk_appetite, recommendations, courses_recommended)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    """, user["id"], file.filename, file_b64[:1000], json.dumps(analysis_result),
+        analysis_result["trader_type"], analysis_result["performance_score"],
+        analysis_result["risk_appetite"], analysis_result["improvement_plan"],
+        json.dumps(analysis_result["recommended_courses"]))
+    
+    return {
+        "success": True,
+        "analysis": analysis_result
+    }
+
+@app.get("/performance/history")
+async def get_performance_history(user=Depends(get_current_user), db=Depends(get_db)):
+    rows = await db.fetch("""
+        SELECT id, trader_type, performance_score, risk_appetite, created_at
+        FROM performance_analyses
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+        LIMIT 10
+    """, user["id"])
+    return [dict(row) for row in rows]
+
+# Mentor chat endpoint
+@app.get("/mentor-chat")
+async def mentor_chat(
+    message: str = Query(...),
+    user=Depends(get_current_user),
+    db=Depends(get_db)
+):
+    if not is_subscription_active(user):
+        raise HTTPException(status_code=403, detail="Subscription required")
+    
+    # Get user's context
+    trades = await db.fetch("SELECT * FROM trades WHERE user_id = $1 LIMIT 20", user["id"])
+    recent_analyses = await db.fetch(
+        "SELECT * FROM performance_analyses WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1", 
+        user["id"]
+    )
+    
+    # Get available courses for recommendations
+    courses = await db.fetch("SELECT id, title, level FROM courses ORDER BY level")
+    courses_list = [dict(c) for c in courses]
+    
+    context = {
+        "user_name": user["name"],
+        "total_trades": len(trades),
+        "recent_performance": dict(recent_analyses[0]) if recent_analyses else None,
+        "available_courses": courses_list
+    }
+    
+    if OPENROUTER_API_KEY:
+        try:
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://pipways.com"
+                },
+                json={
+                    "model": "anthropic/claude-3.5-sonnet",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": f"""You are an expert trading mentor and psychologist. 
+                            Help traders with psychology, risk management, and discipline.
+                            User context: {json.dumps(context)}
+                            Available courses: {json.dumps(courses_list)}
+                            
+                            When relevant, recommend specific courses from the available list.
+                            Be encouraging but firm about discipline and risk management."""
+                        },
+                        {
+                            "role": "user",
+                            "content": message
+                        }
+                    ],
+                    "max_tokens": 800
+                },
+                timeout=30
+            )
+            
+            result = response.json()
             return {
-                "success": False,
-                "analysis": None,
-                "raw_response": None,
-                "error": error,
-                "image_data": base64_image
+                "response": result["choices"][0]["message"]["content"],
+                "fallback": False
             }
-        
-        parsed_analysis = parse_analysis_response(analysis_text)
-        
-        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
-        await conn.execute(
-            "INSERT INTO chart_analyses (user_id, image_data, analysis_result) VALUES ($1, $2, $3)",
-            user["id"], base64_image, json.dumps(parsed_analysis)
-        )
-        
-        return {
-            "success": True,
-            "analysis": parsed_analysis,
-            "raw_response": analysis_text,
-            "image_data": base64_image,
-            "error": None
-        }
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "analysis": None,
-            "raw_response": None,
-            "error": str(e),
-            "image_data": None
-        }
+        except Exception as e:
+            print(f"Mentor chat error: {e}")
+    
+    # Fallback responses
+    fallbacks = {
+        "fomo": "FOMO is a common challenge. Remember: there's always another trade. Stick to your plan and only take A-grade setups. Consider reviewing the 'Trading Psychology Mastery' course.",
+        "risk": "Never risk more than 1-2% per trade. Your position size should allow you to be wrong 10 times in a row and still have capital to trade. Check out 'Risk Management Fundamentals'.",
+        "loss": "Every trader has losing streaks. Review your trades objectively - were they good setups that just didn't work, or did you break your rules? Learn from both.",
+        "discipline": "Discipline is what separates successful traders from failed ones. Use the pre-trade checklist for EVERY trade, no exceptions. Track your discipline score daily."
+    }
+    
+    response_text = fallbacks.get("discipline")
+    for key in fallbacks:
+        if key in message.lower():
+            response_text = fallbacks[key]
+            break
+    
+    return {
+        "response": response_text,
+        "fallback": True
+    }
 
-@app.get("/chart-analyses")
-async def get_chart_analyses(current_user: str = Depends(get_current_user), conn=Depends(get_db)):
-    """Get user's chart analysis history"""
-    try:
-        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
-        analyses = await conn.fetch(
-            "SELECT id, analysis_result, created_at FROM chart_analyses WHERE user_id = $1 ORDER BY created_at DESC",
-            user["id"]
-        )
-        return [dict(a) for a in analyses]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch analyses: {str(e)}")
-
-# Blog Routes (Public)
+# Blog endpoints
 @app.get("/blog/posts")
-async def get_blog_posts(category: Optional[str] = None, limit: int = 10, offset: int = 0, conn=Depends(get_db)):
-    """Get published blog posts"""
-    try:
-        if category:
-            posts = await conn.fetch(
-                """SELECT id, title, slug, excerpt, category, tags, featured_image, author_email, view_count, created_at 
-                   FROM blog_posts WHERE published = TRUE AND category = $1 
-                   ORDER BY created_at DESC LIMIT $2 OFFSET $3""",
-                category, limit, offset
-            )
-        else:
-            posts = await conn.fetch(
-                """SELECT id, title, slug, excerpt, category, tags, featured_image, author_email, view_count, created_at 
-                   FROM blog_posts WHERE published = TRUE 
-                   ORDER BY created_at DESC LIMIT $1 OFFSET $2""",
-                limit, offset
-            )
-        return [dict(p) for p in posts]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+async def get_blog_posts(limit: int = 10, db=Depends(get_db)):
+    rows = await db.fetch("""
+        SELECT id, title, slug, excerpt, category, featured_image, view_count, created_at
+        FROM blog_posts
+        WHERE published = TRUE
+        ORDER BY created_at DESC
+        LIMIT $1
+    """, limit)
+    return [dict(row) for row in rows]
 
 @app.get("/blog/posts/{slug}")
-async def get_blog_post(slug: str, conn=Depends(get_db)):
-    """Get single blog post by slug"""
-    try:
-        post = await conn.fetchrow(
-            "SELECT * FROM blog_posts WHERE slug = $1 AND published = TRUE",
-            slug
-        )
-        if not post:
-            raise HTTPException(status_code=404, detail="Post not found")
-        
-        # Increment view count
-        await conn.execute(
-            "UPDATE blog_posts SET view_count = view_count + 1 WHERE id = $1",
-            post["id"]
-        )
-        
-        return dict(post)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+async def get_blog_post(slug: str, db=Depends(get_db)):
+    row = await db.fetchrow("""
+        SELECT * FROM blog_posts WHERE slug = $1 AND published = TRUE
+    """, slug)
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    # Increment view count
+    await db.execute(
+        "UPDATE blog_posts SET view_count = view_count + 1 WHERE id = $1",
+        row["id"]
+    )
+    
+    return dict(row)
 
-@app.get("/blog/categories")
-async def get_blog_categories(conn=Depends(get_db)):
-    """Get all blog categories"""
-    try:
-        categories = await conn.fetch(
-            "SELECT DISTINCT category FROM blog_posts WHERE published = TRUE"
-        )
-        return [c["category"] for c in categories if c["category"]]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# Admin endpoints
+@app.get("/admin/stats")
+async def admin_stats(user=Depends(get_current_user), db=Depends(get_db)):
+    if not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    users_count = await db.fetchval("SELECT COUNT(*) FROM users")
+    trades_count = await db.fetchval("SELECT COUNT(*) FROM trades")
+    posts = await db.fetch("SELECT published, view_count FROM blog_posts")
+    
+    total_posts = len(posts)
+    published_posts = sum(1 for p in posts if p["published"])
+    total_views = sum(p["view_count"] for p in posts)
+    
+    return {
+        "users": users_count,
+        "trades": trades_count,
+        "blog_posts": {
+            "total": total_posts,
+            "published": published_posts,
+            "total_views": total_views
+        }
+    }
 
-# Admin Blog Routes (Protected)
 @app.get("/admin/blog/posts")
-async def get_admin_blog_posts(current_user: str = Depends(get_current_admin), conn=Depends(get_db)):
-    """Get all blog posts for admin (including unpublished)"""
-    try:
-        posts = await conn.fetch(
-            "SELECT * FROM blog_posts ORDER BY created_at DESC"
-        )
-        return [dict(p) for p in posts]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+async def admin_get_posts(user=Depends(get_current_user), db=Depends(get_db)):
+    if not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    rows = await db.fetch("""
+        SELECT id, title, slug, category, published, view_count, created_at
+        FROM blog_posts
+        ORDER BY created_at DESC
+    """)
+    return [dict(row) for row in rows]
 
 @app.post("/admin/blog/posts")
-async def create_blog_post(
+async def admin_create_post(
     title: str = Form(...),
     slug: str = Form(...),
     content: str = Form(...),
-    excerpt: Optional[str] = Form(None),
-    category: Optional[str] = Form("General"),
-    tags: Optional[str] = Form(None),
-    featured_image: Optional[str] = Form(None),
-    published: bool = Form(False),
-    current_user: str = Depends(get_current_admin),
-    conn=Depends(get_db)
+    excerpt: str = Form(""),
+    category: str = Form(""),
+    tags: str = Form(""),
+    featured_image: str = Form(""),
+    published: str = Form("false"),
+    user=Depends(get_current_user),
+    db=Depends(get_db)
 ):
-    """Create new blog post (admin only)"""
-    try:
-        # Generate excerpt if not provided
-        if not excerpt:
-            excerpt = content[:200] + "..." if len(content) > 200 else content
-        
-        # Parse tags
-        tag_list = [t.strip() for t in tags.split(",")] if tags else []
-        
-        post_id = await conn.fetchval("""
-            INSERT INTO blog_posts (title, slug, content, excerpt, category, tags, featured_image, published, author_email)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
-        """, title, slug, content, excerpt, category, tag_list, featured_image, published, current_user)
-        
-        return {"id": post_id, "message": "Blog post created", "slug": slug}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.put("/admin/blog/posts/{post_id}")
-async def update_blog_post(
-    post_id: int,
-    title: Optional[str] = Form(None),
-    slug: Optional[str] = Form(None),
-    content: Optional[str] = Form(None),
-    excerpt: Optional[str] = Form(None),
-    category: Optional[str] = Form(None),
-    tags: Optional[str] = Form(None),
-    featured_image: Optional[str] = Form(None),
-    published: Optional[bool] = Form(None),
-    current_user: str = Depends(get_current_admin),
-    conn=Depends(get_db)
-):
-    """Update blog post (admin only)"""
-    try:
-        # Build dynamic update query
-        updates = []
-        values = []
-        param_count = 0
-        
-        if title is not None:
-            param_count += 1
-            updates.append(f"title = ${param_count}")
-            values.append(title)
-        if slug is not None:
-            param_count += 1
-            updates.append(f"slug = ${param_count}")
-            values.append(slug)
-        if content is not None:
-            param_count += 1
-            updates.append(f"content = ${param_count}")
-            values.append(content)
-            # Auto-update excerpt if content changes
-            if excerpt is None:
-                new_excerpt = content[:200] + "..." if len(content) > 200 else content
-                param_count += 1
-                updates.append(f"excerpt = ${param_count}")
-                values.append(new_excerpt)
-        if excerpt is not None:
-            param_count += 1
-            updates.append(f"excerpt = ${param_count}")
-            values.append(excerpt)
-        if category is not None:
-            param_count += 1
-            updates.append(f"category = ${param_count}")
-            values.append(category)
-        if tags is not None:
-            param_count += 1
-            updates.append(f"tags = ${param_count}")
-            values.append([t.strip() for t in tags.split(",")])
-        if featured_image is not None:
-            param_count += 1
-            updates.append(f"featured_image = ${param_count}")
-            values.append(featured_image)
-        if published is not None:
-            param_count += 1
-            updates.append(f"published = ${param_count}")
-            values.append(published)
-        
-        if not updates:
-            raise HTTPException(status_code=400, detail="No fields to update")
-        
-        param_count += 1
-        updates.append(f"updated_at = ${param_count}")
-        values.append(datetime.utcnow())
-        
-        values.append(post_id)
-        
-        query = f"UPDATE blog_posts SET {', '.join(updates)} WHERE id = ${len(values)}"
-        await conn.execute(query, *values)
-        
-        return {"message": "Blog post updated"}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/admin/blog/posts/{post_id}")
-async def delete_blog_post(post_id: int, current_user: str = Depends(get_current_admin), conn=Depends(get_db)):
-    """Delete blog post (admin only)"""
-    try:
-        result = await conn.execute("DELETE FROM blog_posts WHERE id = $1", post_id)
-        if result == "DELETE 0":
-            raise HTTPException(status_code=404, detail="Post not found")
-        return {"message": "Blog post deleted"}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/admin/stats")
-async def get_admin_stats(current_user: str = Depends(get_current_admin), conn=Depends(get_db)):
-    """Get admin dashboard statistics"""
-    try:
-        # User stats
-        user_count = await conn.fetchval("SELECT COUNT(*) FROM users")
-        trade_count = await conn.fetchval("SELECT COUNT(*) FROM trades")
-        analysis_count = await conn.fetchval("SELECT COUNT(*) FROM chart_analyses")
-        
-        # Blog stats
-        blog_stats = await conn.fetchrow("""
-            SELECT 
-                COUNT(*) as total_posts,
-                COUNT(*) FILTER (WHERE published = TRUE) as published_posts,
-                SUM(view_count) as total_views
-            FROM blog_posts
-        """)
-        
-        # Recent activity
-        recent_trades = await conn.fetch("""
-            SELECT t.*, u.name, u.email 
-            FROM trades t 
-            JOIN users u ON t.user_id = u.id 
-            ORDER BY t.created_at DESC LIMIT 5
-        """)
-        
-        return {
-            "users": user_count,
-            "trades": trade_count,
-            "chart_analyses": analysis_count,
-            "blog_posts": {
-                "total": blog_stats["total_posts"],
-                "published": blog_stats["published_posts"],
-                "drafts": blog_stats["total_posts"] - blog_stats["published_posts"],
-                "total_views": blog_stats["total_views"] or 0
-            },
-            "recent_trades": [dict(t) for t in recent_trades]
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/mentor-chat")
-async def mentor_chat(message: str, current_user: str = Depends(get_current_user)):
-    """Get AI mentor response via OpenRouter"""
+    if not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    tags_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
     
     try:
-        messages = [
-            {
-                "role": "system",
-                "content": "You are a disciplined forex trading mentor. Focus on risk management, trading psychology, and process adherence. Keep responses concise (2-3 sentences) and actionable. Be encouraging but firm about discipline."
-            },
-            {
-                "role": "user",
-                "content": message
-            }
-        ]
+        post_id = await db.fetchval("""
+            INSERT INTO blog_posts (title, slug, content, excerpt, category, tags, featured_image, published)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING id
+        """, title, slug, content, excerpt, category, tags_list, featured_image, published.lower() == "true")
         
-        response, error = openrouter_chat(messages)
+        return {"id": post_id, "message": "Post created successfully"}
+    except asyncpg.UniqueViolationError:
+        raise HTTPException(status_code=400, detail="Slug already exists")
+
+@app.put("/admin/blog/posts/{post_id}")
+async def admin_update_post(
+    post_id: int,
+    title: str = Form(...),
+    slug: str = Form(...),
+    content: str = Form(...),
+    excerpt: str = Form(""),
+    category: str = Form(""),
+    tags: str = Form(""),
+    featured_image: str = Form(""),
+    published: str = Form("false"),
+    user=Depends(get_current_user),
+    db=Depends(get_db)
+):
+    if not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    tags_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
+    
+    await db.execute("""
+        UPDATE blog_posts 
+        SET title = $1, slug = $2, content = $3, excerpt = $4, 
+            category = $5, tags = $6, featured_image = $7, 
+            published = $8, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $9
+    """, title, slug, content, excerpt, category, tags_list, featured_image, 
+        published.lower() == "true", post_id)
+    
+    return {"message": "Post updated successfully"}
+
+@app.delete("/admin/blog/posts/{post_id}")
+async def admin_delete_post(post_id: int, user=Depends(get_current_user), db=Depends(get_db)):
+    if not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    await db.execute("DELETE FROM blog_posts WHERE id = $1", post_id)
+    return {"message": "Post deleted successfully"}
+
+# Course endpoints
+@app.get("/courses")
+async def get_courses(user=Depends(get_current_user), db=Depends(get_db)):
+    if not is_subscription_active(user):
+        raise HTTPException(status_code=403, detail="Subscription required")
+    
+    rows = await db.fetch("""
+        SELECT c.*, 
+               uc.progress_percentage, uc.completed_lessons, uc.quiz_score,
+               uc.certificate_issued, uc.certificate_url
+        FROM courses c
+        LEFT JOIN user_courses uc ON c.id = uc.course_id AND uc.user_id = $1
+        ORDER BY c.level, c.created_at
+    """, user["id"])
+    
+    return [dict(row) for row in rows]
+
+@app.get("/courses/{course_id}")
+async def get_course(course_id: int, user=Depends(get_current_user), db=Depends(get_db)):
+    if not is_subscription_active(user):
+        raise HTTPException(status_code=403, detail="Subscription required")
+    
+    course = await db.fetchrow("SELECT * FROM courses WHERE id = $1", course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    
+    # Get or create user progress
+    progress = await db.fetchrow("""
+        SELECT * FROM user_courses WHERE user_id = $1 AND course_id = $2
+    """, user["id"], course_id)
+    
+    if not progress:
+        progress = await db.fetchrow("""
+            INSERT INTO user_courses (user_id, course_id)
+            VALUES ($1, $2)
+            RETURNING *
+        """, user["id"], course_id)
+    
+    result = dict(course)
+    result["progress"] = dict(progress)
+    return result
+
+@app.post("/courses/{course_id}/progress")
+async def update_course_progress(
+    course_id: int,
+    lesson_id: int = Form(...),
+    completed: bool = Form(...),
+    user=Depends(get_current_user),
+    db=Depends(get_db)
+):
+    if not is_subscription_active(user):
+        raise HTTPException(status_code=403, detail="Subscription required")
+    
+    # Get current progress
+    progress = await db.fetchrow("""
+        SELECT * FROM user_courses WHERE user_id = $1 AND course_id = $2
+    """, user["id"], course_id)
+    
+    if not progress:
+        raise HTTPException(status_code=404, detail="Course not started")
+    
+    completed_lessons = list(progress["completed_lessons"] or [])
+    
+    if completed and lesson_id not in completed_lessons:
+        completed_lessons.append(lesson_id)
+    elif not completed and lesson_id in completed_lessons:
+        completed_lessons.remove(lesson_id)
+    
+    # Calculate progress percentage
+    course = await db.fetchrow("SELECT lessons FROM courses WHERE id = $1", course_id)
+    total_lessons = len(json.loads(course["lessons"])) if course["lessons"] else 1
+    progress_pct = int((len(completed_lessons) / total_lessons) * 100)
+    
+    await db.execute("""
+        UPDATE user_courses 
+        SET completed_lessons = $1, progress_percentage = $2, last_accessed = CURRENT_TIMESTAMP
+        WHERE id = $3
+    """, completed_lessons, progress_pct, progress["id"])
+    
+    return {"progress": progress_pct, "completed_lessons": completed_lessons}
+
+@app.post("/courses/{course_id}/quiz")
+async def submit_quiz(
+    course_id: int,
+    answers: str = Form(...),  # JSON array of answer indices
+    user=Depends(get_current_user),
+    db=Depends(get_db)
+):
+    if not is_subscription_active(user):
+        raise HTTPException(status_code=403, detail="Subscription required")
+    
+    course = await db.fetchrow("SELECT quiz_questions, passing_score FROM courses WHERE id = $1", course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    
+    questions = json.loads(course["quiz_questions"]) if course["quiz_questions"] else []
+    user_answers = json.loads(answers)
+    
+    correct = sum(1 for i, q in enumerate(questions) if user_answers[i] == q["correct"])
+    score = int((correct / len(questions)) * 100) if questions else 0
+    
+    # Update quiz score and attempts
+    progress = await db.fetchrow("""
+        SELECT * FROM user_courses WHERE user_id = $1 AND course_id = $2
+    """, user["id"], course_id)
+    
+    if progress:
+        await db.execute("""
+            UPDATE user_courses 
+            SET quiz_score = $1, quiz_attempts = quiz_attempts + 1
+            WHERE id = $2
+        """, score, progress["id"])
+    
+    # Generate certificate if passed
+    certificate_url = None
+    if score >= course["passing_score"] and progress:
+        if not progress["certificate_issued"]:
+            certificate_url = await generate_certificate(user["id"], course_id, user["name"], db)
+            await db.execute("""
+                UPDATE user_courses 
+                SET certificate_issued = TRUE, certificate_url = $1, completed_at = CURRENT_TIMESTAMP
+                WHERE id = $2
+            """, certificate_url, progress["id"])
+        else:
+            certificate_url = progress["certificate_url"]
+    
+    return {
+        "score": score,
+        "passed": score >= course["passing_score"],
+        "certificate_url": certificate_url
+    }
+
+async def generate_certificate(user_id: int, course_id: int, user_name: str, db) -> str:
+    """Generate a PDF certificate and return the URL/path"""
+    course = await db.fetchrow("SELECT title FROM courses WHERE id = $1", course_id)
+    
+    # Create PDF in memory
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    
+    # Certificate design
+    c.setFillColorRGB(0.95, 0.95, 0.95)
+    c.rect(0, 0, width, height, fill=True, stroke=False)
+    
+    # Border
+    c.setStrokeColorRGB(0.2, 0.4, 0.8)
+    c.setLineWidth(3)
+    c.rect(50, 50, width-100, height-100)
+    
+    # Title
+    c.setFillColorRGB(0.1, 0.2, 0.4)
+    c.setFont("Helvetica-Bold", 36)
+    c.drawCentredString(width/2, height-150, "CERTIFICATE")
+    c.setFont("Helvetica-Bold", 24)
+    c.drawCentredString(width/2, height-200, "OF COMPLETION")
+    
+    # Content
+    c.setFont("Helvetica", 18)
+    c.setFillColorRGB(0.2, 0.2, 0.2)
+    c.drawCentredString(width/2, height-280, "This certifies that")
+    
+    c.setFont("Helvetica-Bold", 28)
+    c.setFillColorRGB(0.1, 0.2, 0.4)
+    c.drawCentredString(width/2, height-330, user_name or "Student")
+    
+    c.setFont("Helvetica", 18)
+    c.setFillColorRGB(0.2, 0.2, 0.2)
+    c.drawCentredString(width/2, height-380, "has successfully completed")
+    
+    c.setFont("Helvetica-Bold", 22)
+    c.setFillColorRGB(0.2, 0.4, 0.8)
+    c.drawCentredString(width/2, height-430, course["title"])
+    
+    # Date
+    c.setFont("Helvetica", 14)
+    c.setFillColorRGB(0.4, 0.4, 0.4)
+    date_str = datetime.now().strftime("%B %d, %Y")
+    c.drawCentredString(width/2, height-500, f"Completed on {date_str}")
+    
+    # Signature line
+    c.setStrokeColorRGB(0.2, 0.2, 0.2)
+    c.line(width/2-100, 150, width/2+100, 150)
+    c.setFont("Helvetica", 12)
+    c.drawCentredString(width/2, 130, "Pipways Academy")
+    
+    c.save()
+    
+    # In production, upload to cloud storage and return URL
+    # For now, return a data URL
+    buffer.seek(0)
+    pdf_b64 = base64.b64encode(buffer.read()).decode()
+    return f"data:application/pdf;base64,{pdf_b64}"
+
+# Webinar endpoints
+@app.get("/webinars")
+async def get_webinars(user=Depends(get_current_user), db=Depends(get_db)):
+    if not is_subscription_active(user):
+        raise HTTPException(status_code=403, detail="Subscription required")
+    
+    # Get upcoming and recent webinars
+    rows = await db.fetch("""
+        SELECT w.*, 
+               EXISTS(SELECT 1 FROM webinar_registrations 
+                      WHERE webinar_id = w.id AND user_id = $1) as is_registered
+        FROM webinars w
+        WHERE w.scheduled_at > NOW() - INTERVAL '7 days'
+        ORDER BY w.scheduled_at ASC
+    """, user["id"])
+    
+    return [dict(row) for row in rows]
+
+@app.post("/webinars/{webinar_id}/register")
+async def register_webinar(webinar_id: int, user=Depends(get_current_user), db=Depends(get_db)):
+    if not is_subscription_active(user):
+        raise HTTPException(status_code=403, detail="Subscription required")
+    
+    try:
+        await db.execute("""
+            INSERT INTO webinar_registrations (webinar_id, user_id)
+            VALUES ($1, $2)
+        """, webinar_id, user["id"])
+        return {"message": "Registered successfully"}
+    except asyncpg.UniqueViolationError:
+        return {"message": "Already registered"}
+
+# Paystack payment endpoints
+@app.get("/payments/config")
+async def get_payment_config(user=Depends(get_current_user)):
+    return {
+        "public_key": PAYSTACK_PUBLIC_KEY,
+        "amount": int(SUBSCRIPTION_PRICE * 100),  # Paystack uses kobo/cents
+        "email": user["email"]
+    }
+
+@app.post("/payments/initialize")
+async def initialize_payment(user=Depends(get_current_user), db=Depends(get_db)):
+    if not PAYSTACK_SECRET_KEY or "your_key" in PAYSTACK_SECRET_KEY:
+        raise HTTPException(status_code=503, detail="Payment system not configured")
+    
+    # Create or get Paystack customer
+    headers = {
+        "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    # Initialize transaction
+    payload = {
+        "email": user["email"],
+        "amount": int(SUBSCRIPTION_PRICE * 100),
+        "plan": "monthly",  # You'd create this plan in Paystack dashboard
+        "callback_url": "https://pipways-web.onrender.com/payment/callback"
+    }
+    
+    response = requests.post(
+        "https://api.paystack.co/transaction/initialize",
+        headers=headers,
+        json=payload
+    )
+    
+    result = response.json()
+    if result.get("status"):
+        return {
+            "authorization_url": result["data"]["authorization_url"],
+            "reference": result["data"]["reference"]
+        }
+    else:
+        raise HTTPException(status_code=400, detail=result.get("message", "Payment initialization failed"))
+
+@app.get("/payments/verify/{reference}")
+async def verify_payment(reference: str, user=Depends(get_current_user), db=Depends(get_db)):
+    if not PAYSTACK_SECRET_KEY or "your_key" in PAYSTACK_SECRET_KEY:
+        raise HTTPException(status_code=503, detail="Payment system not configured")
+    
+    headers = {"Authorization": f"Bearer {PAYSTACK_SECRET_KEY}"}
+    response = requests.get(
+        f"https://api.paystack.co/transaction/verify/{reference}",
+        headers=headers
+    )
+    
+    result = response.json()
+    if result.get("status") and result["data"]["status"] == "success":
+        # Update user subscription
+        subscription_ends = datetime.utcnow() + timedelta(days=30)
+        await db.execute("""
+            UPDATE users 
+            SET subscription_status = 'active',
+                subscription_ends_at = $1,
+                paystack_subscription_code = $2
+            WHERE id = $3
+        """, subscription_ends, result["data"].get("subscription_code"), user["id"])
         
-        if error:
-            fallbacks = [
-                "Focus on your process, not the outcome. Did you follow your trading plan?",
-                "Risk management is key. Never risk more than 1-2% per trade.",
-                "Emotional trading leads to losses. Take a break if you're feeling frustrated.",
-                "Patience is a trader's greatest virtue. Wait for your setup.",
-                "Review your losing trades objectively. What can you learn?"
-            ]
-            import random
-            return {
-                "response": random.choice(fallbacks),
-                "fallback": True,
-                "error": error
-            }
+        # Record payment
+        await db.execute("""
+            INSERT INTO payments (user_id, paystack_reference, amount, status, paid_at)
+            VALUES ($1, $2, $3, 'success', CURRENT_TIMESTAMP)
+        """, user["id"], reference, SUBSCRIPTION_PRICE)
         
         return {
-            "response": response,
-            "model": "claude-3.5-sonnet"
+            "status": "success",
+            "message": "Subscription activated",
+            "subscription_ends_at": subscription_ends.isoformat()
         }
-    except Exception as e:
-        return {
-            "response": "I'm here to help with your trading psychology. What would you like to discuss?",
-            "fallback": True,
-            "error": str(e)
-        }
+    else:
+        raise HTTPException(status_code=400, detail="Payment verification failed")
+
+@app.get("/subscription/status")
+async def get_subscription_status(user=Depends(get_current_user)):
+    is_active = is_subscription_active(user)
+    is_trial = is_trial_active(user) and user.get("subscription_status") != "active"
+    
+    return {
+        "is_active": is_active,
+        "is_trial": is_trial,
+        "status": user.get("subscription_status", "trial"),
+        "trial_ends_at": user["trial_ends_at"].isoformat() if user.get("trial_ends_at") else None,
+        "subscription_ends_at": user["subscription_ends_at"].isoformat() if user.get("subscription_ends_at") else None
+    }
+
+# Zoom webhook for recording
+@app.post("/webhooks/zoom/recording")
+async def zoom_recording_webhook(request: dict, db=Depends(get_db)):
+    """Handle Zoom recording completed webhook"""
+    if request.get("event") == "recording.completed":
+        meeting_id = request["payload"]["object"]["id"]
+        recording_url = request["payload"]["object"]["recording_files"][0]["download_url"]
+        
+        # Update webinar with recording
+        await db.execute("""
+            UPDATE webinars 
+            SET recording_url = $1, is_recorded = TRUE
+            WHERE zoom_meeting_id = $2
+        """, recording_url, meeting_id)
+    
+    return {"status": "ok"}
 
 if __name__ == "__main__":
     import uvicorn
