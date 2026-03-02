@@ -8,61 +8,61 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
+
         * { font-family: 'Inter', sans-serif; }
-        
+
         .glass-panel {
             background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(148, 163, 184, 0.1);
         }
-        
+
         .gradient-text {
             background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        
+
         .nav-item {
             transition: all 0.3s ease;
         }
-        
+
         .nav-item:hover {
             background: rgba(59, 130, 246, 0.1);
             color: #60a5fa;
         }
-        
+
         .nav-item.active {
             background: rgba(59, 130, 246, 0.2);
             color: #60a5fa;
             border-right: 3px solid #60a5fa;
         }
-        
+
         .card-hover {
             transition: all 0.3s ease;
         }
-        
+
         .card-hover:hover {
             transform: translateY(-2px);
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
         }
-        
+
         .btn-primary {
             background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
             transition: all 0.3s ease;
         }
-        
+
         .btn-primary:hover {
             transform: translateY(-1px);
             box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.4);
         }
-        
+
         .btn-primary:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
         }
-        
+
         .loading-spinner {
             border: 3px solid rgba(255, 255, 255, 0.1);
             border-left-color: #3b82f6;
@@ -71,26 +71,26 @@
             height: 24px;
             animation: spin 1s linear infinite;
         }
-        
+
         .loading-spinner-sm {
             width: 16px;
             height: 16px;
             border-width: 2px;
         }
-        
+
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        
+
         .fade-in {
             animation: fadeIn 0.5s ease-in;
         }
-        
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        
+
         .toast {
             position: fixed;
             bottom: 20px;
@@ -106,22 +106,22 @@
             z-index: 9999;
             max-width: 400px;
         }
-        
+
         .toast.show {
             transform: translateY(0);
             opacity: 1;
         }
-        
+
         .toast.error {
             border-color: rgba(239, 68, 68, 0.5);
             background: rgba(127, 29, 29, 0.95);
         }
-        
+
         .toast.success {
             border-color: rgba(16, 185, 129, 0.5);
             background: rgba(6, 78, 59, 0.95);
         }
-        
+
         .offline-indicator {
             position: fixed;
             top: 0;
@@ -135,11 +135,11 @@
             transform: translateY(-100%);
             transition: transform 0.3s ease;
         }
-        
+
         .offline-indicator.show {
             transform: translateY(0);
         }
-        
+
         .modal {
             display: none;
             position: fixed;
@@ -152,11 +152,11 @@
             justify-content: center;
             align-items: center;
         }
-        
+
         .modal.show {
             display: flex;
         }
-        
+
         .modal-content {
             background: rgba(30, 41, 59, 0.95);
             border: 1px solid rgba(148, 163, 184, 0.2);
@@ -167,11 +167,11 @@
             max-height: 90vh;
             overflow-y: auto;
         }
-        
+
         .grade-a { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
         .grade-b { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); }
         .grade-c { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
-        
+
         .typing-indicator span {
             display: inline-block;
             width: 8px;
@@ -181,34 +181,34 @@
             animation: typing 1.4s infinite ease-in-out both;
             margin: 0 2px;
         }
-        
+
         .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
         .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-        
+
         @keyframes typing {
             0%, 80%, 100% { transform: scale(0); }
             40% { transform: scale(1); }
         }
-        
+
         .chat-message {
             animation: messageSlide 0.3s ease;
         }
-        
+
         @keyframes messageSlide {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        
+
         .drag-drop-zone {
             border: 2px dashed rgba(148, 163, 184, 0.3);
             transition: all 0.3s ease;
         }
-        
+
         .drag-drop-zone.drag-over {
             border-color: #3b82f6;
             background: rgba(59, 130, 246, 0.05);
         }
-        
+
         .debug-panel {
             position: fixed;
             bottom: 80px;
@@ -223,11 +223,11 @@
             font-size: 12px;
             display: none;
         }
-        
+
         .debug-panel.show {
             display: block;
         }
-        
+
         .blog-content h2 { font-size: 1.5rem; font-weight: 600; margin: 1.5rem 0 1rem; color: #60a5fa; }
         .blog-content h3 { font-size: 1.25rem; font-weight: 600; margin: 1.25rem 0 0.75rem; color: #a78bfa; }
         .blog-content p { margin-bottom: 1rem; line-height: 1.7; }
@@ -276,7 +276,7 @@
                 <h2 class="text-2xl font-bold mb-2">Welcome to Pipways</h2>
                 <p class="text-slate-400">Master your trading psychology and track your journey</p>
             </div>
-            
+
             <div class="space-y-4" id="auth-buttons">
                 <button onclick="showLoginForm()" class="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors flex items-center justify-center gap-2">
                     <i data-lucide="log-in" class="w-5 h-5"></i>
@@ -286,7 +286,7 @@
                     Create Account
                 </button>
             </div>
-            
+
             <div id="auth-forms" class="hidden mt-6 text-left">
                 <!-- Login Form -->
                 <form id="login-form" class="hidden space-y-4" onsubmit="handleLogin(event)">
@@ -310,7 +310,7 @@
                         ← Back
                     </button>
                 </form>
-                
+
                 <!-- Register Form -->
                 <form id="register-form" class="hidden space-y-4" onsubmit="handleRegister(event)">
                     <div>
@@ -355,7 +355,7 @@
                     </div>
                     <span class="text-xl font-bold gradient-text">Pipways</span>
                 </div>
-                
+
                 <nav class="space-y-1">
                     <a href="#" onclick="navigateTo('dashboard')" class="nav-item active flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" data-page="dashboard">
                         <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
@@ -395,7 +395,7 @@
                     </a>
                 </nav>
             </div>
-            
+
             <div class="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-800">
                 <div class="flex items-center gap-3 mb-4">
                     <div class="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center">
@@ -477,7 +477,7 @@
         <!-- Main Content -->
         <main class="flex-1 md:ml-64 pt-16 md:pt-0">
             <div class="p-6 md:p-8 max-w-7xl mx-auto">
-                
+
                 <!-- Dashboard Page -->
                 <div id="page-dashboard" class="page-content fade-in">
                     <div class="mb-8">
@@ -514,7 +514,7 @@
                             </div>
                             <p class="text-slate-400 text-sm">Total Trades</p>
                         </div>
-                        
+
                         <div class="glass-panel rounded-2xl p-6 card-hover">
                             <div class="flex items-center justify-between mb-4">
                                 <div class="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
@@ -524,7 +524,7 @@
                             </div>
                             <p class="text-slate-400 text-sm">Win Rate</p>
                         </div>
-                        
+
                         <div class="glass-panel rounded-2xl p-6 card-hover">
                             <div class="flex items-center justify-between mb-4">
                                 <div class="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
@@ -534,7 +534,7 @@
                             </div>
                             <p class="text-slate-400 text-sm">Total Pips</p>
                         </div>
-                        
+
                         <div class="glass-panel rounded-2xl p-6 card-hover">
                             <div class="flex items-center justify-between mb-4">
                                 <div class="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center">
@@ -563,7 +563,7 @@
                                     </div>
                                     <i data-lucide="chevron-right" class="w-5 h-5 text-slate-500"></i>
                                 </button>
-                                
+
                                 <button onclick="navigateTo('checklist')" class="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors flex items-center justify-between group">
                                     <div class="flex items-center gap-3">
                                         <div class="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center group-hover:bg-green-500/30 transition-colors">
@@ -576,7 +576,7 @@
                                     </div>
                                     <i data-lucide="chevron-right" class="w-5 h-5 text-slate-500"></i>
                                 </button>
-                                
+
                                 <button onclick="navigateTo('mentor')" class="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors flex items-center justify-between group">
                                     <div class="flex items-center gap-3">
                                         <div class="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center group-hover:bg-purple-500/30 transition-colors">
@@ -660,7 +660,7 @@
                                 <div class="loading-spinner"></div>
                             </div>
                         </div>
-                        
+
                         <div class="glass-panel rounded-2xl p-6">
                             <h3 class="text-lg font-semibold mb-4">Pair Performance</h3>
                             <div id="pair-chart" class="h-64 flex items-center justify-center">
@@ -702,7 +702,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div id="checklist-items" class="space-y-3">
                             </div>
                         </div>
@@ -757,7 +757,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div class="border-t border-slate-800 pt-4">
                                 <div class="flex gap-3">
                                     <input type="text" id="chat-input" placeholder="Type your message..." 
@@ -935,7 +935,7 @@
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
-            
+
             <form id="trade-form" onsubmit="handleTradeSubmit(event)" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -952,7 +952,7 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium mb-2">Pips</label>
@@ -1006,67 +1006,69 @@
     </div>
 
     <script>
+
         // ============================================================================
-        // CONFIGURATION
+        // CONFIGURATION - FIXED: Simplified API URL detection
         // ============================================================================
-        
+
         const CURRENT_DOMAIN = window.location.hostname;
         console.log('Current domain:', CURRENT_DOMAIN);
-        
+
+        // FIXED: Simplified and more reliable API URL configuration
         let API_URL;
+
+        // Check if we're running locally
         if (CURRENT_DOMAIN === 'localhost' || CURRENT_DOMAIN === '127.0.0.1') {
             API_URL = 'http://localhost:8000';
         } else {
-            if (CURRENT_DOMAIN.includes('pipways-web-')) {
-                const apiDomain = CURRENT_DOMAIN.replace('pipways-web-', 'pipways-api-');
-                API_URL = `https://${apiDomain}`;
-            } else if (CURRENT_DOMAIN.includes('pipways-web')) {
-                API_URL = 'https://pipways-api.onrender.com';
-            } else {
-                API_URL = 'https://pipways-api-nhem.onrender.com';
-            }
+            // For Render deployments - use the explicit API URL
+            API_URL = 'https://pipways-api-nhem.onrender.com';
         }
-        
+
+        // Allow override via environment variable (for local development)
+        if (window.API_URL_OVERRIDE) {
+            API_URL = window.API_URL_OVERRIDE;
+        }
+
         console.log('API URL configured:', API_URL);
-        document.getElementById('debug-api-url').textContent = API_URL;
-        
+
         // ============================================================================
         // GLOBAL STATE
         // ============================================================================
-        
+
         let authToken = localStorage.getItem('pipways_token');
         let currentUser = JSON.parse(localStorage.getItem('pipways_user') || '{}');
         let checklistData = {};
         let currentPage = 'dashboard';
         let subscriptionStatus = null;
         let isOnline = navigator.onLine;
-        
+
         // ============================================================================
         // OFFLINE DETECTION
         // ============================================================================
-        
+
         window.addEventListener('online', () => {
             isOnline = true;
             document.getElementById('offline-indicator').classList.remove('show');
             showToast('Back online', 2000, 'success');
             testAPIConnection();
         });
-        
+
         window.addEventListener('offline', () => {
             isOnline = false;
             document.getElementById('offline-indicator').classList.add('show');
             showToast('You are offline', 3000, 'error');
         });
-        
+
         // ============================================================================
-        // API CLIENT WITH TIMEOUT
+        // API CLIENT WITH TIMEOUT - FIXED: Better error handling
         // ============================================================================
-        
+
         async function apiRequest(endpoint, options = {}) {
             const url = `${API_URL}${endpoint}`;
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 30000);
-            
+
             const defaultOptions = {
                 headers: {
                     'Authorization': authToken ? `Bearer ${authToken}` : '',
@@ -1074,86 +1076,106 @@
                 },
                 signal: controller.signal
             };
-            
+
             try {
                 const startTime = performance.now();
                 const response = await fetch(url, { ...defaultOptions, ...options });
                 const latency = Math.round(performance.now() - startTime);
-                
-                document.getElementById('debug-latency').textContent = latency;
-                document.getElementById('debug-status').textContent = `HTTP ${response.status}`;
-                document.getElementById('debug-status').className = response.ok ? 'text-green-400' : 'text-red-400';
-                
+
+                // Update debug panel if it exists
+                const debugLatency = document.getElementById('debug-latency');
+                const debugStatus = document.getElementById('debug-status');
+                if (debugLatency) debugLatency.textContent = latency;
+                if (debugStatus) {
+                    debugStatus.textContent = `HTTP ${response.status}`;
+                    debugStatus.className = response.ok ? 'text-green-400' : 'text-red-400';
+                }
+
                 clearTimeout(timeoutId);
-                
+
                 if (response.status === 401) {
                     handleLogout();
                     throw new Error('Session expired. Please login again.');
                 }
-                
+
                 return response;
             } catch (error) {
                 clearTimeout(timeoutId);
-                
+
                 if (error.name === 'AbortError') {
-                    document.getElementById('debug-status').textContent = 'Timeout';
-                    document.getElementById('debug-status').className = 'text-red-400';
+                    const debugStatus = document.getElementById('debug-status');
+                    if (debugStatus) {
+                        debugStatus.textContent = 'Timeout';
+                        debugStatus.className = 'text-red-400';
+                    }
                     throw new Error('Request timeout. API may be waking up from sleep (Render free tier). Please try again.');
                 }
-                
-                document.getElementById('debug-status').textContent = 'Error';
-                document.getElementById('debug-status').className = 'text-red-400';
+
+                const debugStatus = document.getElementById('debug-status');
+                if (debugStatus) {
+                    debugStatus.textContent = 'Error';
+                    debugStatus.className = 'text-red-400';
+                }
                 throw error;
             }
         }
-        
+
         // ============================================================================
         // DEBUG FUNCTIONS
         // ============================================================================
-        
+
         function toggleDebug() {
             document.getElementById('debug-panel').classList.toggle('show');
         }
-        
+
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.shiftKey && e.key === 'D') {
                 e.preventDefault();
                 toggleDebug();
             }
         });
-        
+
         async function testAPIConnection() {
             const statusEl = document.getElementById('debug-status');
-            statusEl.textContent = 'Testing...';
-            statusEl.className = 'text-yellow-400';
-            
+            const apiUrlEl = document.getElementById('debug-api-url');
+
+            if (statusEl) statusEl.textContent = 'Testing...';
+            if (statusEl) statusEl.className = 'text-yellow-400';
+            if (apiUrlEl) apiUrlEl.textContent = API_URL;
+
             try {
                 const response = await apiRequest('/health');
                 const data = await response.json();
-                
+
                 if (response.ok && data.status === 'healthy') {
-                    statusEl.textContent = 'Connected';
-                    statusEl.className = 'text-green-400';
+                    if (statusEl) {
+                        statusEl.textContent = 'Connected';
+                        statusEl.className = 'text-green-400';
+                    }
                     showToast('API connection successful', 2000, 'success');
                 } else {
                     throw new Error('API unhealthy');
                 }
             } catch (e) {
-                statusEl.textContent = 'Failed';
-                statusEl.className = 'text-red-400';
+                if (statusEl) {
+                    statusEl.textContent = 'Failed';
+                    statusEl.className = 'text-red-400';
+                }
                 showToast(`API connection failed: ${e.message}`, 3000, 'error');
             }
         }
-        
-        setTimeout(testAPIConnection, 1000);
-        
+
         // ============================================================================
         // INITIALIZATION
         // ============================================================================
-        
+
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
-            
+
+            // Show debug info
+            const apiUrlEl = document.getElementById('debug-api-url');
+            if (apiUrlEl) apiUrlEl.textContent = API_URL;
+
             if (authToken) {
                 showApp();
                 loadDashboard();
@@ -1162,69 +1184,73 @@
             } else {
                 showAuthModal();
             }
-            
+
             setupDragAndDrop();
+
+            // Test API connection after a short delay
+            setTimeout(testAPIConnection, 1000);
         });
-        
+
         // ============================================================================
-        // AUTH FUNCTIONS
+        // AUTH FUNCTIONS - FIXED: Better error display
         // ============================================================================
-        
+
         function showAuthModal() {
             document.getElementById('auth-modal').classList.add('show');
             document.getElementById('app').classList.add('hidden');
         }
-        
+
         function showApp() {
             document.getElementById('auth-modal').classList.remove('show');
             document.getElementById('app').classList.remove('hidden');
         }
-        
+
         function showAuthButtons() {
             document.getElementById('auth-forms').classList.add('hidden');
             document.getElementById('auth-buttons').classList.remove('hidden');
         }
-        
+
         function showLoginForm() {
             document.getElementById('auth-buttons').classList.add('hidden');
             document.getElementById('auth-forms').classList.remove('hidden');
             document.getElementById('login-form').classList.remove('hidden');
             document.getElementById('register-form').classList.add('hidden');
         }
-        
+
         function showRegisterForm() {
             document.getElementById('auth-buttons').classList.add('hidden');
             document.getElementById('auth-forms').classList.remove('hidden');
             document.getElementById('login-form').classList.add('hidden');
             document.getElementById('register-form').classList.remove('hidden');
         }
-        
+
         async function handleLogin(event) {
             event.preventDefault();
-            
+
             if (!isOnline) {
                 showToast('You are offline. Please check your connection.', 3000, 'error');
                 return;
             }
-            
+
             const btn = document.getElementById('login-submit');
             const errorEl = document.getElementById('login-error');
             errorEl.classList.add('hidden');
-            
+            errorEl.textContent = '';
+
             setButtonLoading(btn, true);
-            
+
             const formData = new FormData();
             formData.append('email', document.getElementById('login-email').value);
             formData.append('password', document.getElementById('login-password').value);
-            
+
             try {
                 const response = await apiRequest('/auth/login', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     authToken = data.access_token;
                     currentUser = data;
@@ -1236,7 +1262,9 @@
                     loadSubscriptionStatus();
                     showToast('Welcome back!', 3000, 'success');
                 } else {
-                    errorEl.textContent = data.detail || 'Login failed. Check your credentials.';
+                    // FIXED: Display specific error message from server
+                    const errorMsg = data.detail || 'Login failed. Check your credentials.';
+                    errorEl.textContent = errorMsg;
                     errorEl.classList.remove('hidden');
                 }
             } catch (error) {
@@ -1247,34 +1275,35 @@
                 setButtonLoading(btn, false, 'Sign In');
             }
         }
-        
+
         async function handleRegister(event) {
             event.preventDefault();
-            
+
             if (!isOnline) {
                 showToast('You are offline. Please check your connection.', 3000, 'error');
                 return;
             }
-            
+
             const btn = document.getElementById('register-submit');
             const errorEl = document.getElementById('register-error');
             errorEl.classList.add('hidden');
-            
+            errorEl.textContent = '';
+
             setButtonLoading(btn, true);
-            
+
             const formData = new FormData();
             formData.append('email', document.getElementById('register-email').value);
             formData.append('password', document.getElementById('register-password').value);
             formData.append('name', document.getElementById('register-name').value);
-            
+
             try {
                 const response = await apiRequest('/auth/register', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     authToken = data.access_token;
                     currentUser = data;
@@ -1286,7 +1315,9 @@
                     loadSubscriptionStatus();
                     showToast('Account created successfully!', 3000, 'success');
                 } else {
-                    errorEl.textContent = data.detail || 'Registration failed. Email may already exist.';
+                    // FIXED: Display specific error message from server
+                    const errorMsg = data.detail || 'Registration failed. Email may already exist.';
+                    errorEl.textContent = errorMsg;
                     errorEl.classList.remove('hidden');
                 }
             } catch (error) {
@@ -1297,7 +1328,7 @@
                 setButtonLoading(btn, false, 'Create Account');
             }
         }
-        
+
         function handleLogout() {
             authToken = null;
             currentUser = {};
@@ -1306,20 +1337,20 @@
             showAuthModal();
             showToast('Logged out successfully', 2000, 'success');
         }
-        
+
         function updateUserInfo() {
             document.getElementById('user-name').textContent = currentUser.name || 'User';
             document.getElementById('user-email').textContent = currentUser.email || 'user@example.com';
         }
-        
+
         // ============================================================================
         // NAVIGATION
         // ============================================================================
-        
+
         function navigateTo(page) {
             document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`page-${page}`).classList.remove('hidden');
-            
+
             document.querySelectorAll('.nav-item').forEach(el => {
                 el.classList.remove('active');
                 el.classList.add('text-slate-400');
@@ -1328,9 +1359,9 @@
                 el.classList.add('active');
                 el.classList.remove('text-slate-400');
             });
-            
+
             currentPage = page;
-            
+
             switch(page) {
                 case 'dashboard': loadDashboard(); break;
                 case 'journal': loadTrades(); break;
@@ -1341,30 +1372,30 @@
                 case 'blog': loadBlog(); break;
                 case 'subscription': loadSubscriptionStatus(); break;
             }
-            
+
             window.scrollTo(0, 0);
         }
-        
+
         function toggleMobileMenu() {
             const menu = document.getElementById('mobile-menu');
             menu.classList.toggle('hidden');
         }
-        
+
         // ============================================================================
         // DASHBOARD FUNCTIONS
         // ============================================================================
-        
+
         async function loadDashboard() {
             try {
                 const response = await apiRequest('/analytics/dashboard');
                 if (!response.ok) throw new Error('Failed to load dashboard');
-                
+
                 const data = await response.json();
-                
+
                 document.getElementById('stat-total-trades').textContent = data.total_trades || 0;
                 document.getElementById('stat-win-rate').textContent = (data.win_rate || 0) + '%';
                 document.getElementById('stat-total-pips').textContent = (data.total_pips > 0 ? '+' : '') + (data.total_pips || 0);
-                
+
                 const grades = data.grade_distribution || {};
                 const total = (grades.A || 0) + (grades.B || 0) + (grades.C || 0);
                 let avgGrade = '-';
@@ -1373,27 +1404,27 @@
                     avgGrade = score >= 2.5 ? 'A' : score >= 1.5 ? 'B' : 'C';
                 }
                 document.getElementById('stat-grade').textContent = avgGrade;
-                
+
                 loadRecentTrades();
             } catch (error) {
                 console.error('Dashboard error:', error);
                 showToast('Failed to load dashboard: ' + error.message, 3000, 'error');
             }
         }
-        
+
         async function loadRecentTrades() {
             try {
                 const response = await apiRequest('/trades');
                 if (!response.ok) throw new Error('Failed to load trades');
-                
+
                 const trades = await response.json();
                 const container = document.getElementById('recent-trades');
-                
+
                 if (trades.length === 0) {
                     container.innerHTML = '<p class="text-slate-400 text-center py-8">No trades logged yet</p>';
                     return;
                 }
-                
+
                 container.innerHTML = trades.slice(0, 5).map(trade => `
                     <div class="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg">
                         <div class="flex items-center gap-3">
@@ -1411,26 +1442,26 @@
                 console.error('Recent trades error:', error);
             }
         }
-        
+
         // ============================================================================
         // TRADE FUNCTIONS
         // ============================================================================
-        
+
         async function loadTrades() {
             try {
                 const response = await apiRequest('/trades');
                 if (!response.ok) throw new Error('Failed to load trades');
-                
+
                 const trades = await response.json();
                 const tbody = document.getElementById('trades-table-body');
                 const emptyState = document.getElementById('trades-empty');
-                
+
                 if (trades.length === 0) {
                     tbody.innerHTML = '';
                     emptyState.classList.remove('hidden');
                     return;
                 }
-                
+
                 emptyState.classList.add('hidden');
                 tbody.innerHTML = trades.map(trade => {
                     const date = new Date(trade.created_at).toLocaleDateString();
@@ -1458,44 +1489,44 @@
                         </tr>
                     `;
                 }).join('');
-                
+
                 lucide.createIcons();
             } catch (error) {
                 console.error('Load trades error:', error);
                 showToast('Failed to load trades: ' + error.message, 3000, 'error');
             }
         }
-        
+
         function openTradeModal() {
             document.getElementById('trade-modal').classList.add('show');
         }
-        
+
         function closeTradeModal() {
             document.getElementById('trade-modal').classList.remove('show');
             document.getElementById('trade-form').reset();
         }
-        
+
         async function handleTradeSubmit(event) {
             event.preventDefault();
-            
+
             if (!isOnline) {
                 showToast('You are offline. Please check your connection.', 3000, 'error');
                 return;
             }
-            
+
             const btn = document.getElementById('trade-submit-btn');
             setButtonLoading(btn, true);
-            
+
             const formData = new FormData(event.target);
-            
+
             try {
                 const response = await apiRequest('/trades', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     closeTradeModal();
                     showToast('Trade logged successfully!', 3000, 'success');
@@ -1514,11 +1545,11 @@
                 setButtonLoading(btn, false, 'Save Trade');
             }
         }
-        
+
         // ============================================================================
         // CHECKLIST FUNCTIONS
         // ============================================================================
-        
+
         function loadChecklist() {
             const items = [
                 { id: 1, text: "I have a valid trade setup based on my strategy", required: true },
@@ -1530,7 +1561,7 @@
                 { id: 7, text: "Market conditions align with my strategy", required: false },
                 { id: 8, text: "I checked economic calendar for news", required: false }
             ];
-            
+
             const container = document.getElementById('checklist-items');
             container.innerHTML = items.map(item => `
                 <div class="checklist-item flex items-start gap-3 p-3 rounded-lg bg-slate-800/30 cursor-pointer" onclick="toggleChecklistItem(${item.id})">
@@ -1541,43 +1572,43 @@
                     </label>
                 </div>
             `).join('');
-            
+
             updateChecklistProgress();
         }
-        
+
         function toggleChecklistItem(id) {
             const checkbox = document.getElementById(`check-${id}`);
             checkbox.checked = !checkbox.checked;
             checklistData[id] = checkbox.checked;
             updateChecklistProgress();
         }
-        
+
         function updateChecklistProgress() {
             const checked = Object.values(checklistData).filter(v => v).length;
             const total = 8;
             const percentage = (checked / total) * 100;
-            
+
             document.getElementById('checklist-progress').textContent = `${checked}/${total} completed`;
             document.getElementById('checklist-progress-bar').style.width = `${percentage}%`;
         }
-        
+
         // ============================================================================
         // CHART ANALYSIS
         // ============================================================================
-        
+
         function setupDragAndDrop() {
             const dropZone = document.getElementById('chart-drop-zone');
             if (!dropZone) return;
-            
+
             dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 dropZone.classList.add('drag-over');
             });
-            
+
             dropZone.addEventListener('dragleave', () => {
                 dropZone.classList.remove('drag-over');
             });
-            
+
             dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
                 dropZone.classList.remove('drag-over');
@@ -1585,18 +1616,18 @@
                 if (files.length > 0) handleChartFile(files[0]);
             });
         }
-        
+
         function handleChartUpload(event) {
             const file = event.target.files[0];
             if (file) handleChartFile(file);
         }
-        
+
         function handleChartFile(file) {
             if (file.size > 5 * 1024 * 1024) {
                 showToast('File too large (max 5MB)', 3000, 'error');
                 return;
             }
-            
+
             const reader = new FileReader();
             reader.onload = (e) => {
                 document.getElementById('chart-preview-img').src = e.target.result;
@@ -1605,34 +1636,34 @@
             };
             reader.readAsDataURL(file);
         }
-        
+
         async function analyzeChart() {
             if (!isOnline) {
                 showToast('You are offline. Please check your connection.', 3000, 'error');
                 return;
             }
-            
+
             const img = document.getElementById('chart-preview-img');
             const resultDiv = document.getElementById('chart-analysis-result');
-            
+
             const response = await fetch(img.src);
             const blob = await response.blob();
             const file = new File([blob], 'chart.png', { type: 'image/png' });
-            
+
             const formData = new FormData();
             formData.append('file', file);
-            
+
             resultDiv.classList.remove('hidden');
             resultDiv.innerHTML = '<div class="flex items-center justify-center py-8"><div class="loading-spinner mr-3"></div><span>Analyzing chart...</span></div>';
-            
+
             try {
                 const apiResponse = await apiRequest('/analyze-chart', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await apiResponse.json();
-                
+
                 if (apiResponse.ok && data.analysis) {
                     const analysis = data.analysis;
                     resultDiv.innerHTML = `
@@ -1669,30 +1700,30 @@
                 resultDiv.innerHTML = `<p class="text-red-400">Failed to analyze chart: ${error.message}</p>`;
             }
         }
-        
+
         // ============================================================================
         // AI MENTOR
         // ============================================================================
-        
+
         async function sendChatMessage() {
             const input = document.getElementById('chat-input');
             const message = input.value.trim();
-            
+
             if (!message) return;
             if (!isOnline) {
                 showToast('You are offline. Please check your connection.', 3000, 'error');
                 return;
             }
-            
+
             addChatMessage(message, 'user');
             input.value = '';
-            
+
             const typingId = showTypingIndicator();
-            
+
             try {
                 const response = await apiRequest(`/mentor-chat?message=${encodeURIComponent(message)}`);
                 removeTypingIndicator(typingId);
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     addChatMessage(data.response, 'bot');
@@ -1705,16 +1736,16 @@
                 addChatMessage(`Sorry, error: ${error.message}`, 'bot');
             }
         }
-        
+
         function sendQuickMessage(message) {
             document.getElementById('chat-input').value = message;
             sendChatMessage();
         }
-        
+
         function addChatMessage(text, sender) {
             const container = document.getElementById('chat-messages');
             const isBot = sender === 'bot';
-            
+
             const div = document.createElement('div');
             div.className = 'flex gap-3 chat-message';
             div.innerHTML = `
@@ -1725,12 +1756,12 @@
                     <p class="text-sm whitespace-pre-wrap">${escapeHtml(text)}</p>
                 </div>
             `;
-            
+
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
             lucide.createIcons();
         }
-        
+
         function showTypingIndicator() {
             const container = document.getElementById('chat-messages');
             const id = 'typing-' + Date.now();
@@ -1753,31 +1784,31 @@
             container.scrollTop = container.scrollHeight;
             return id;
         }
-        
+
         function removeTypingIndicator(id) {
             const el = document.getElementById(id);
             if (el) el.remove();
         }
-        
+
         // ============================================================================
         // COURSES
         // ============================================================================
-        
+
         async function loadCourses() {
             const container = document.getElementById('courses-list');
             container.innerHTML = '<div class="glass-panel rounded-2xl p-6 flex items-center justify-center h-64"><div class="loading-spinner"></div></div>';
-            
+
             try {
                 const response = await apiRequest('/courses');
                 if (!response.ok) throw new Error('Failed to load courses');
-                
+
                 const courses = await response.json();
-                
+
                 if (courses.length === 0) {
                     container.innerHTML = '<p class="text-slate-400 text-center col-span-full">No courses available</p>';
                     return;
                 }
-                
+
                 container.innerHTML = courses.map(course => {
                     const progress = course.progress_percentage || 0;
                     const levelColor = course.level === 'beginner' ? 'text-green-400' : course.level === 'intermediate' ? 'text-yellow-400' : 'text-red-400';
@@ -1793,7 +1824,7 @@
                                 </div>
                                 <h3 class="font-semibold mb-2">${course.title}</h3>
                                 <p class="text-sm text-slate-400 mb-4 line-clamp-2">${course.description || 'No description'}</p>
-                                
+
                                 <div class="mb-4">
                                     <div class="flex items-center justify-between text-sm mb-1">
                                         <span class="text-slate-400">Progress</span>
@@ -1803,7 +1834,7 @@
                                         <div class="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300" style="width: ${progress}%"></div>
                                     </div>
                                 </div>
-                                
+
                                 <button onclick="startCourse(${course.id})" class="w-full py-2 bg-slate-800 hover:bg-slate-700 rounded-lg font-medium transition-colors">
                                     ${progress > 0 ? 'Continue' : 'Start Course'}
                                 </button>
@@ -1811,37 +1842,37 @@
                         </div>
                     `;
                 }).join('');
-                
+
                 lucide.createIcons();
             } catch (error) {
                 console.error('Courses error:', error);
                 container.innerHTML = `<p class="text-red-400 text-center col-span-full">Failed to load courses: ${error.message}</p>`;
             }
         }
-        
+
         function startCourse(courseId) {
             showToast('Course starting...', 2000, 'success');
         }
-        
+
         // ============================================================================
         // WEBINARS
         // ============================================================================
-        
+
         async function loadWebinars() {
             const container = document.getElementById('webinars-list');
             container.innerHTML = '<div class="glass-panel rounded-2xl p-6 flex items-center justify-center h-64"><div class="loading-spinner"></div></div>';
-            
+
             try {
                 const response = await apiRequest('/webinars');
                 if (!response.ok) throw new Error('Failed to load webinars');
-                
+
                 const webinars = await response.json();
-                
+
                 if (webinars.length === 0) {
                     container.innerHTML = '<p class="text-slate-400 text-center">No upcoming webinars</p>';
                     return;
                 }
-                
+
                 container.innerHTML = webinars.map(webinar => {
                     const date = new Date(webinar.scheduled_at);
                     const isRegistered = webinar.is_registered;
@@ -1880,25 +1911,25 @@
                         </div>
                     `;
                 }).join('');
-                
+
                 lucide.createIcons();
             } catch (error) {
                 console.error('Webinars error:', error);
                 container.innerHTML = `<p class="text-red-400 text-center">Failed to load webinars: ${error.message}</p>`;
             }
         }
-        
+
         async function registerWebinar(webinarId) {
             if (!isOnline) {
                 showToast('You are offline. Please check your connection.', 3000, 'error');
                 return;
             }
-            
+
             try {
                 const response = await apiRequest(`/webinars/${webinarId}/register`, {
                     method: 'POST'
                 });
-                
+
                 if (response.ok) {
                     showToast('Registered successfully!', 3000, 'success');
                     loadWebinars();
@@ -1911,26 +1942,26 @@
                 showToast(error.message || 'Network error. Please try again.', 3000, 'error');
             }
         }
-        
+
         // ============================================================================
         // BLOG
         // ============================================================================
-        
+
         async function loadBlog() {
             const container = document.getElementById('blog-list');
             container.innerHTML = '<div class="glass-panel rounded-2xl p-6 flex items-center justify-center h-64"><div class="loading-spinner"></div></div>';
-            
+
             try {
                 const response = await apiRequest('/blog/posts');
                 if (!response.ok) throw new Error('Failed to load blog posts');
-                
+
                 const posts = await response.json();
-                
+
                 if (posts.length === 0) {
                     container.innerHTML = '<p class="text-slate-400 text-center col-span-full">No articles available</p>';
                     return;
                 }
-                
+
                 container.innerHTML = posts.map(post => `
                     <article class="glass-panel rounded-2xl overflow-hidden card-hover cursor-pointer" onclick="openBlogPost('${post.slug}')">
                         <div class="h-48 bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
@@ -1953,21 +1984,21 @@
                         </div>
                     </article>
                 `).join('');
-                
+
                 lucide.createIcons();
             } catch (error) {
                 console.error('Blog error:', error);
                 container.innerHTML = `<p class="text-red-400 text-center col-span-full">Failed to load articles: ${error.message}</p>`;
             }
         }
-        
+
         async function openBlogPost(slug) {
             try {
                 const response = await apiRequest(`/blog/posts/${slug}`);
                 if (!response.ok) throw new Error('Failed to load post');
-                
+
                 const post = await response.json();
-                
+
                 const modal = document.createElement('div');
                 modal.className = 'modal show';
                 modal.innerHTML = `
@@ -1988,7 +2019,7 @@
                         </div>
                     </div>
                 `;
-                
+
                 document.body.appendChild(modal);
                 lucide.createIcons();
             } catch (error) {
@@ -1996,22 +2027,22 @@
                 showToast('Failed to load article: ' + error.message, 3000, 'error');
             }
         }
-        
+
         // ============================================================================
         // SUBSCRIPTION
         // ============================================================================
-        
+
         async function loadSubscriptionStatus() {
             try {
                 const response = await apiRequest('/subscription/status');
                 if (!response.ok) throw new Error('Failed to load subscription');
-                
+
                 const data = await response.json();
                 subscriptionStatus = data;
-                
+
                 const statusEl = document.getElementById('subscription-status-details');
                 const banner = document.getElementById('subscription-banner');
-                
+
                 if (data.is_active) {
                     if (data.is_trial) {
                         const daysLeft = Math.max(0, data.days_left || 3);
@@ -2040,23 +2071,23 @@
                 console.error('Subscription error:', error);
             }
         }
-        
+
         async function initiatePayment() {
             if (!isOnline) {
                 showToast('You are offline. Please check your connection.', 3000, 'error');
                 return;
             }
-            
+
             const btn = document.getElementById('subscribe-btn');
             setButtonLoading(btn, true);
-            
+
             try {
                 const response = await apiRequest('/payments/initialize', {
                     method: 'POST'
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok && data.authorization_url) {
                     window.location.href = data.authorization_url;
                 } else {
@@ -2069,22 +2100,22 @@
                 setButtonLoading(btn, false, 'Subscribe Now');
             }
         }
-        
+
         // ============================================================================
         // ANALYTICS
         // ============================================================================
-        
+
         async function loadAnalytics() {
             document.getElementById('grade-chart').innerHTML = '<p class="text-slate-400">Grade distribution chart will appear here</p>';
             document.getElementById('pair-chart').innerHTML = '<p class="text-slate-400">Pair performance chart will appear here</p>';
             document.getElementById('equity-chart').innerHTML = '<p class="text-slate-400">Equity curve chart will appear here</p>';
             document.getElementById('monthly-chart').innerHTML = '<p class="text-slate-400">Monthly performance chart will appear here</p>';
         }
-        
+
         // ============================================================================
         // UTILITIES
         // ============================================================================
-        
+
         function setButtonLoading(btn, loading, text = '') {
             if (loading) {
                 btn.disabled = true;
@@ -2094,28 +2125,28 @@
                 btn.innerHTML = text;
             }
         }
-        
+
         function showToast(message, duration = 3000, type = '') {
             const toast = document.getElementById('toast');
             const messageEl = document.getElementById('toast-message');
-            
+
             toast.classList.remove('error', 'success');
             if (type) toast.classList.add(type);
-            
+
             messageEl.textContent = message;
             toast.classList.add('show');
-            
+
             setTimeout(() => {
                 toast.classList.remove('show');
             }, duration);
         }
-        
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
-        
+
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
                 e.target.classList.remove('show');
