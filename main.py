@@ -22,13 +22,11 @@ from asyncpg import Pool
 # Authentication
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-import bcrypt
 
 # HTTP client for AI integration
 import httpx
 
 # File handling
-import shutil
 from pathlib import Path
 
 # Configure logging
@@ -44,23 +42,23 @@ logger = logging.getLogger(__name__)
 
 class Settings:
     """Application configuration loaded from environment variables"""
-    
+
     # Security
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-super-secret-key-change-in-production")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
-    
+
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost/pipways")
-    
+
     # CORS
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production")
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "")
-    
+
     # API Keys
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
     PAYSTACK_SECRET_KEY: str = os.getenv("PAYSTACK_SECRET_KEY", "")
-    
+
     # File storage
     UPLOAD_DIR: Path = Path("uploads")
     MAX_FILE_SIZE: int = 5 * 1024 * 1024  # 5MB
@@ -73,11 +71,11 @@ settings = Settings()
 
 class DatabaseManager:
     """Manages PostgreSQL connection pool with resilience"""
-    
+
     def __init__(self):
         self.pool: Optional[Pool] = None
         self._healthy: bool = False
-    
+
     async def initialize(self):
         """Initialize connection pool with proper timeouts"""
         try:
@@ -95,24 +93,24 @@ class DatabaseManager:
             )
             self._healthy = True
             logger.info("Database pool initialized successfully")
-            
+
             # Test connection
             async with self.pool.acquire() as conn:
                 await conn.fetchval("SELECT 1")
                 logger.info("Database connection test passed")
-                
+
         except Exception as e:
             logger.error(f"Failed to initialize database pool: {e}")
             self._healthy = False
             raise
-    
+
     async def close(self):
         """Close pool gracefully"""
         if self.pool:
             await self.pool.close()
             self._healthy = False
             logger.info("Database pool closed")
-    
+
     async def health_check(self) -> bool:
         """Check if database is accessible"""
         if not self.pool:
@@ -126,7 +124,7 @@ class DatabaseManager:
             logger.warning(f"Health check failed: {e}")
             self._healthy = False
             return False
-    
+
     @property
     def is_healthy(self) -> bool:
         return self._healthy
@@ -143,6 +141,8 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting up Pipways API...")
     await db.initialize()
+    # Initialize database tables
+    await init_db()
     yield
     # Shutdown
     logger.info("Shutting down Pipways API...")
@@ -155,11 +155,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Pipways API",
     description="Forex Trading Journal & Analytics Platform",
-    version="2.0.0",
+    version="2.0.1",
     lifespan=lifespan
 )
 
-# Build CORS origins list dynamically
+# Build CORS origins list dynamically - FIXED: Removed wildcard origins
 def get_cors_origins() -> List[str]:
     """Build CORS origins list based on environment"""
     origins = [
@@ -174,16 +174,11 @@ def get_cors_origins() -> List[str]:
         "https://www.pipways.com",
         "https://pipways.com",
     ]
-    
+
     # Add custom frontend URL if provided
     if settings.FRONTEND_URL and settings.FRONTEND_URL not in origins:
         origins.append(settings.FRONTEND_URL)
-    
-    # For Render preview deployments (dynamic subdomains)
-    if settings.ENVIRONMENT == "production":
-        # Allow any render.com subdomain (safe for this use case)
-        origins.append("https://*.onrender.com")
-    
+
     return origins
 
 # Add CORS middleware BEFORE any routes
@@ -198,7 +193,7 @@ app.add_middleware(
 )
 
 # ============================================================================
-# SECURITY UTILITIES
+# SECURITY UTILITIES - FIXED: Removed bcrypt import, using passlib only
 # ============================================================================
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -238,7 +233,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    
+
     # Get user from database
     async with db.pool.acquire() as conn:
         user = await conn.fetchrow(
@@ -260,13 +255,13 @@ async def health_check():
     Use with UptimeRobot or cron-job.org (ping every 10-14 minutes)
     """
     db_healthy = await db.health_check()
-    
+
     return {
         "status": "healthy" if db_healthy else "unhealthy",
         "timestamp": datetime.utcnow().isoformat(),
         "environment": settings.ENVIRONMENT,
         "database": "connected" if db_healthy else "disconnected",
-        "version": "2.0.0"
+        "version": "2.0.1"
     }
 
 @app.get("/", tags=["Root"])
@@ -274,7 +269,7 @@ async def root():
     """Root endpoint"""
     return {
         "message": "Pipways API",
-        "version": "2.0.0",
+        "version": "2.0.1",
         "docs": "/docs",
         "health": "/health"
     }
@@ -302,10 +297,10 @@ async def register(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Email already registered"
                 )
-            
+
             # Hash password
             hashed_password = get_password_hash(password)
-            
+
             # Create user
             user_id = await conn.fetchval(
                 """
@@ -319,13 +314,13 @@ async def register(
                 datetime.utcnow(),
                 True
             )
-            
+
             # Create access token
             access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
             access_token = create_access_token(
                 data={"sub": str(user_id)}, expires_delta=access_token_expires
             )
-            
+
             return {
                 "access_token": access_token,
                 "token_type": "bearer",
@@ -333,7 +328,7 @@ async def register(
                 "email": email,
                 "name": name
             }
-            
+
     except HTTPException:
         raise
     except Exception as e:
@@ -355,38 +350,38 @@ async def login(
                 "SELECT id, email, password_hash, name, is_active FROM users WHERE email = $1",
                 email.lower()
             )
-            
+
             if not user:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid email or password"
                 )
-            
+
             if not verify_password(password, user["password_hash"]):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid email or password"
                 )
-            
+
             if not user["is_active"]:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Account is deactivated"
                 )
-            
+
             # Update last login
             await conn.execute(
                 "UPDATE users SET last_login = $1 WHERE id = $2",
                 datetime.utcnow(),
                 user["id"]
             )
-            
+
             # Create access token
             access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
             access_token = create_access_token(
                 data={"sub": str(user["id"])}, expires_delta=access_token_expires
             )
-            
+
             return {
                 "access_token": access_token,
                 "token_type": "bearer",
@@ -394,7 +389,7 @@ async def login(
                 "email": user["email"],
                 "name": user["name"]
             }
-            
+
     except HTTPException:
         raise
     except Exception as e:
@@ -477,20 +472,20 @@ async def get_dashboard_analytics(current_user: dict = Depends(get_current_user)
                 "SELECT COUNT(*) FROM trades WHERE user_id = $1",
                 current_user["id"]
             )
-            
+
             # Win rate (positive pips)
             win_count = await conn.fetchval(
                 "SELECT COUNT(*) FROM trades WHERE user_id = $1 AND pips > 0",
                 current_user["id"]
             )
             win_rate = (win_count / total_trades * 100) if total_trades > 0 else 0
-            
+
             # Total pips
             total_pips = await conn.fetchval(
                 "SELECT COALESCE(SUM(pips), 0) FROM trades WHERE user_id = $1",
                 current_user["id"]
             )
-            
+
             # Grade distribution
             grades = await conn.fetch(
                 """
@@ -502,7 +497,7 @@ async def get_dashboard_analytics(current_user: dict = Depends(get_current_user)
                 current_user["id"]
             )
             grade_distribution = {g["grade"]: g["count"] for g in grades}
-            
+
             return {
                 "total_trades": total_trades,
                 "win_rate": round(win_rate, 2),
@@ -525,7 +520,7 @@ async def mentor_chat(
     """AI Trading Mentor chat endpoint"""
     if not settings.OPENROUTER_API_KEY:
         raise HTTPException(status_code=503, detail="AI service not configured")
-    
+
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
@@ -548,16 +543,16 @@ async def mentor_chat(
                     ]
                 }
             )
-            
+
             if response.status_code != 200:
                 logger.error(f"OpenRouter error: {response.text}")
                 raise HTTPException(status_code=503, detail="AI service temporarily unavailable")
-            
+
             data = response.json()
             ai_response = data["choices"][0]["message"]["content"]
-            
+
             return {"response": ai_response}
-            
+
     except httpx.TimeoutException:
         raise HTTPException(status_code=504, detail="AI service timeout")
     except Exception as e:
@@ -576,19 +571,19 @@ async def analyze_chart(
     """Analyze trading chart using AI vision"""
     if not settings.OPENROUTER_API_KEY:
         raise HTTPException(status_code=503, detail="AI service not configured")
-    
+
     try:
         # Validate file
         if file.size > settings.MAX_FILE_SIZE:
             raise HTTPException(status_code=400, detail="File too large (max 5MB)")
-        
+
         # Read file content
         contents = await file.read()
-        
+
         # Convert to base64
         import base64
         image_b64 = base64.b64encode(contents).decode()
-        
+
         async with httpx.AsyncClient(timeout=45.0) as client:
             response = await client.post(
                 "https://openrouter.ai/api/v1/chat/completions",
@@ -625,14 +620,14 @@ async def analyze_chart(
                     ]
                 }
             )
-            
+
             if response.status_code != 200:
                 logger.error(f"OpenRouter vision error: {response.text}")
                 raise HTTPException(status_code=503, detail="AI analysis failed")
-            
+
             data = response.json()
             analysis_text = data["choices"][0]["message"]["content"]
-            
+
             # Parse structured data from analysis (simplified)
             return {
                 "analysis": {
@@ -647,7 +642,7 @@ async def analyze_chart(
                     "recommendations": "Wait for confirmation before entering"
                 }
             }
-            
+
     except HTTPException:
         raise
     except Exception as e:
@@ -715,7 +710,7 @@ async def register_webinar(
             )
             if existing:
                 return {"message": "Already registered"}
-            
+
             await conn.execute(
                 "INSERT INTO webinar_registrations (webinar_id, user_id, registered_at) VALUES ($1, $2, $3)",
                 webinar_id, current_user["id"], datetime.utcnow()
@@ -759,13 +754,13 @@ async def get_blog_post(slug: str):
             )
             if not post:
                 raise HTTPException(status_code=404, detail="Post not found")
-            
+
             # Increment view count
             await conn.execute(
                 "UPDATE blog_posts SET view_count = view_count + 1 WHERE id = $1",
                 post["id"]
             )
-            
+
             return dict(post)
     except HTTPException:
         raise
@@ -791,7 +786,7 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
                 """,
                 current_user["id"]
             )
-            
+
             if not sub:
                 # Return trial status
                 user = await conn.fetchrow(
@@ -800,7 +795,7 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
                 )
                 trial_end = user["created_at"] + timedelta(days=3)
                 days_left = (trial_end - datetime.utcnow()).days
-                
+
                 return {
                     "is_active": days_left > 0,
                     "is_trial": True,
@@ -808,7 +803,7 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
                     "days_left": max(0, days_left),
                     "plan": "trial"
                 }
-            
+
             return {
                 "is_active": sub["is_active"] and sub["end_date"] > datetime.utcnow(),
                 "is_trial": False,
@@ -826,7 +821,7 @@ async def initialize_payment(current_user: dict = Depends(get_current_user)):
     """Initialize Paystack payment"""
     if not settings.PAYSTACK_SECRET_KEY:
         raise HTTPException(status_code=503, detail="Payment service not configured")
-    
+
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -845,11 +840,11 @@ async def initialize_payment(current_user: dict = Depends(get_current_user)):
                     }
                 }
             )
-            
+
             data = response.json()
             if not data.get("status"):
                 raise HTTPException(status_code=400, detail="Payment initialization failed")
-            
+
             return {
                 "authorization_url": data["data"]["authorization_url"],
                 "reference": data["data"]["reference"]
@@ -888,7 +883,7 @@ async def general_exception_handler(request, exc):
 
 async def init_db():
     """Initialize database tables"""
-    async with asyncpg.connect(settings.DATABASE_URL) as conn:
+    async with db.pool.acquire() as conn:
         # Users table
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -901,7 +896,7 @@ async def init_db():
                 is_active BOOLEAN DEFAULT TRUE
             )
         """)
-        
+
         # Trades table
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS trades (
@@ -917,7 +912,7 @@ async def init_db():
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """)
-        
+
         # Courses table
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS courses (
@@ -928,7 +923,7 @@ async def init_db():
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """)
-        
+
         # User progress table
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS user_progress (
@@ -940,7 +935,7 @@ async def init_db():
                 UNIQUE(user_id, course_id)
             )
         """)
-        
+
         # Webinars table
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS webinars (
@@ -953,7 +948,7 @@ async def init_db():
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """)
-        
+
         # Webinar registrations
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS webinar_registrations (
@@ -964,7 +959,7 @@ async def init_db():
                 UNIQUE(webinar_id, user_id)
             )
         """)
-        
+
         # Blog posts
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS blog_posts (
@@ -980,7 +975,7 @@ async def init_db():
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """)
-        
+
         # Subscriptions
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS subscriptions (
@@ -993,12 +988,9 @@ async def init_db():
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """)
-        
+
         logger.info("Database tables initialized")
 
 if __name__ == "__main__":
     import uvicorn
-    # Initialize database on startup
-    import asyncio
-    asyncio.run(init_db())
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
