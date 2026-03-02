@@ -298,7 +298,13 @@ class UserLogin(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    user: Dict[str, Any]
+    id: int
+    email: str
+    name: str
+    is_admin: bool
+    subscription_status: str
+    trial_ends_at: Optional[str] = None
+    subscription_ends_at: Optional[str] = None
 
 class TradeCreate(BaseModel):
     pair: str = Field(..., pattern=r'^[A-Z]{6}$')
@@ -634,20 +640,40 @@ async def health_check():
 # =============================================================================
 
 @app.post("/auth/register", response_model=TokenResponse)
-async def register(user_data: UserRegister):
+async def register(
+    email: str = Form(...),
+    password: str = Form(...),
+    name: str = Form(...)
+):
     """Register a new user with 3-day trial"""
     try:
+        # Validate email format
+        try:
+            email = email.lower().strip()
+            if '@' not in email:
+                raise HTTPException(status_code=400, detail="Invalid email format")
+        except:
+            raise HTTPException(status_code=400, detail="Invalid email format")
+        
+        # Validate password length
+        if len(password) < 8:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+        
+        # Validate name
+        if len(name.strip()) < 2:
+            raise HTTPException(status_code=400, detail="Name must be at least 2 characters")
+        
         async with db_pool.acquire() as conn:
             # Check if email exists
             existing = await conn.fetchval(
                 "SELECT id FROM users WHERE email = $1",
-                user_data.email.lower()
+                email
             )
             if existing:
                 raise HTTPException(status_code=400, detail="Email already registered")
             
             # Hash password
-            password_hash = hash_password(user_data.password)
+            password_hash = hash_password(password)
             
             # Create user with 3-day trial
             trial_ends = datetime.utcnow() + timedelta(days=3)
@@ -656,7 +682,7 @@ async def register(user_data: UserRegister):
                 INSERT INTO users (email, password_hash, name, trial_ends_at)
                 VALUES ($1, $2, $3, $4)
                 RETURNING id
-            """, user_data.email.lower(), password_hash, user_data.name, trial_ends)
+            """, email, password_hash, name.strip(), trial_ends)
             
             # Create access token
             token = create_access_token({"sub": str(user_id)})
@@ -664,14 +690,12 @@ async def register(user_data: UserRegister):
             return {
                 "access_token": token,
                 "token_type": "bearer",
-                "user": {
-                    "id": user_id,
-                    "email": user_data.email.lower(),
-                    "name": user_data.name,
-                    "is_admin": False,
-                    "subscription_status": "trial",
-                    "trial_ends_at": trial_ends.isoformat()
-                }
+                "id": user_id,
+                "email": email,
+                "name": name.strip(),
+                "is_admin": False,
+                "subscription_status": "trial",
+                "trial_ends_at": trial_ends.isoformat()
             }
     except HTTPException:
         raise
@@ -680,16 +704,22 @@ async def register(user_data: UserRegister):
         raise HTTPException(status_code=500, detail="Registration failed")
 
 @app.post("/auth/login", response_model=TokenResponse)
-async def login(user_data: UserLogin):
+async def login(
+    email: str = Form(...),
+    password: str = Form(...)
+):
     """Login and return JWT token"""
     try:
+        # Normalize email
+        email = email.lower().strip()
+        
         async with db_pool.acquire() as conn:
             user = await conn.fetchrow(
                 "SELECT id, email, password_hash, name, is_admin, subscription_status, trial_ends_at, subscription_ends_at FROM users WHERE email = $1",
-                user_data.email.lower()
+                email
             )
             
-            if not user or not verify_password(user_data.password, user["password_hash"]):
+            if not user or not verify_password(password, user["password_hash"]):
                 raise HTTPException(status_code=401, detail="Invalid email or password")
             
             # Create access token
@@ -698,15 +728,13 @@ async def login(user_data: UserLogin):
             return {
                 "access_token": token,
                 "token_type": "bearer",
-                "user": {
-                    "id": user["id"],
-                    "email": user["email"],
-                    "name": user["name"],
-                    "is_admin": user["is_admin"],
-                    "subscription_status": user["subscription_status"],
-                    "trial_ends_at": user["trial_ends_at"].isoformat() if user["trial_ends_at"] else None,
-                    "subscription_ends_at": user["subscription_ends_at"].isoformat() if user["subscription_ends_at"] else None
-                }
+                "id": user["id"],
+                "email": user["email"],
+                "name": user["name"],
+                "is_admin": user["is_admin"],
+                "subscription_status": user["subscription_status"],
+                "trial_ends_at": user["trial_ends_at"].isoformat() if user["trial_ends_at"] else None,
+                "subscription_ends_at": user["subscription_ends_at"].isoformat() if user["subscription_ends_at"] else None
             }
     except HTTPException:
         raise
