@@ -251,6 +251,65 @@
             transform-origin: 50% 50%;
         }
         
+        /* Video Container */
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            border-radius: 0.75rem;
+        }
+        
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        /* Quiz Styles */
+        .quiz-option {
+            transition: all 0.2s ease;
+        }
+        
+        .quiz-option:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: #3b82f6;
+        }
+        
+        .quiz-option.selected {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
+        }
+        
+        .quiz-option.correct {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: #10b981;
+        }
+        
+        .quiz-option.incorrect {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+        }
+        
+        /* Certificate Styles */
+        .certificate-frame {
+            border: 8px solid #f59e0b;
+            border-radius: 4px;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            position: relative;
+        }
+        
+        .certificate-frame::before {
+            content: '';
+            position: absolute;
+            inset: 4px;
+            border: 2px solid #d97706;
+            border-radius: 2px;
+        }
+        
         /* Responsive Utilities */
         @media (max-width: 1024px) {
             .desktop-sidebar {
@@ -391,11 +450,20 @@
                 <button onclick="showPage('analysis')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
                     <i data-lucide="scan-eye" class="w-5 h-5"></i> Chart Analysis
                 </button>
+                <button onclick="showPage('courses')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="graduation-cap" class="w-5 h-5"></i> Courses
+                </button>
+                <button onclick="showPage('webinars')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="video" class="w-5 h-5"></i> Webinars
+                </button>
                 <button onclick="showPage('discipline')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
                     <i data-lucide="shield-check" class="w-5 h-5"></i> Discipline
                 </button>
                 <button onclick="showPage('mentor')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
                     <i data-lucide="bot" class="w-5 h-5"></i> AI Mentor
+                </button>
+                <button onclick="showPage('subscription')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="credit-card" class="w-5 h-5"></i> Subscription
                 </button>
                 <button onclick="showPage('blog')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
                     <i data-lucide="newspaper" class="w-5 h-5"></i> Blog
@@ -440,9 +508,9 @@
                 <i data-lucide="plus-circle"></i>
                 <span>Trade</span>
             </button>
-            <button onclick="showPage('performance')" class="nav-btn-mobile" data-page="performance">
-                <i data-lucide="trophy"></i>
-                <span>AI Score</span>
+            <button onclick="showPage('courses')" class="nav-btn-mobile" data-page="courses">
+                <i data-lucide="graduation-cap"></i>
+                <span>Learn</span>
             </button>
             <button onclick="showPage('more')" class="nav-btn-mobile" data-page="more">
                 <i data-lucide="menu"></i>
@@ -462,6 +530,7 @@ let authToken = localStorage.getItem('pipways_token');
 let currentUser = JSON.parse(localStorage.getItem('pipways_user') || '{}');
 let checklistData = {};
 let currentPage = 'dashboard';
+let subscriptionStatus = null;
 
 if (authToken) {
     showApp();
@@ -492,7 +561,17 @@ function showApp() {
         document.getElementById('admin-menu-item-desktop')?.classList.remove('hidden');
     }
     
+    checkSubscription();
     showPage('dashboard');
+}
+
+async function checkSubscription() {
+    try {
+        const response = await apiCall('/subscription/status');
+        subscriptionStatus = await response.json();
+    } catch (err) {
+        console.error('Failed to check subscription:', err);
+    }
 }
 
 function showAuthTab(tab) {
@@ -600,6 +679,7 @@ async function handleRegister(e) {
         localStorage.setItem('pipways_token', authToken);
         localStorage.setItem('pipways_user', JSON.stringify(data));
         showApp();
+        showToast('Welcome! Your 3-day trial has started.');
         
     } catch (err) {
         errorEl.textContent = err.message;
@@ -612,6 +692,7 @@ function logout() {
     localStorage.removeItem('pipways_user');
     authToken = null;
     currentUser = {};
+    subscriptionStatus = null;
     showAuth();
 }
 
@@ -668,8 +749,11 @@ async function showPage(page) {
         'journal': renderJournal,
         'performance': renderPerformance,
         'analysis': renderChartAnalysis,
+        'courses': renderCourses,
+        'webinars': renderWebinars,
         'discipline': renderDiscipline,
         'mentor': renderMentor,
+        'subscription': renderSubscription,
         'blog': renderBlog,
         'admin': renderAdmin
     };
@@ -708,6 +792,15 @@ function showMobileMenu() {
                         <div class="text-sm text-slate-400">AI-powered setup review</div>
                     </div>
                 </button>
+                <button onclick="showPage('webinars')" class="w-full p-4 glass rounded-xl flex items-center gap-4 text-left">
+                    <div class="w-12 h-12 rounded-lg bg-pink-500/20 flex items-center justify-center">
+                        <i data-lucide="video" class="w-6 h-6 text-pink-400"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-white">Live Webinars</div>
+                        <div class="text-sm text-slate-400">Mon/Wed/Fri 8PM WAT</div>
+                    </div>
+                </button>
                 <button onclick="showPage('discipline')" class="w-full p-4 glass rounded-xl flex items-center gap-4 text-left">
                     <div class="w-12 h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center">
                         <i data-lucide="shield-check" class="w-6 h-6 text-emerald-400"></i>
@@ -724,6 +817,15 @@ function showMobileMenu() {
                     <div>
                         <div class="font-semibold text-white">AI Mentor</div>
                         <div class="text-sm text-slate-400">Trading psychology coach</div>
+                    </div>
+                </button>
+                <button onclick="showPage('subscription')" class="w-full p-4 glass rounded-xl flex items-center gap-4 text-left">
+                    <div class="w-12 h-12 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+                        <i data-lucide="credit-card" class="w-6 h-6 text-yellow-400"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-white">Subscription</div>
+                        <div class="text-sm text-slate-400">Manage your plan</div>
                     </div>
                 </button>
                 <button onclick="showPage('blog')" class="w-full p-4 glass rounded-xl flex items-center gap-4 text-left">
@@ -775,8 +877,25 @@ async function renderDashboard(content) {
         const wins = trades.filter(t => t.pips > 0).length;
         const winRate = trades.length ? (wins / trades.length * 100).toFixed(0) : 0;
         
+        // Check subscription status
+        const isTrial = subscriptionStatus?.is_trial;
+        const isActive = subscriptionStatus?.is_active;
+        const showUpgradeBanner = isTrial && !isActive;
+        
         content.innerHTML = `
             <div class="p-4 md:p-8 max-w-7xl mx-auto">
+                ${showUpgradeBanner ? `
+                <div class="mb-6 p-4 bg-gradient-to-r from-violet-600 to-blue-600 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div>
+                        <h3 class="font-bold text-white">Trial Active</h3>
+                        <p class="text-sm text-violet-200">Upgrade to unlock unlimited trades and all features</p>
+                    </div>
+                    <button onclick="showPage('subscription')" class="px-6 py-2 bg-white text-violet-600 rounded-lg font-medium hover:bg-violet-50 transition-colors">
+                        Upgrade $15/mo
+                    </button>
+                </div>
+                ` : ''}
+                
                 <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-8 gap-4">
                     <div>
                         <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">Dashboard</h2>
@@ -889,6 +1008,18 @@ async function renderDashboard(content) {
                                     <div>
                                         <div class="font-medium text-white text-sm md:text-base">Analyze Chart</div>
                                         <div class="text-xs text-slate-400 hidden md:block">AI-powered setup review</div>
+                                    </div>
+                                </div>
+                            </button>
+                            
+                            <button onclick="showPage('courses')" class="w-full p-3 md:p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-yellow-500/50 hover:bg-slate-800 transition-all text-left group">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center group-hover:bg-yellow-500/30 transition-colors">
+                                        <i data-lucide="graduation-cap" class="w-4 h-4 md:w-5 md:h-5 text-yellow-400"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-white text-sm md:text-base">Courses</div>
+                                        <div class="text-xs text-slate-400 hidden md:block">Learn & get certified</div>
                                     </div>
                                 </div>
                             </button>
@@ -1164,7 +1295,6 @@ async function renderJournal(content) {
         } else if (checklistData.items && Array.isArray(checklistData.items)) {
             checklistItems = checklistData.items;
         } else if (checklistData.items && typeof checklistData.items === 'string') {
-            // Parse if stored as JSON string
             try {
                 checklistItems = JSON.parse(checklistData.items);
             } catch (e) {
@@ -1400,7 +1530,7 @@ async function addTrade(e) {
     }
 }
 
-// NEW: Performance Analysis Page
+// Performance Analysis Page
 async function renderPerformance(content) {
     content.innerHTML = `
         <div class="p-4 md:p-8 max-w-4xl mx-auto fade-in pb-24 md:pb-8">
@@ -1624,7 +1754,7 @@ async function analyzePerformance(input) {
                 </h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     ${(analysis.recommended_courses || []).map(course => `
-                        <div class="p-4 bg-slate-800/50 rounded-lg border border-slate-700 hover:border-violet-500/50 transition-colors">
+                        <div class="p-4 bg-slate-800/50 rounded-lg border border-slate-700 hover:border-violet-500/50 transition-colors cursor-pointer" onclick="showPage('courses')">
                             <div class="flex items-center justify-between mb-2">
                                 <span class="px-2 py-1 rounded text-xs ${course.priority === 'High' ? 'bg-red-500/20 text-red-400' : course.priority === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'}">${course.priority} Priority</span>
                                 <span class="text-xs text-slate-500">${course.level}</span>
@@ -1964,6 +2094,620 @@ function saveAnalysisToJournal(pair, direction, grade) {
     }, 500);
 }
 
+// Courses Page
+async function renderCourses(content) {
+    try {
+        const response = await apiCall('/courses');
+        const courses = await response.json();
+        
+        content.innerHTML = `
+            <div class="p-4 md:p-8 max-w-7xl mx-auto fade-in pb-24 md:pb-8">
+                <div class="flex items-center justify-between mb-6 md:mb-8">
+                    <div>
+                        <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">Trading Courses</h2>
+                        <p class="text-slate-400 text-sm">Learn from beginner to advanced</p>
+                    </div>
+                </div>
+                
+                <!-- Level Tabs -->
+                <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
+                    <button onclick="filterCourses('all')" class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium whitespace-nowrap">All</button>
+                    <button onclick="filterCourses('beginner')" class="px-4 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-lg text-sm font-medium whitespace-nowrap">Beginner</button>
+                    <button onclick="filterCourses('intermediate')" class="px-4 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-lg text-sm font-medium whitespace-nowrap">Intermediate</button>
+                    <button onclick="filterCourses('advanced')" class="px-4 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-lg text-sm font-medium whitespace-nowrap">Advanced</button>
+                </div>
+                
+                <div id="courses-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                    ${courses.map(course => `
+                        <div class="glass rounded-xl overflow-hidden card-hover course-card" data-level="${course.level}">
+                            <div class="h-40 bg-gradient-to-br from-slate-800 to-slate-700 flex items-center justify-center overflow-hidden relative">
+                                ${course.thumbnail_url ? `
+                                    <img src="${course.thumbnail_url}" class="w-full h-full object-cover" alt="${course.title}">
+                                ` : `
+                                    <i data-lucide="graduation-cap" class="w-16 h-16 text-slate-600"></i>
+                                `}
+                                <div class="absolute top-3 right-3">
+                                    <span class="px-2 py-1 bg-slate-900/80 text-white text-xs rounded-full capitalize">${course.level}</span>
+                                </div>
+                                ${course.certificate_issued ? `
+                                <div class="absolute bottom-3 right-3">
+                                    <span class="px-2 py-1 bg-emerald-500/80 text-white text-xs rounded-full flex items-center gap-1">
+                                        <i data-lucide="award" class="w-3 h-3"></i> Certified
+                                    </span>
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div class="p-4 md:p-6">
+                                <h3 class="font-semibold text-white mb-2 text-lg">${course.title}</h3>
+                                <p class="text-sm text-slate-400 mb-4 line-clamp-2">${course.description || 'Master the essential skills for successful trading'}</p>
+                                
+                                <!-- Progress Bar -->
+                                <div class="mb-4">
+                                    <div class="flex items-center justify-between text-xs mb-1">
+                                        <span class="text-slate-400">Progress</span>
+                                        <span class="text-blue-400 font-medium">${course.progress_percentage || 0}%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-700 rounded-full h-2">
+                                        <div class="bg-gradient-to-r from-blue-500 to-violet-500 h-2 rounded-full transition-all" style="width: ${course.progress_percentage || 0}%"></div>
+                                    </div>
+                                </div>
+                                
+                                <button onclick="openCourse(${course.id})" class="w-full py-2.5 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2">
+                                    ${course.progress_percentage > 0 ? 'Continue' : 'Start Learning'}
+                                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `).join('') || '<div class="col-span-full text-center py-12 text-slate-500">No courses available</div>'}
+                </div>
+            </div>
+        `;
+    } catch (err) {
+        content.innerHTML = `<div class="p-4 md:p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">${err.message}</div></div>`;
+    }
+    lucide.createIcons();
+}
+
+function filterCourses(level) {
+    const cards = document.querySelectorAll('.course-card');
+    cards.forEach(card => {
+        if (level === 'all' || card.dataset.level === level) {
+            card.classList.remove('hidden');
+        } else {
+            card.classList.add('hidden');
+        }
+    });
+}
+
+async function openCourse(courseId) {
+    const content = document.getElementById('content');
+    try {
+        const response = await apiCall(`/courses/${courseId}`);
+        const course = await response.json();
+        
+        const lessons = JSON.parse(course.lessons || '[]');
+        const progress = course.progress || {};
+        const currentLesson = progress.completed_lessons?.length || 0;
+        
+        content.innerHTML = `
+            <div class="p-4 md:p-8 max-w-5xl mx-auto fade-in pb-24 md:pb-8">
+                <button onclick="showPage('courses')" class="mb-4 flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Courses
+                </button>
+                
+                <div class="glass rounded-xl overflow-hidden mb-6">
+                    <div class="p-6 md:p-8">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm capitalize">${course.level}</span>
+                            ${course.certificate_issued ? `
+                            <span class="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-sm flex items-center gap-1">
+                                <i data-lucide="award" class="w-4 h-4"></i> Completed
+                            </span>
+                            ` : ''}
+                        </div>
+                        <h1 class="text-2xl md:text-3xl font-bold text-white mb-4">${course.title}</h1>
+                        <p class="text-slate-400 mb-6">${course.description}</p>
+                        
+                        <!-- Progress -->
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between text-sm mb-2">
+                                    <span class="text-slate-400">Course Progress</span>
+                                    <span class="text-white font-medium">${progress.progress_percentage || 0}%</span>
+                                </div>
+                                <div class="w-full bg-slate-700 rounded-full h-3">
+                                    <div class="bg-gradient-to-r from-blue-500 to-violet-500 h-3 rounded-full transition-all" style="width: ${progress.progress_percentage || 0}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Lessons List -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-white mb-4">Lessons</h3>
+                    ${lessons.map((lesson, index) => {
+                        const isCompleted = progress.completed_lessons?.includes(lesson.id);
+                        const isLocked = index > 0 && !progress.completed_lessons?.includes(lessons[index-1]?.id);
+                        
+                        return `
+                        <div class="glass rounded-xl p-4 md:p-6 ${isCompleted ? 'border-emerald-500/30' : isLocked ? 'opacity-60' : ''}">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 rounded-lg ${isCompleted ? 'bg-emerald-500/20' : 'bg-slate-800'} flex items-center justify-center flex-shrink-0">
+                                    ${isCompleted ? 
+                                        '<i data-lucide="check-circle" class="w-6 h-6 text-emerald-400"></i>' : 
+                                        `<span class="text-lg font-bold text-slate-400">${index + 1}</span>`
+                                    }
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="font-semibold text-white mb-1">${lesson.title}</h4>
+                                    <p class="text-sm text-slate-400 mb-3">${lesson.duration_minutes} minutes</p>
+                                    
+                                    ${!isLocked ? `
+                                    <div class="video-container mb-4 bg-slate-900 rounded-lg overflow-hidden">
+                                        <iframe src="${lesson.content}" allowfullscreen></iframe>
+                                    </div>
+                                    
+                                    ${!isCompleted ? `
+                                    <button onclick="completeLesson(${courseId}, ${lesson.id})" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-white text-sm font-medium">
+                                        Mark as Complete
+                                    </button>
+                                    ` : ''}
+                                    ` : `
+                                    <div class="p-4 bg-slate-800/50 rounded-lg text-center">
+                                        <i data-lucide="lock" class="w-6 h-6 text-slate-500 mx-auto mb-2"></i>
+                                        <p class="text-sm text-slate-500">Complete previous lesson to unlock</p>
+                                    </div>
+                                    `}
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+                
+                <!-- Quiz Section -->
+                ${progress.progress_percentage >= 80 && !course.certificate_issued ? `
+                <div class="mt-8 glass rounded-xl p-6 border border-yellow-500/20">
+                    <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                        <i data-lucide="help-circle" class="w-5 h-5 text-yellow-400"></i>
+                        Final Quiz
+                    </h3>
+                    <p class="text-slate-400 mb-4">Complete the quiz to earn your certificate. You need ${course.passing_score}% to pass.</p>
+                    <button onclick="startQuiz(${courseId})" class="px-6 py-3 bg-yellow-500 hover:bg-yellow-600 rounded-lg text-white font-medium">
+                        Start Quiz
+                    </button>
+                    ${progress.quiz_attempts > 0 ? `<p class="text-sm text-slate-500 mt-2">Previous attempts: ${progress.quiz_attempts}</p>` : ''}
+                </div>
+                ` : ''}
+                
+                <!-- Certificate -->
+                ${course.certificate_issued ? `
+                <div class="mt-8 glass rounded-xl p-6 border border-emerald-500/20 bg-emerald-500/5">
+                    <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                        <i data-lucide="award" class="w-5 h-5 text-emerald-400"></i>
+                        Your Certificate
+                    </h3>
+                    <div class="certificate-frame p-8 text-center">
+                        <h4 class="text-2xl font-bold text-slate-800 mb-2">Certificate of Completion</h4>
+                        <p class="text-slate-600 mb-4">This certifies that</p>
+                        <p class="text-xl font-bold text-slate-900 mb-4">${currentUser.name}</p>
+                        <p class="text-slate-600 mb-4">has successfully completed</p>
+                        <p class="text-lg font-bold text-blue-600 mb-4">${course.title}</p>
+                        <p class="text-sm text-slate-500">Score: ${progress.quiz_score}%</p>
+                    </div>
+                    <a href="${course.certificate_url}" download class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-white text-sm font-medium">
+                        <i data-lucide="download" class="w-4 h-4"></i> Download Certificate
+                    </a>
+                </div>
+                ` : ''}
+            </div>
+        `;
+    } catch (err) {
+        content.innerHTML = `<div class="p-4 md:p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">${err.message}</div></div>`;
+    }
+    lucide.createIcons();
+}
+
+async function completeLesson(courseId, lessonId) {
+    try {
+        const formData = new URLSearchParams();
+        formData.append('lesson_id', lessonId);
+        formData.append('completed', 'true');
+        
+        await apiCall(`/courses/${courseId}/progress`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData.toString()
+        });
+        
+        showToast('Lesson completed!');
+        openCourse(courseId);
+    } catch (err) {
+        showToast('Error: ' + err.message);
+    }
+}
+
+async function startQuiz(courseId) {
+    const content = document.getElementById('content');
+    try {
+        const response = await apiCall(`/courses/${courseId}`);
+        const course = await response.json();
+        const questions = JSON.parse(course.quiz_questions || '[]');
+        
+        let currentQuestion = 0;
+        const answers = [];
+        
+        function renderQuestion() {
+            const q = questions[currentQuestion];
+            content.querySelector('#quiz-container').innerHTML = `
+                <div class="glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <span class="text-sm text-slate-400">Question ${currentQuestion + 1} of ${questions.length}</span>
+                        <div class="w-32 bg-slate-700 rounded-full h-2">
+                            <div class="bg-blue-500 h-2 rounded-full" style="width: ${((currentQuestion + 1) / questions.length) * 100}%"></div>
+                        </div>
+                    </div>
+                    
+                    <h4 class="text-lg font-semibold text-white mb-6">${q.question}</h4>
+                    
+                    <div class="space-y-3">
+                        ${q.options.map((opt, idx) => `
+                            <button onclick="selectAnswer(${idx})" class="quiz-option w-full p-4 bg-slate-800/50 border border-slate-700 rounded-lg text-left text-slate-200 hover:border-blue-500" data-idx="${idx}">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-6 h-6 rounded-full border-2 border-slate-600 flex items-center justify-center option-circle">
+                                        <div class="w-3 h-3 rounded-full bg-blue-500 hidden"></div>
+                                    </div>
+                                    <span>${opt}</span>
+                                </div>
+                            </button>
+                        `).join('')}
+                    </div>
+                    
+                    <button onclick="nextQuestion()" id="next-btn" class="mt-6 w-full py-3 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        ${currentQuestion < questions.length - 1 ? 'Next Question' : 'Submit Quiz'}
+                    </button>
+                </div>
+            `;
+            
+            // Attach selectAnswer to window
+            window.selectAnswer = (idx) => {
+                answers[currentQuestion] = idx;
+                document.querySelectorAll('.quiz-option').forEach((btn, i) => {
+                    if (i === idx) {
+                        btn.classList.add('selected');
+                        btn.querySelector('.option-circle div').classList.remove('hidden');
+                    } else {
+                        btn.classList.remove('selected');
+                        btn.querySelector('.option-circle div').classList.add('hidden');
+                    }
+                });
+                document.getElementById('next-btn').disabled = false;
+            };
+            
+            window.nextQuestion = async () => {
+                if (currentQuestion < questions.length - 1) {
+                    currentQuestion++;
+                    renderQuestion();
+                } else {
+                    // Submit quiz
+                    try {
+                        const formData = new URLSearchParams();
+                        formData.append('answers', JSON.stringify(answers));
+                        
+                        const submitRes = await apiCall(`/courses/${courseId}/quiz`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                            body: formData.toString()
+                        });
+                        
+                        const result = await submitRes.json();
+                        
+                        content.querySelector('#quiz-container').innerHTML = `
+                            <div class="glass rounded-xl p-8 text-center">
+                                <div class="w-20 h-20 mx-auto mb-4 rounded-full ${result.passed ? 'bg-emerald-500/20' : 'bg-orange-500/20'} flex items-center justify-center">
+                                    <i data-lucide="${result.passed ? 'check-circle' : 'alert-circle'}" class="w-10 h-10 ${result.passed ? 'text-emerald-400' : 'text-orange-400'}"></i>
+                                </div>
+                                <h3 class="text-2xl font-bold text-white mb-2">${result.passed ? 'Congratulations!' : 'Keep Learning'}</h3>
+                                <p class="text-slate-400 mb-4">You scored ${result.score}%</p>
+                                ${result.passed ? `
+                                    <p class="text-emerald-400 mb-6">You've earned your certificate!</p>
+                                    <button onclick="openCourse(${courseId})" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-white font-medium">
+                                        View Certificate
+                                    </button>
+                                ` : `
+                                    <p class="text-orange-400 mb-6">You need ${course.passing_score}% to pass. Review the lessons and try again.</p>
+                                    <button onclick="openCourse(${courseId})" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium">
+                                        Back to Course
+                                    </button>
+                                `}
+                            </div>
+                        `;
+                        lucide.createIcons();
+                    } catch (err) {
+                        showToast('Error submitting quiz: ' + err.message);
+                    }
+                }
+            };
+        }
+        
+        content.innerHTML = `
+            <div class="p-4 md:p-8 max-w-2xl mx-auto fade-in pb-24 md:pb-8">
+                <button onclick="openCourse(${courseId})" class="mb-4 flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Course
+                </button>
+                <div id="quiz-container"></div>
+            </div>
+        `;
+        
+        renderQuestion();
+        
+    } catch (err) {
+        showToast('Error loading quiz: ' + err.message);
+    }
+    lucide.createIcons();
+}
+
+// Webinars Page
+async function renderWebinars(content) {
+    try {
+        const response = await apiCall('/webinars');
+        const webinars = await response.json();
+        
+        const now = new Date();
+        const upcoming = webinars.filter(w => new Date(w.scheduled_at) > now);
+        const past = webinars.filter(w => new Date(w.scheduled_at) <= now);
+        
+        content.innerHTML = `
+            <div class="p-4 md:p-8 max-w-5xl mx-auto fade-in pb-24 md:pb-8">
+                <div class="flex items-center justify-between mb-6 md:mb-8">
+                    <div>
+                        <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">Live Webinars</h2>
+                        <p class="text-slate-400 text-sm">Mon/Wed/Fri at 8:00 PM WAT</p>
+                    </div>
+                </div>
+                
+                <!-- Schedule Info -->
+                <div class="glass rounded-xl p-4 md:p-6 mb-6 border border-pink-500/20 bg-pink-500/5">
+                    <div class="flex items-center gap-3 mb-3">
+                        <i data-lucide="calendar" class="w-5 h-5 text-pink-400"></i>
+                        <h3 class="font-semibold text-white">Weekly Schedule</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                        <div class="p-3 bg-slate-800/50 rounded-lg">
+                            <span class="text-emerald-400 font-medium">Monday</span>
+                            <p class="text-slate-400">Beginner Level</p>
+                        </div>
+                        <div class="p-3 bg-slate-800/50 rounded-lg">
+                            <span class="text-blue-400 font-medium">Wednesday</span>
+                            <p class="text-slate-400">Intermediate Level</p>
+                        </div>
+                        <div class="p-3 bg-slate-800/50 rounded-lg">
+                            <span class="text-violet-400 font-medium">Friday</span>
+                            <p class="text-slate-400">Advanced Level</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Upcoming Webinars -->
+                <h3 class="text-lg font-semibold text-white mb-4">Upcoming Sessions</h3>
+                <div class="space-y-4 mb-8">
+                    ${upcoming.length > 0 ? upcoming.map(w => {
+                        const date = new Date(w.scheduled_at);
+                        const levelColors = {
+                            'beginner': 'border-emerald-500/30 bg-emerald-500/5',
+                            'intermediate': 'border-blue-500/30 bg-blue-500/5',
+                            'advanced': 'border-violet-500/30 bg-violet-500/5'
+                        };
+                        return `
+                        <div class="glass rounded-xl p-4 md:p-6 border ${levelColors[w.level] || 'border-slate-700'}">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="px-2 py-1 rounded text-xs capitalize ${w.level === 'beginner' ? 'bg-emerald-500/20 text-emerald-400' : w.level === 'intermediate' ? 'bg-blue-500/20 text-blue-400' : 'bg-violet-500/20 text-violet-400'}">${w.level}</span>
+                                        <span class="text-xs text-slate-500">${date.toLocaleDateString()} at ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                    </div>
+                                    <h4 class="font-semibold text-white text-lg mb-1">${w.title}</h4>
+                                    <p class="text-sm text-slate-400">${w.description || 'Live trading session with Q&A'}</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    ${w.is_registered ? `
+                                        <a href="${w.zoom_join_url}" target="_blank" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-white text-sm font-medium flex items-center gap-2">
+                                            <i data-lucide="video" class="w-4 h-4"></i> Join
+                                        </a>
+                                    ` : `
+                                        <button onclick="registerWebinar(${w.id})" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white text-sm font-medium">
+                                            Register
+                                        </button>
+                                    `}
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    }).join('') : '<p class="text-slate-500 text-center py-8">No upcoming webinars scheduled</p>'}
+                </div>
+                
+                <!-- Past Recordings -->
+                ${past.filter(w => w.is_recorded).length > 0 ? `
+                <h3 class="text-lg font-semibold text-white mb-4">Recordings</h3>
+                <div class="space-y-4">
+                    ${past.filter(w => w.is_recorded).map(w => `
+                        <div class="glass rounded-xl p-4 md:p-6 border border-slate-700 opacity-80">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="px-2 py-1 rounded text-xs capitalize bg-slate-700 text-slate-300">${w.level}</span>
+                                        <span class="text-xs text-slate-500">${new Date(w.scheduled_at).toLocaleDateString()}</span>
+                                    </div>
+                                    <h4 class="font-semibold text-white">${w.title}</h4>
+                                </div>
+                                <a href="${w.recording_url}" target="_blank" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-sm font-medium flex items-center gap-2">
+                                    <i data-lucide="play-circle" class="w-4 h-4"></i> Watch
+                                </a>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                ` : ''}
+            </div>
+        `;
+    } catch (err) {
+        content.innerHTML = `<div class="p-4 md:p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">${err.message}</div></div>`;
+    }
+    lucide.createIcons();
+}
+
+async function registerWebinar(webinarId) {
+    try {
+        await apiCall(`/webinars/${webinarId}/register`, { method: 'POST' });
+        showToast('Registered successfully! Check your email for the link.');
+        renderWebinars(document.getElementById('content'));
+    } catch (err) {
+        showToast('Error: ' + err.message);
+    }
+}
+
+// Subscription Page
+async function renderSubscription(content) {
+    try {
+        const response = await apiCall('/subscription/status');
+        const status = await response.json();
+        
+        const isTrial = status.is_trial;
+        const isActive = status.is_active;
+        const trialEnds = status.trial_ends_at ? new Date(status.trial_ends_at) : null;
+        const subEnds = status.subscription_ends_at ? new Date(status.subscription_ends_at) : null;
+        
+        content.innerHTML = `
+            <div class="p-4 md:p-8 max-w-4xl mx-auto fade-in pb-24 md:pb-8">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">Subscription</h2>
+                    <p class="text-slate-400">Manage your Pipways membership</p>
+                </div>
+                
+                <!-- Current Status -->
+                <div class="glass rounded-xl p-6 md:p-8 mb-8 ${isActive ? 'border-emerald-500/30 bg-emerald-500/5' : isTrial ? 'border-yellow-500/30 bg-yellow-500/5' : 'border-red-500/30 bg-red-500/5'}">
+                    <div class="flex items-center justify-center mb-4">
+                        <div class="w-16 h-16 rounded-full ${isActive ? 'bg-emerald-500/20' : isTrial ? 'bg-yellow-500/20' : 'bg-red-500/20'} flex items-center justify-center">
+                            <i data-lucide="${isActive ? 'check-circle' : isTrial ? 'clock' : 'alert-circle'}" class="w-8 h-8 ${isActive ? 'text-emerald-400' : isTrial ? 'text-yellow-400' : 'text-red-400'}"></i>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold text-white text-center mb-2">
+                        ${isActive ? 'Active Subscription' : isTrial ? 'Trial Period' : 'Subscription Expired'}
+                    </h3>
+                    <p class="text-slate-400 text-center mb-4">
+                        ${isActive ? `Valid until ${subEnds.toLocaleDateString()}` : 
+                          isTrial ? `Trial ends ${trialEnds.toLocaleDateString()} (${Math.ceil((trialEnds - new Date()) / (1000 * 60 * 60 * 24))} days left)` : 
+                          'Renew to continue accessing all features'}
+                    </p>
+                    ${!isActive ? `
+                    <div class="text-center">
+                        <button onclick="initializePayment()" class="px-8 py-3 bg-gradient-to-r from-blue-500 to-violet-500 hover:from-blue-600 hover:to-violet-600 rounded-lg text-white font-bold text-lg transition-all">
+                            Subscribe Now - $15/month
+                        </button>
+                        <p class="text-xs text-slate-500 mt-2">3-day free trial • Cancel anytime</p>
+                    </div>
+                    ` : ''}
+                </div>
+                
+                <!-- Features Comparison -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Free/Trial -->
+                    <div class="glass rounded-xl p-6 border border-slate-700">
+                        <h3 class="text-lg font-semibold text-white mb-4">Free/Trial</h3>
+                        <ul class="space-y-3 text-sm">
+                            <li class="flex items-center gap-2 text-slate-400">
+                                <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                5 trade entries
+                            </li>
+                            <li class="flex items-center gap-2 text-slate-400">
+                                <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                1 chart analysis
+                            </li>
+                            <li class="flex items-center gap-2 text-slate-400">
+                                <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                1 performance analysis
+                            </li>
+                            <li class="flex items-center gap-2 text-slate-400">
+                                <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                Basic AI mentor
+                            </li>
+                            <li class="flex items-center gap-2 text-slate-500">
+                                <i data-lucide="x" class="w-4 h-4 text-slate-600"></i>
+                                Courses
+                            </li>
+                            <li class="flex items-center gap-2 text-slate-500">
+                                <i data-lucide="x" class="w-4 h-4 text-slate-600"></i>
+                                Live webinars
+                            </li>
+                            <li class="flex items-center gap-2 text-slate-500">
+                                <i data-lucide="x" class="w-4 h-4 text-slate-600"></i>
+                                Certificates
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Premium -->
+                    <div class="glass rounded-xl p-6 border-2 border-blue-500/50 bg-blue-500/5">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-white">Premium</h3>
+                            <span class="px-3 py-1 bg-blue-500 text-white text-xs rounded-full">$15/month</span>
+                        </div>
+                        <ul class="space-y-3 text-sm">
+                            <li class="flex items-center gap-2 text-white">
+                                <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                Unlimited trade entries
+                            </li>
+                            <li class="flex items-center gap-2 text-white">
+                                <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                Unlimited chart analyses
+                            </li>
+                            <li class="flex items-center gap-2 text-white">
+                                <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                Unlimited performance analyses
+                            </li>
+                            <li class="flex items-center gap-2 text-white">
+                                <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                Advanced AI mentor
+                            </li>
+                            <li class="flex items-center gap-2 text-white">
+                                <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                Full course library
+                            </li>
+                            <li class="flex items-center gap-2 text-white">
+                                <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                Live webinars (3x/week)
+                            </li>
+                            <li class="flex items-center gap-2 text-white">
+                                <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                Certificates on completion
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (err) {
+        content.innerHTML = `<div class="p-4 md:p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">${err.message}</div></div>`;
+    }
+    lucide.createIcons();
+}
+
+async function initializePayment() {
+    try {
+        const response = await apiCall('/payments/initialize');
+        const data = await response.json();
+        
+        if (data.authorization_url) {
+            window.location.href = data.authorization_url;
+        } else {
+            showToast('Payment system not available');
+        }
+    } catch (err) {
+        showToast('Error: ' + err.message);
+    }
+}
+
 // Discipline Score
 function renderDiscipline(content) {
     content.innerHTML = `
@@ -2019,7 +2763,7 @@ function renderMentor(content) {
                             <i data-lucide="bot" class="w-4 h-4 md:w-5 md:h-5 text-white"></i>
                         </div>
                         <div class="bg-slate-800 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%] md:max-w-[80%]">
-                            <p class="text-slate-200 text-sm leading-relaxed">Hello! I'm your AI trading mentor. I'm here to help you with trading psychology, risk management, and maintaining discipline. What would you like to discuss today?</p>
+                            <p class="text-slate-200 text-sm leading-relaxed">Hello! I'm your AI trading mentor. I'm here to help you with trading psychology, risk management, and maintaining discipline. I can also recommend courses based on your needs. What would you like to discuss today?</p>
                         </div>
                     </div>
                 </div>
@@ -2037,6 +2781,7 @@ function renderMentor(content) {
                         <button onclick="quickAsk('How do I control FOMO?')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">How do I control FOMO?</button>
                         <button onclick="quickAsk('What is proper risk management?')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">Risk management</button>
                         <button onclick="quickAsk('How to review losing trades?')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">Review losses</button>
+                        <button onclick="quickAsk('Recommend a course for me')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">Recommend course</button>
                     </div>
                 </div>
             </div>
@@ -2368,6 +3113,9 @@ async function renderAdmin(content) {
                                         </td>
                                         <td class="py-2 md:py-3 text-center text-slate-400">${post.view_count || 0}</td>
                                         <td class="py-2 md:py-3 text-right">
+                                            <button onclick="editPost(${post.id})" class="text-blue-400 hover:text-blue-300 transition-colors p-2 mr-1">
+                                                <i data-lucide="edit" class="w-4 h-4"></i>
+                                            </button>
                                             <button onclick="deletePost(${post.id})" class="text-red-400 hover:text-red-300 transition-colors p-2">
                                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                                             </button>
@@ -2379,14 +3127,15 @@ async function renderAdmin(content) {
                     </div>
                 </div>
                 
-                <!-- New Post Form (Hidden by default) -->
-                <div id="new-post-form" class="hidden glass rounded-xl p-4 md:p-6">
-                    <h3 class="text-base md:text-lg font-semibold text-white mb-4">Create New Post</h3>
-                    <form onsubmit="createBlogPost(event)" class="space-y-4">
+                <!-- New/Edit Post Form (Hidden by default) -->
+                <div id="post-form" class="hidden glass rounded-xl p-4 md:p-6">
+                    <h3 id="form-title" class="text-base md:text-lg font-semibold text-white mb-4">Create New Post</h3>
+                    <form id="blog-post-form" onsubmit="saveBlogPost(event)" class="space-y-4">
+                        <input type="hidden" id="edit-post-id" name="post_id" value="">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Title</label>
-                                <input name="title" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-sm" oninput="generateSlug(this.value)">
+                                <input name="title" id="post-title" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-sm" oninput="generateSlug(this.value)">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Slug (URL)</label>
@@ -2397,11 +3146,11 @@ async function renderAdmin(content) {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Category</label>
-                                <input name="category" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-sm" placeholder="Strategy">
+                                <input name="category" id="post-category" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-sm" placeholder="Strategy">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Tags (comma separated)</label>
-                                <input name="tags" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-sm" placeholder="forex, psychology, risk">
+                                <input name="tags" id="post-tags" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-sm" placeholder="forex, psychology, risk">
                             </div>
                         </div>
                         
@@ -2427,12 +3176,12 @@ async function renderAdmin(content) {
                         
                         <div>
                             <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Excerpt</label>
-                            <textarea name="excerpt" rows="2" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-sm" placeholder="Brief summary for SEO and previews..."></textarea>
+                            <textarea name="excerpt" id="post-excerpt" rows="2" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-sm" placeholder="Brief summary for SEO and previews..."></textarea>
                         </div>
                         
                         <div>
                             <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Content</label>
-                            <textarea name="content" required rows="6" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-sm"></textarea>
+                            <textarea name="content" id="post-content" required rows="6" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-sm"></textarea>
                         </div>
                         
                         <div class="flex items-center gap-3">
@@ -2441,8 +3190,8 @@ async function renderAdmin(content) {
                         </div>
                         
                         <div class="flex gap-3">
-                            <button type="submit" class="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium text-sm">Create Post</button>
-                            <button type="button" onclick="document.getElementById('new-post-form').classList.add('hidden')" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 font-medium text-sm">Cancel</button>
+                            <button type="submit" class="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium text-sm">Save Post</button>
+                            <button type="button" onclick="document.getElementById('post-form').classList.add('hidden')" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 font-medium text-sm">Cancel</button>
                         </div>
                     </form>
                 </div>
@@ -2488,17 +3237,50 @@ function removeImage() {
 }
 
 function showNewPostForm() {
-    document.getElementById('new-post-form').classList.remove('hidden');
-    document.getElementById('new-post-form').scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('post-form').classList.remove('hidden');
+    document.getElementById('form-title').textContent = 'Create New Post';
+    document.getElementById('blog-post-form').reset();
+    document.getElementById('edit-post-id').value = '';
+    document.getElementById('image-preview-container').classList.add('hidden');
+    document.getElementById('post-form').scrollIntoView({ behavior: 'smooth' });
 }
 
-async function createBlogPost(e) {
+async function editPost(postId) {
+    try {
+        const response = await apiCall(`/admin/blog/posts/${postId}`);
+        const post = await response.json();
+        
+        document.getElementById('post-form').classList.remove('hidden');
+        document.getElementById('form-title').textContent = 'Edit Post';
+        document.getElementById('edit-post-id').value = postId;
+        document.getElementById('post-title').value = post.title;
+        document.getElementById('post-slug').value = post.slug;
+        document.getElementById('post-category').value = post.category || '';
+        document.getElementById('post-tags').value = post.tags ? post.tags.join(', ') : '';
+        document.getElementById('post-excerpt').value = post.excerpt || '';
+        document.getElementById('post-content').value = post.content || '';
+        document.getElementById('publish-check').checked = post.published;
+        
+        if (post.featured_image) {
+            document.getElementById('featured-image-data').value = post.featured_image;
+            document.getElementById('image-preview').src = post.featured_image;
+            document.getElementById('image-preview-container').classList.remove('hidden');
+        }
+        
+        document.getElementById('post-form').scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+        showToast('Error loading post: ' + err.message);
+    }
+}
+
+async function saveBlogPost(e) {
     e.preventDefault();
     const f = e.target;
+    const postId = document.getElementById('edit-post-id').value;
     const btn = f.querySelector('button[type="submit"]');
     const originalText = btn.textContent;
     
-    btn.textContent = 'Creating...';
+    btn.textContent = 'Saving...';
     btn.disabled = true;
     
     try {
@@ -2512,8 +3294,11 @@ async function createBlogPost(e) {
         formData.append('featured_image', document.getElementById('featured-image-data').value);
         formData.append('published', f.published.checked);
         
-        const response = await apiCall('/admin/blog/posts', {
-            method: 'POST',
+        const endpoint = postId ? `/admin/blog/posts/${postId}` : '/admin/blog/posts';
+        const method = postId ? 'PUT' : 'POST';
+        
+        const response = await apiCall(endpoint, {
+            method: method,
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: formData.toString()
         });
@@ -2524,7 +3309,7 @@ async function createBlogPost(e) {
             throw new Error(getErrorMessage(data));
         }
         
-        showToast('Blog post created successfully!');
+        showToast(postId ? 'Post updated successfully!' : 'Post created successfully!');
         renderAdmin(document.getElementById('content'));
         
     } catch (err) {
