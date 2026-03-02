@@ -9,9 +9,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
-        * {
-            font-family: 'Inter', sans-serif;
-        }
+        * { font-family: 'Inter', sans-serif; }
         
         .glass-panel {
             background: rgba(30, 41, 59, 0.7);
@@ -57,6 +55,12 @@
         .btn-primary:hover {
             transform: translateY(-1px);
             box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
         
         .loading-spinner {
@@ -168,104 +172,6 @@
         .grade-b { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); }
         .grade-c { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
         
-        .progress-ring {
-            transform: rotate(-90deg);
-        }
-        
-        .progress-ring-circle {
-            transition: stroke-dashoffset 0.5s ease;
-        }
-        
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-        }
-        
-        .tooltip {
-            position: absolute;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.2s;
-            z-index: 100;
-        }
-        
-        .checklist-item {
-            transition: all 0.2s ease;
-        }
-        
-        .checklist-item:hover {
-            background: rgba(59, 130, 246, 0.05);
-        }
-        
-        .checklist-item input[type="checkbox"]:checked + label {
-            text-decoration: line-through;
-            opacity: 0.6;
-        }
-        
-        .subscription-badge {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        }
-        
-        .subscription-badge.active {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        }
-        
-        .subscription-badge.expired {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-        }
-        
-        .blog-content h2 { font-size: 1.5rem; font-weight: 600; margin: 1.5rem 0 1rem; color: #60a5fa; }
-        .blog-content h3 { font-size: 1.25rem; font-weight: 600; margin: 1.25rem 0 0.75rem; color: #a78bfa; }
-        .blog-content p { margin-bottom: 1rem; line-height: 1.7; }
-        .blog-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
-        .blog-content li { margin-bottom: 0.5rem; }
-        .blog-content code { background: rgba(30, 41, 59, 0.8); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
-        
-        .video-container {
-            position: relative;
-            padding-bottom: 56.25%;
-            height: 0;
-            overflow: hidden;
-            border-radius: 12px;
-        }
-        
-        .video-container iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-        
-        .quiz-option {
-            transition: all 0.2s ease;
-        }
-        
-        .quiz-option:hover {
-            background: rgba(59, 130, 246, 0.1);
-        }
-        
-        .quiz-option.selected {
-            background: rgba(59, 130, 246, 0.2);
-            border-color: #3b82f6;
-        }
-        
-        .quiz-option.correct {
-            background: rgba(16, 185, 129, 0.2);
-            border-color: #10b981;
-        }
-        
-        .quiz-option.incorrect {
-            background: rgba(239, 68, 68, 0.2);
-            border-color: #ef4444;
-        }
-        
         .typing-indicator span {
             display: inline-block;
             width: 8px;
@@ -293,13 +199,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        .image-preview {
-            max-width: 100%;
-            max-height: 300px;
-            border-radius: 8px;
-            margin-top: 12px;
-        }
-        
         .drag-drop-zone {
             border: 2px dashed rgba(148, 163, 184, 0.3);
             transition: all 0.3s ease;
@@ -309,6 +208,31 @@
             border-color: #3b82f6;
             background: rgba(59, 130, 246, 0.05);
         }
+        
+        .debug-panel {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            z-index: 9998;
+            max-width: 300px;
+            font-family: monospace;
+            font-size: 12px;
+            display: none;
+        }
+        
+        .debug-panel.show {
+            display: block;
+        }
+        
+        .blog-content h2 { font-size: 1.5rem; font-weight: 600; margin: 1.5rem 0 1rem; color: #60a5fa; }
+        .blog-content h3 { font-size: 1.25rem; font-weight: 600; margin: 1.25rem 0 0.75rem; color: #a78bfa; }
+        .blog-content p { margin-bottom: 1rem; line-height: 1.7; }
+        .blog-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .blog-content li { margin-bottom: 0.5rem; }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200 antialiased">
@@ -326,6 +250,22 @@
         </div>
     </div>
 
+    <!-- Debug Panel -->
+    <div id="debug-panel" class="debug-panel">
+        <div class="flex justify-between items-center mb-2">
+            <span class="font-bold text-blue-400">Debug Info</span>
+            <button onclick="toggleDebug()" class="text-xs text-slate-400 hover:text-white">Hide</button>
+        </div>
+        <div class="space-y-1 text-slate-300">
+            <div>API: <span id="debug-api-url" class="text-green-400"></span></div>
+            <div>Status: <span id="debug-status" class="text-yellow-400">Unknown</span></div>
+            <div>Latency: <span id="debug-latency">-</span>ms</div>
+            <button onclick="testAPIConnection()" class="mt-2 px-3 py-1 bg-blue-600 rounded text-xs hover:bg-blue-500">
+                Test Connection
+            </button>
+        </div>
+    </div>
+
     <!-- Auth Modal -->
     <div id="auth-modal" class="modal show">
         <div class="modal-content text-center">
@@ -337,7 +277,7 @@
                 <p class="text-slate-400">Master your trading psychology and track your journey</p>
             </div>
             
-            <div class="space-y-4">
+            <div class="space-y-4" id="auth-buttons">
                 <button onclick="showLoginForm()" class="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors flex items-center justify-center gap-2">
                     <i data-lucide="log-in" class="w-5 h-5"></i>
                     Sign In
@@ -348,17 +288,22 @@
             </div>
             
             <div id="auth-forms" class="hidden mt-6 text-left">
+                <!-- Login Form -->
                 <form id="login-form" class="hidden space-y-4" onsubmit="handleLogin(event)">
                     <div>
                         <label class="block text-sm font-medium mb-2">Email</label>
-                        <input type="email" id="login-email" required class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 transition-colors" placeholder="you@example.com">
+                        <input type="email" id="login-email" required 
+                            class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 transition-colors" 
+                            placeholder="you@example.com">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2">Password</label>
-                        <input type="password" id="login-password" required class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 transition-colors" placeholder="••••••••">
+                        <input type="password" id="login-password" required 
+                            class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 transition-colors" 
+                            placeholder="••••••••">
                     </div>
                     <div id="login-error" class="hidden text-red-400 text-sm"></div>
-                    <button type="submit" class="w-full py-3 px-4 btn-primary text-white rounded-xl font-medium">
+                    <button type="submit" id="login-submit" class="w-full py-3 px-4 btn-primary text-white rounded-xl font-medium">
                         Sign In
                     </button>
                     <button type="button" onclick="showAuthButtons()" class="w-full py-2 text-slate-400 hover:text-white text-sm">
@@ -366,22 +311,29 @@
                     </button>
                 </form>
                 
+                <!-- Register Form -->
                 <form id="register-form" class="hidden space-y-4" onsubmit="handleRegister(event)">
                     <div>
                         <label class="block text-sm font-medium mb-2">Full Name</label>
-                        <input type="text" id="register-name" required class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 transition-colors" placeholder="John Doe">
+                        <input type="text" id="register-name" required 
+                            class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 transition-colors" 
+                            placeholder="John Doe">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2">Email</label>
-                        <input type="email" id="register-email" required class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 transition-colors" placeholder="you@example.com">
+                        <input type="email" id="register-email" required 
+                            class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 transition-colors" 
+                            placeholder="you@example.com">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2">Password</label>
-                        <input type="password" id="register-password" required minlength="6" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 transition-colors" placeholder="••••••••">
+                        <input type="password" id="register-password" required minlength="6"
+                            class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 transition-colors" 
+                            placeholder="••••••••">
                         <p class="text-xs text-slate-500 mt-1">Minimum 6 characters</p>
                     </div>
                     <div id="register-error" class="hidden text-red-400 text-sm"></div>
-                    <button type="submit" class="w-full py-3 px-4 btn-primary text-white rounded-xl font-medium">
+                    <button type="submit" id="register-submit" class="w-full py-3 px-4 btn-primary text-white rounded-xl font-medium">
                         Create Account
                     </button>
                     <button type="button" onclick="showAuthButtons()" class="w-full py-2 text-slate-400 hover:text-white text-sm">
@@ -525,6 +477,7 @@
         <!-- Main Content -->
         <main class="flex-1 md:ml-64 pt-16 md:pt-0">
             <div class="p-6 md:p-8 max-w-7xl mx-auto">
+                
                 <!-- Dashboard Page -->
                 <div id="page-dashboard" class="page-content fade-in">
                     <div class="mb-8">
@@ -593,7 +546,7 @@
                         </div>
                     </div>
 
-                    <!-- Quick Actions -->
+                    <!-- Quick Actions & Recent Activity -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                         <div class="glass-panel rounded-2xl p-6">
                             <h3 class="text-lg font-semibold mb-4">Quick Actions</h3>
@@ -683,7 +636,6 @@
                                     </tr>
                                 </thead>
                                 <tbody id="trades-table-body" class="divide-y divide-slate-800">
-                                    <!-- Trades will be loaded here -->
                                 </tbody>
                             </table>
                         </div>
@@ -752,7 +704,6 @@
                             </div>
                             
                             <div id="checklist-items" class="space-y-3">
-                                <!-- Checklist items will be loaded here -->
                             </div>
                         </div>
 
@@ -768,13 +719,12 @@
                                 </button>
                             </div>
                             <div id="chart-preview" class="hidden mt-4">
-                                <img id="chart-preview-img" class="image-preview mx-auto">
+                                <img id="chart-preview-img" class="max-w-full max-h-64 rounded-lg mx-auto">
                                 <button onclick="analyzeChart()" class="mt-4 w-full py-3 btn-primary text-white rounded-xl font-medium">
                                     Analyze Chart
                                 </button>
                             </div>
                             <div id="chart-analysis-result" class="hidden mt-6 p-4 bg-slate-800/50 rounded-xl">
-                                <!-- Analysis result will appear here -->
                             </div>
                         </div>
                     </div>
@@ -971,6 +921,7 @@
                         </div>
                     </div>
                 </div>
+
             </div>
         </main>
     </div>
@@ -1046,7 +997,7 @@
                         class="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 rounded-xl font-medium transition-colors">
                         Cancel
                     </button>
-                    <button type="submit" class="flex-1 py-3 px-4 btn-primary text-white rounded-xl font-medium">
+                    <button type="submit" id="trade-submit-btn" class="flex-1 py-3 px-4 btn-primary text-white rounded-xl font-medium">
                         Save Trade
                     </button>
                 </div>
@@ -1055,36 +1006,151 @@
     </div>
 
     <script>
-        // Configuration - Auto-detect API URL based on current domain
+        // ============================================================================
+        // CONFIGURATION
+        // ============================================================================
+        
         const CURRENT_DOMAIN = window.location.hostname;
-        const API_URL = CURRENT_DOMAIN.includes('localhost') || CURRENT_DOMAIN.includes('127.0.0.1') 
-            ? 'http://localhost:8000'
-            : (CURRENT_DOMAIN.includes('-nhem') 
-                ? 'https://pipways-api-nhem.onrender.com'
-                : 'https://pipways-api.onrender.com');
-
-        console.log('API URL:', API_URL);
-
+        console.log('Current domain:', CURRENT_DOMAIN);
+        
+        let API_URL;
+        if (CURRENT_DOMAIN === 'localhost' || CURRENT_DOMAIN === '127.0.0.1') {
+            API_URL = 'http://localhost:8000';
+        } else {
+            if (CURRENT_DOMAIN.includes('pipways-web-')) {
+                const apiDomain = CURRENT_DOMAIN.replace('pipways-web-', 'pipways-api-');
+                API_URL = `https://${apiDomain}`;
+            } else if (CURRENT_DOMAIN.includes('pipways-web')) {
+                API_URL = 'https://pipways-api.onrender.com';
+            } else {
+                API_URL = 'https://pipways-api-nhem.onrender.com';
+            }
+        }
+        
+        console.log('API URL configured:', API_URL);
+        document.getElementById('debug-api-url').textContent = API_URL;
+        
+        // ============================================================================
+        // GLOBAL STATE
+        // ============================================================================
+        
         let authToken = localStorage.getItem('pipways_token');
         let currentUser = JSON.parse(localStorage.getItem('pipways_user') || '{}');
         let checklistData = {};
         let currentPage = 'dashboard';
         let subscriptionStatus = null;
         let isOnline = navigator.onLine;
-
-        // Offline detection
+        
+        // ============================================================================
+        // OFFLINE DETECTION
+        // ============================================================================
+        
         window.addEventListener('online', () => {
             isOnline = true;
             document.getElementById('offline-indicator').classList.remove('show');
             showToast('Back online', 2000, 'success');
+            testAPIConnection();
         });
-
+        
         window.addEventListener('offline', () => {
             isOnline = false;
             document.getElementById('offline-indicator').classList.add('show');
+            showToast('You are offline', 3000, 'error');
         });
-
-        // Initialize Lucide icons
+        
+        // ============================================================================
+        // API CLIENT WITH TIMEOUT
+        // ============================================================================
+        
+        async function apiRequest(endpoint, options = {}) {
+            const url = `${API_URL}${endpoint}`;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            
+            const defaultOptions = {
+                headers: {
+                    'Authorization': authToken ? `Bearer ${authToken}` : '',
+                    ...options.headers
+                },
+                signal: controller.signal
+            };
+            
+            try {
+                const startTime = performance.now();
+                const response = await fetch(url, { ...defaultOptions, ...options });
+                const latency = Math.round(performance.now() - startTime);
+                
+                document.getElementById('debug-latency').textContent = latency;
+                document.getElementById('debug-status').textContent = `HTTP ${response.status}`;
+                document.getElementById('debug-status').className = response.ok ? 'text-green-400' : 'text-red-400';
+                
+                clearTimeout(timeoutId);
+                
+                if (response.status === 401) {
+                    handleLogout();
+                    throw new Error('Session expired. Please login again.');
+                }
+                
+                return response;
+            } catch (error) {
+                clearTimeout(timeoutId);
+                
+                if (error.name === 'AbortError') {
+                    document.getElementById('debug-status').textContent = 'Timeout';
+                    document.getElementById('debug-status').className = 'text-red-400';
+                    throw new Error('Request timeout. API may be waking up from sleep (Render free tier). Please try again.');
+                }
+                
+                document.getElementById('debug-status').textContent = 'Error';
+                document.getElementById('debug-status').className = 'text-red-400';
+                throw error;
+            }
+        }
+        
+        // ============================================================================
+        // DEBUG FUNCTIONS
+        // ============================================================================
+        
+        function toggleDebug() {
+            document.getElementById('debug-panel').classList.toggle('show');
+        }
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                e.preventDefault();
+                toggleDebug();
+            }
+        });
+        
+        async function testAPIConnection() {
+            const statusEl = document.getElementById('debug-status');
+            statusEl.textContent = 'Testing...';
+            statusEl.className = 'text-yellow-400';
+            
+            try {
+                const response = await apiRequest('/health');
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'healthy') {
+                    statusEl.textContent = 'Connected';
+                    statusEl.className = 'text-green-400';
+                    showToast('API connection successful', 2000, 'success');
+                } else {
+                    throw new Error('API unhealthy');
+                }
+            } catch (e) {
+                statusEl.textContent = 'Failed';
+                statusEl.className = 'text-red-400';
+                showToast(`API connection failed: ${e.message}`, 3000, 'error');
+            }
+        }
+        
+        setTimeout(testAPIConnection, 1000);
+        
+        // ============================================================================
+        // INITIALIZATION
+        // ============================================================================
+        
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             
@@ -1096,41 +1162,43 @@
             } else {
                 showAuthModal();
             }
-
-            // Setup drag and drop for chart analysis
+            
             setupDragAndDrop();
         });
-
-        // Auth functions
+        
+        // ============================================================================
+        // AUTH FUNCTIONS
+        // ============================================================================
+        
         function showAuthModal() {
             document.getElementById('auth-modal').classList.add('show');
             document.getElementById('app').classList.add('hidden');
         }
-
+        
         function showApp() {
             document.getElementById('auth-modal').classList.remove('show');
             document.getElementById('app').classList.remove('hidden');
         }
-
+        
         function showAuthButtons() {
             document.getElementById('auth-forms').classList.add('hidden');
-            document.querySelector('.space-y-4').classList.remove('hidden');
+            document.getElementById('auth-buttons').classList.remove('hidden');
         }
-
+        
         function showLoginForm() {
-            document.querySelector('.space-y-4').classList.add('hidden');
+            document.getElementById('auth-buttons').classList.add('hidden');
             document.getElementById('auth-forms').classList.remove('hidden');
             document.getElementById('login-form').classList.remove('hidden');
             document.getElementById('register-form').classList.add('hidden');
         }
-
+        
         function showRegisterForm() {
-            document.querySelector('.space-y-4').classList.add('hidden');
+            document.getElementById('auth-buttons').classList.add('hidden');
             document.getElementById('auth-forms').classList.remove('hidden');
             document.getElementById('login-form').classList.add('hidden');
             document.getElementById('register-form').classList.remove('hidden');
         }
-
+        
         async function handleLogin(event) {
             event.preventDefault();
             
@@ -1138,26 +1206,25 @@
                 showToast('You are offline. Please check your connection.', 3000, 'error');
                 return;
             }
-
-            const btn = event.target.querySelector('button[type="submit"]');
-            const originalText = btn.innerHTML;
-            setButtonLoading(btn, true);
-
+            
+            const btn = document.getElementById('login-submit');
             const errorEl = document.getElementById('login-error');
             errorEl.classList.add('hidden');
-
+            
+            setButtonLoading(btn, true);
+            
             const formData = new FormData();
             formData.append('email', document.getElementById('login-email').value);
             formData.append('password', document.getElementById('login-password').value);
-
+            
             try {
-                const response = await fetch(`${API_URL}/auth/login`, {
+                const response = await apiRequest('/auth/login', {
                     method: 'POST',
                     body: formData
                 });
-
+                
                 const data = await response.json();
-
+                
                 if (response.ok) {
                     authToken = data.access_token;
                     currentUser = data;
@@ -1169,18 +1236,18 @@
                     loadSubscriptionStatus();
                     showToast('Welcome back!', 3000, 'success');
                 } else {
-                    errorEl.textContent = data.detail || 'Login failed';
+                    errorEl.textContent = data.detail || 'Login failed. Check your credentials.';
                     errorEl.classList.remove('hidden');
                 }
             } catch (error) {
                 console.error('Login error:', error);
-                errorEl.textContent = 'Network error. Please try again.';
+                errorEl.textContent = error.message || 'Network error. Please try again.';
                 errorEl.classList.remove('hidden');
             } finally {
-                setButtonLoading(btn, false, originalText);
+                setButtonLoading(btn, false, 'Sign In');
             }
         }
-
+        
         async function handleRegister(event) {
             event.preventDefault();
             
@@ -1188,27 +1255,26 @@
                 showToast('You are offline. Please check your connection.', 3000, 'error');
                 return;
             }
-
-            const btn = event.target.querySelector('button[type="submit"]');
-            const originalText = btn.innerHTML;
-            setButtonLoading(btn, true);
-
+            
+            const btn = document.getElementById('register-submit');
             const errorEl = document.getElementById('register-error');
             errorEl.classList.add('hidden');
-
+            
+            setButtonLoading(btn, true);
+            
             const formData = new FormData();
             formData.append('email', document.getElementById('register-email').value);
             formData.append('password', document.getElementById('register-password').value);
             formData.append('name', document.getElementById('register-name').value);
-
+            
             try {
-                const response = await fetch(`${API_URL}/auth/register`, {
+                const response = await apiRequest('/auth/register', {
                     method: 'POST',
                     body: formData
                 });
-
+                
                 const data = await response.json();
-
+                
                 if (response.ok) {
                     authToken = data.access_token;
                     currentUser = data;
@@ -1220,18 +1286,18 @@
                     loadSubscriptionStatus();
                     showToast('Account created successfully!', 3000, 'success');
                 } else {
-                    errorEl.textContent = data.detail || 'Registration failed';
+                    errorEl.textContent = data.detail || 'Registration failed. Email may already exist.';
                     errorEl.classList.remove('hidden');
                 }
             } catch (error) {
                 console.error('Registration error:', error);
-                errorEl.textContent = 'Network error. Please try again.';
+                errorEl.textContent = error.message || 'Network error. Please try again.';
                 errorEl.classList.remove('hidden');
             } finally {
-                setButtonLoading(btn, false, originalText);
+                setButtonLoading(btn, false, 'Create Account');
             }
         }
-
+        
         function handleLogout() {
             authToken = null;
             currentUser = {};
@@ -1240,21 +1306,20 @@
             showAuthModal();
             showToast('Logged out successfully', 2000, 'success');
         }
-
+        
         function updateUserInfo() {
             document.getElementById('user-name').textContent = currentUser.name || 'User';
             document.getElementById('user-email').textContent = currentUser.email || 'user@example.com';
         }
-
-        // Navigation
+        
+        // ============================================================================
+        // NAVIGATION
+        // ============================================================================
+        
         function navigateTo(page) {
-            // Hide all pages
             document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
-            
-            // Show selected page
             document.getElementById(`page-${page}`).classList.remove('hidden');
             
-            // Update nav items
             document.querySelectorAll('.nav-item').forEach(el => {
                 el.classList.remove('active');
                 el.classList.add('text-slate-400');
@@ -1266,59 +1331,40 @@
             
             currentPage = page;
             
-            // Load page data
             switch(page) {
-                case 'dashboard':
-                    loadDashboard();
-                    break;
-                case 'journal':
-                    loadTrades();
-                    break;
-                case 'analytics':
-                    loadAnalytics();
-                    break;
-                case 'checklist':
-                    loadChecklist();
-                    break;
-                case 'courses':
-                    loadCourses();
-                    break;
-                case 'webinars':
-                    loadWebinars();
-                    break;
-                case 'blog':
-                    loadBlog();
-                    break;
-                case 'subscription':
-                    loadSubscriptionStatus();
-                    break;
+                case 'dashboard': loadDashboard(); break;
+                case 'journal': loadTrades(); break;
+                case 'analytics': loadAnalytics(); break;
+                case 'checklist': loadChecklist(); break;
+                case 'courses': loadCourses(); break;
+                case 'webinars': loadWebinars(); break;
+                case 'blog': loadBlog(); break;
+                case 'subscription': loadSubscriptionStatus(); break;
             }
             
             window.scrollTo(0, 0);
         }
-
+        
         function toggleMobileMenu() {
             const menu = document.getElementById('mobile-menu');
             menu.classList.toggle('hidden');
         }
-
-        // Dashboard functions
+        
+        // ============================================================================
+        // DASHBOARD FUNCTIONS
+        // ============================================================================
+        
         async function loadDashboard() {
             try {
-                const response = await fetch(`${API_URL}/analytics/dashboard`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-                
+                const response = await apiRequest('/analytics/dashboard');
                 if (!response.ok) throw new Error('Failed to load dashboard');
                 
                 const data = await response.json();
                 
-                // Update stats
                 document.getElementById('stat-total-trades').textContent = data.total_trades || 0;
                 document.getElementById('stat-win-rate').textContent = (data.win_rate || 0) + '%';
                 document.getElementById('stat-total-pips').textContent = (data.total_pips > 0 ? '+' : '') + (data.total_pips || 0);
                 
-                // Calculate average grade
                 const grades = data.grade_distribution || {};
                 const total = (grades.A || 0) + (grades.B || 0) + (grades.C || 0);
                 let avgGrade = '-';
@@ -1328,21 +1374,16 @@
                 }
                 document.getElementById('stat-grade').textContent = avgGrade;
                 
-                // Load recent trades
                 loadRecentTrades();
-                
             } catch (error) {
                 console.error('Dashboard error:', error);
-                showToast('Failed to load dashboard data', 3000, 'error');
+                showToast('Failed to load dashboard: ' + error.message, 3000, 'error');
             }
         }
-
+        
         async function loadRecentTrades() {
             try {
-                const response = await fetch(`${API_URL}/trades`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-                
+                const response = await apiRequest('/trades');
                 if (!response.ok) throw new Error('Failed to load trades');
                 
                 const trades = await response.json();
@@ -1366,19 +1407,18 @@
                         </span>
                     </div>
                 `).join('');
-                
             } catch (error) {
                 console.error('Recent trades error:', error);
             }
         }
-
-        // Trade functions
+        
+        // ============================================================================
+        // TRADE FUNCTIONS
+        // ============================================================================
+        
         async function loadTrades() {
             try {
-                const response = await fetch(`${API_URL}/trades`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-                
+                const response = await apiRequest('/trades');
                 if (!response.ok) throw new Error('Failed to load trades');
                 
                 const trades = await response.json();
@@ -1394,7 +1434,7 @@
                 emptyState.classList.add('hidden');
                 tbody.innerHTML = trades.map(trade => {
                     const date = new Date(trade.created_at).toLocaleDateString();
-                    const gradeClass = `grade-${trade.grade?.toLowerCase() || 'c'}`;
+                    const gradeClass = `grade-${(trade.grade || 'c').toLowerCase()}`;
                     return `
                         <tr class="hover:bg-slate-800/30 transition-colors">
                             <td class="px-6 py-4 text-sm">${date}</td>
@@ -1420,22 +1460,21 @@
                 }).join('');
                 
                 lucide.createIcons();
-                
             } catch (error) {
                 console.error('Load trades error:', error);
-                showToast('Failed to load trades', 3000, 'error');
+                showToast('Failed to load trades: ' + error.message, 3000, 'error');
             }
         }
-
+        
         function openTradeModal() {
             document.getElementById('trade-modal').classList.add('show');
         }
-
+        
         function closeTradeModal() {
             document.getElementById('trade-modal').classList.remove('show');
             document.getElementById('trade-form').reset();
         }
-
+        
         async function handleTradeSubmit(event) {
             event.preventDefault();
             
@@ -1443,13 +1482,15 @@
                 showToast('You are offline. Please check your connection.', 3000, 'error');
                 return;
             }
-
+            
+            const btn = document.getElementById('trade-submit-btn');
+            setButtonLoading(btn, true);
+            
             const formData = new FormData(event.target);
             
             try {
-                const response = await fetch(`${API_URL}/trades`, {
+                const response = await apiRequest('/trades', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${authToken}` },
                     body: formData
                 });
                 
@@ -1468,11 +1509,16 @@
                 }
             } catch (error) {
                 console.error('Trade submit error:', error);
-                showToast('Network error. Please try again.', 3000, 'error');
+                showToast(error.message || 'Network error. Please try again.', 3000, 'error');
+            } finally {
+                setButtonLoading(btn, false, 'Save Trade');
             }
         }
-
-        // Checklist functions
+        
+        // ============================================================================
+        // CHECKLIST FUNCTIONS
+        // ============================================================================
+        
         function loadChecklist() {
             const items = [
                 { id: 1, text: "I have a valid trade setup based on my strategy", required: true },
@@ -1498,14 +1544,14 @@
             
             updateChecklistProgress();
         }
-
+        
         function toggleChecklistItem(id) {
             const checkbox = document.getElementById(`check-${id}`);
             checkbox.checked = !checkbox.checked;
             checklistData[id] = checkbox.checked;
             updateChecklistProgress();
         }
-
+        
         function updateChecklistProgress() {
             const checked = Object.values(checklistData).filter(v => v).length;
             const total = 8;
@@ -1514,8 +1560,11 @@
             document.getElementById('checklist-progress').textContent = `${checked}/${total} completed`;
             document.getElementById('checklist-progress-bar').style.width = `${percentage}%`;
         }
-
-        // Chart Analysis functions
+        
+        // ============================================================================
+        // CHART ANALYSIS
+        // ============================================================================
+        
         function setupDragAndDrop() {
             const dropZone = document.getElementById('chart-drop-zone');
             if (!dropZone) return;
@@ -1533,17 +1582,15 @@
                 e.preventDefault();
                 dropZone.classList.remove('drag-over');
                 const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    handleChartFile(files[0]);
-                }
+                if (files.length > 0) handleChartFile(files[0]);
             });
         }
-
+        
         function handleChartUpload(event) {
             const file = event.target.files[0];
             if (file) handleChartFile(file);
         }
-
+        
         function handleChartFile(file) {
             if (file.size > 5 * 1024 * 1024) {
                 showToast('File too large (max 5MB)', 3000, 'error');
@@ -1558,17 +1605,16 @@
             };
             reader.readAsDataURL(file);
         }
-
+        
         async function analyzeChart() {
             if (!isOnline) {
                 showToast('You are offline. Please check your connection.', 3000, 'error');
                 return;
             }
-
+            
             const img = document.getElementById('chart-preview-img');
             const resultDiv = document.getElementById('chart-analysis-result');
             
-            // Convert base64 to blob
             const response = await fetch(img.src);
             const blob = await response.blob();
             const file = new File([blob], 'chart.png', { type: 'image/png' });
@@ -1580,9 +1626,8 @@
             resultDiv.innerHTML = '<div class="flex items-center justify-center py-8"><div class="loading-spinner mr-3"></div><span>Analyzing chart...</span></div>';
             
             try {
-                const apiResponse = await fetch(`${API_URL}/analyze-chart`, {
+                const apiResponse = await apiRequest('/analyze-chart', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${authToken}` },
                     body: formData
                 });
                 
@@ -1594,7 +1639,7 @@
                         <div class="space-y-4">
                             <div class="flex items-center justify-between">
                                 <h4 class="font-semibold">Analysis Result</h4>
-                                <span class="text-xs px-2 py-1 rounded grade-${analysis.setup_quality?.toLowerCase() || 'c'}">
+                                <span class="text-xs px-2 py-1 rounded grade-${(analysis.setup_quality || 'C').toLowerCase()}">
                                     Grade: ${analysis.setup_quality || 'C'}
                                 </span>
                             </div>
@@ -1621,11 +1666,14 @@
                 }
             } catch (error) {
                 console.error('Chart analysis error:', error);
-                resultDiv.innerHTML = '<p class="text-red-400">Failed to analyze chart. Please try again.</p>';
+                resultDiv.innerHTML = `<p class="text-red-400">Failed to analyze chart: ${error.message}</p>`;
             }
         }
-
-        // AI Mentor functions
+        
+        // ============================================================================
+        // AI MENTOR
+        // ============================================================================
+        
         async function sendChatMessage() {
             const input = document.getElementById('chat-input');
             const message = input.value.trim();
@@ -1636,18 +1684,13 @@
                 return;
             }
             
-            // Add user message
             addChatMessage(message, 'user');
             input.value = '';
             
-            // Show typing indicator
             const typingId = showTypingIndicator();
             
             try {
-                const response = await fetch(`${API_URL}/mentor-chat?message=${encodeURIComponent(message)}`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-                
+                const response = await apiRequest(`/mentor-chat?message=${encodeURIComponent(message)}`);
                 removeTypingIndicator(typingId);
                 
                 if (response.ok) {
@@ -1659,15 +1702,15 @@
             } catch (error) {
                 removeTypingIndicator(typingId);
                 console.error('Chat error:', error);
-                addChatMessage('Sorry, I encountered a network error. Please check your connection.', 'bot');
+                addChatMessage(`Sorry, error: ${error.message}`, 'bot');
             }
         }
-
+        
         function sendQuickMessage(message) {
             document.getElementById('chat-input').value = message;
             sendChatMessage();
         }
-
+        
         function addChatMessage(text, sender) {
             const container = document.getElementById('chat-messages');
             const isBot = sender === 'bot';
@@ -1687,7 +1730,7 @@
             container.scrollTop = container.scrollHeight;
             lucide.createIcons();
         }
-
+        
         function showTypingIndicator() {
             const container = document.getElementById('chat-messages');
             const id = 'typing-' + Date.now();
@@ -1710,22 +1753,22 @@
             container.scrollTop = container.scrollHeight;
             return id;
         }
-
+        
         function removeTypingIndicator(id) {
             const el = document.getElementById(id);
             if (el) el.remove();
         }
-
-        // Courses functions
+        
+        // ============================================================================
+        // COURSES
+        // ============================================================================
+        
         async function loadCourses() {
             const container = document.getElementById('courses-list');
             container.innerHTML = '<div class="glass-panel rounded-2xl p-6 flex items-center justify-center h-64"><div class="loading-spinner"></div></div>';
             
             try {
-                const response = await fetch(`${API_URL}/courses`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-                
+                const response = await apiRequest('/courses');
                 if (!response.ok) throw new Error('Failed to load courses');
                 
                 const courses = await response.json();
@@ -1770,28 +1813,26 @@
                 }).join('');
                 
                 lucide.createIcons();
-                
             } catch (error) {
                 console.error('Courses error:', error);
-                container.innerHTML = '<p class="text-red-400 text-center col-span-full">Failed to load courses</p>';
+                container.innerHTML = `<p class="text-red-400 text-center col-span-full">Failed to load courses: ${error.message}</p>`;
             }
         }
-
+        
         function startCourse(courseId) {
             showToast('Course starting...', 2000, 'success');
-            // Implement course detail view
         }
-
-        // Webinars functions
+        
+        // ============================================================================
+        // WEBINARS
+        // ============================================================================
+        
         async function loadWebinars() {
             const container = document.getElementById('webinars-list');
             container.innerHTML = '<div class="glass-panel rounded-2xl p-6 flex items-center justify-center h-64"><div class="loading-spinner"></div></div>';
             
             try {
-                const response = await fetch(`${API_URL}/webinars`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-                
+                const response = await apiRequest('/webinars');
                 if (!response.ok) throw new Error('Failed to load webinars');
                 
                 const webinars = await response.json();
@@ -1829,10 +1870,10 @@
                                     ${isRegistered 
                                         ? `<button class="px-6 py-3 bg-green-500/20 text-green-500 rounded-xl font-medium cursor-default">
                                             <i data-lucide="check" class="w-5 h-5 inline mr-2"></i>Registered
-                                           </button>`
+                                        </button>` 
                                         : `<button onclick="registerWebinar(${webinar.id})" class="px-6 py-3 btn-primary text-white rounded-xl font-medium">
                                             Register Now
-                                           </button>`
+                                        </button>`
                                     }
                                 </div>
                             </div>
@@ -1841,23 +1882,21 @@
                 }).join('');
                 
                 lucide.createIcons();
-                
             } catch (error) {
                 console.error('Webinars error:', error);
-                container.innerHTML = '<p class="text-red-400 text-center">Failed to load webinars</p>';
+                container.innerHTML = `<p class="text-red-400 text-center">Failed to load webinars: ${error.message}</p>`;
             }
         }
-
+        
         async function registerWebinar(webinarId) {
             if (!isOnline) {
                 showToast('You are offline. Please check your connection.', 3000, 'error');
                 return;
             }
-
+            
             try {
-                const response = await fetch(`${API_URL}/webinars/${webinarId}/register`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${authToken}` }
+                const response = await apiRequest(`/webinars/${webinarId}/register`, {
+                    method: 'POST'
                 });
                 
                 if (response.ok) {
@@ -1869,18 +1908,20 @@
                 }
             } catch (error) {
                 console.error('Register error:', error);
-                showToast('Network error. Please try again.', 3000, 'error');
+                showToast(error.message || 'Network error. Please try again.', 3000, 'error');
             }
         }
-
-        // Blog functions
+        
+        // ============================================================================
+        // BLOG
+        // ============================================================================
+        
         async function loadBlog() {
             const container = document.getElementById('blog-list');
             container.innerHTML = '<div class="glass-panel rounded-2xl p-6 flex items-center justify-center h-64"><div class="loading-spinner"></div></div>';
             
             try {
-                const response = await fetch(`${API_URL}/blog/posts`);
-                
+                const response = await apiRequest('/blog/posts');
                 if (!response.ok) throw new Error('Failed to load blog posts');
                 
                 const posts = await response.json();
@@ -1894,7 +1935,7 @@
                     <article class="glass-panel rounded-2xl overflow-hidden card-hover cursor-pointer" onclick="openBlogPost('${post.slug}')">
                         <div class="h-48 bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
                             ${post.featured_image 
-                                ? `<img src="${post.featured_image}" alt="${post.title}" class="w-full h-full object-cover">`
+                                ? `<img src="${post.featured_image}" alt="${post.title}" class="w-full h-full object-cover">` 
                                 : `<i data-lucide="file-text" class="w-16 h-16 text-slate-700"></i>`
                             }
                         </div>
@@ -1914,22 +1955,19 @@
                 `).join('');
                 
                 lucide.createIcons();
-                
             } catch (error) {
                 console.error('Blog error:', error);
-                container.innerHTML = '<p class="text-red-400 text-center col-span-full">Failed to load articles</p>';
+                container.innerHTML = `<p class="text-red-400 text-center col-span-full">Failed to load articles: ${error.message}</p>`;
             }
         }
-
+        
         async function openBlogPost(slug) {
             try {
-                const response = await fetch(`${API_URL}/blog/posts/${slug}`);
-                
+                const response = await apiRequest(`/blog/posts/${slug}`);
                 if (!response.ok) throw new Error('Failed to load post');
                 
                 const post = await response.json();
                 
-                // Create modal for blog post
                 const modal = document.createElement('div');
                 modal.className = 'modal show';
                 modal.innerHTML = `
@@ -1953,32 +1991,30 @@
                 
                 document.body.appendChild(modal);
                 lucide.createIcons();
-                
             } catch (error) {
                 console.error('Blog post error:', error);
-                showToast('Failed to load article', 3000, 'error');
+                showToast('Failed to load article: ' + error.message, 3000, 'error');
             }
         }
-
-        // Subscription functions
+        
+        // ============================================================================
+        // SUBSCRIPTION
+        // ============================================================================
+        
         async function loadSubscriptionStatus() {
             try {
-                const response = await fetch(`${API_URL}/subscription/status`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-                
+                const response = await apiRequest('/subscription/status');
                 if (!response.ok) throw new Error('Failed to load subscription');
                 
                 const data = await response.json();
                 subscriptionStatus = data;
                 
-                // Update UI
                 const statusEl = document.getElementById('subscription-status-details');
                 const banner = document.getElementById('subscription-banner');
                 
                 if (data.is_active) {
                     if (data.is_trial) {
-                        const daysLeft = Math.ceil((new Date(data.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24));
+                        const daysLeft = Math.max(0, data.days_left || 3);
                         statusEl.innerHTML = `
                             <span class="w-3 h-3 bg-amber-500 rounded-full"></span>
                             <span class="text-slate-400">Trial - ${daysLeft} days left</span>
@@ -2000,26 +2036,23 @@
                     banner.classList.remove('hidden');
                     document.getElementById('subscription-message').textContent = 'Your subscription has expired';
                 }
-                
             } catch (error) {
                 console.error('Subscription error:', error);
             }
         }
-
+        
         async function initiatePayment() {
             if (!isOnline) {
                 showToast('You are offline. Please check your connection.', 3000, 'error');
                 return;
             }
-
+            
             const btn = document.getElementById('subscribe-btn');
-            const originalText = btn.innerHTML;
             setButtonLoading(btn, true);
-
+            
             try {
-                const response = await fetch(`${API_URL}/payments/initialize`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${authToken}` }
+                const response = await apiRequest('/payments/initialize', {
+                    method: 'POST'
                 });
                 
                 const data = await response.json();
@@ -2031,23 +2064,27 @@
                 }
             } catch (error) {
                 console.error('Payment error:', error);
-                showToast('Payment system error. Please try again.', 3000, 'error');
+                showToast(error.message || 'Payment system error. Please try again.', 3000, 'error');
             } finally {
-                setButtonLoading(btn, false, originalText);
+                setButtonLoading(btn, false, 'Subscribe Now');
             }
         }
-
-        // Analytics functions
+        
+        // ============================================================================
+        // ANALYTICS
+        // ============================================================================
+        
         async function loadAnalytics() {
-            // Load analytics data and render charts
-            // This is a placeholder - implement actual chart rendering with a library like Chart.js
             document.getElementById('grade-chart').innerHTML = '<p class="text-slate-400">Grade distribution chart will appear here</p>';
             document.getElementById('pair-chart').innerHTML = '<p class="text-slate-400">Pair performance chart will appear here</p>';
             document.getElementById('equity-chart').innerHTML = '<p class="text-slate-400">Equity curve chart will appear here</p>';
             document.getElementById('monthly-chart').innerHTML = '<p class="text-slate-400">Monthly performance chart will appear here</p>';
         }
-
-        // Utility functions
+        
+        // ============================================================================
+        // UTILITIES
+        // ============================================================================
+        
         function setButtonLoading(btn, loading, text = '') {
             if (loading) {
                 btn.disabled = true;
@@ -2057,7 +2094,7 @@
                 btn.innerHTML = text;
             }
         }
-
+        
         function showToast(message, duration = 3000, type = '') {
             const toast = document.getElementById('toast');
             const messageEl = document.getElementById('toast-message');
@@ -2072,14 +2109,13 @@
                 toast.classList.remove('show');
             }, duration);
         }
-
+        
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
-
-        // Close modals on outside click
+        
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
                 e.target.classList.remove('show');
