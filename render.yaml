@@ -12,7 +12,7 @@ services:
         destination: /index.html
     envVars:
       - key: API_URL
-        value: https://pipways-api.onrender.com
+        value: https://pipways-api-nhem.onrender.com
 
   # Backend (Python API)
   - type: web
@@ -29,8 +29,14 @@ services:
         generateValue: true
       - key: OPENROUTER_API_KEY
         sync: false # You will add your API key manually in the Render Dashboard
+      - key: PAYSTACK_SECRET_KEY
+        sync: false # You will add your API key manually in the Render Dashboard
       - key: PYTHON_VERSION
         value: "3.11.0"
+      - key: ENVIRONMENT
+        value: "production"
+      - key: FRONTEND_URL
+        value: "https://pipways-web-nhem.onrender.com"
 
 # Database (PostgreSQL)
 databases:
