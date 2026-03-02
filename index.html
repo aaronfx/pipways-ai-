@@ -292,9 +292,20 @@
                 showApp();
                 showToast('Welcome back!', 'success');
             } catch (error) {
-                const errorMsg = error && typeof error.message === 'string' ? error.message : 
-                                typeof error === 'string' ? error : 
-                                'An error occurred. Please try again.';
+                console.error('Login error:', error);
+                let errorMsg = 'Login failed. Please try again.';
+                
+                if (error && typeof error.message === 'string') {
+                    errorMsg = error.message;
+                } else if (typeof error === 'string') {
+                    errorMsg = error;
+                }
+                
+                // Check if it's a network error
+                if (errorMsg.includes('fetch') || errorMsg.includes('Network')) {
+                    errorMsg = 'Network error. Please check your connection.';
+                }
+                
                 showToast(errorMsg, 'error');
             }
         }
@@ -331,9 +342,20 @@
                 showApp();
                 showToast('Welcome! Your trial has started.', 'success');
             } catch (error) {
-                const errorMsg = error && typeof error.message === 'string' ? error.message : 
-                                typeof error === 'string' ? error : 
-                                'An error occurred. Please try again.';
+                console.error('Register error:', error);
+                let errorMsg = 'Registration failed. Please try again.';
+                
+                if (error && typeof error.message === 'string') {
+                    errorMsg = error.message;
+                } else if (typeof error === 'string') {
+                    errorMsg = error;
+                }
+                
+                // Check if it's a network error
+                if (errorMsg.includes('fetch') || errorMsg.includes('Network')) {
+                    errorMsg = 'Network error. Please check your connection.';
+                }
+                
                 showToast(errorMsg, 'error');
             }
         }
