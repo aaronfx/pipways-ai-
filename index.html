@@ -23,6 +23,18 @@
         .animate-fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .sidebar-item.active { background: rgba(59, 130, 246, 0.2); border-right: 3px solid #3b82f6; }
+
+        /* Skeleton Loading */
+        .skeleton { background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; }
+        @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* Progress Bar Animation */
+        .progress-bar-animated { transition: width 0.5s ease-out; }
+
+        /* Live Badge Pulse */
+        .live-pulse { animation: pulse-red 2s infinite; }
+        @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
         @media (max-width: 1024px) { .hide-mobile { display: none !important; } }
         @media (min-width: 1025px) { .hide-desktop { display: none !important; } }
     </style>
@@ -48,19 +60,37 @@
             </div>
             <form id="login-form" class="space-y-4" onsubmit="handleLogin(event)">
                 <div><label class="block text-sm text-slate-400 mb-1">Email</label>
-                <input type="email" id="login-email" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" placeholder="your@email.com" required></div>
+                <input type="email" id="login-email" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:outline-none transition-colors" placeholder="your@email.com" required></div>
                 <div><label class="block text-sm text-slate-400 mb-1">Password</label>
-                <input type="password" id="login-password" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" placeholder="••••••••" required></div>
-                <button type="submit" class="w-full btn-primary py-3 rounded-lg font-medium">Sign In</button>
+                <input type="password" id="login-password" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:outline-none transition-colors" placeholder="••••••••" required></div>
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center gap-2 text-sm text-slate-400 cursor-pointer">
+                        <input type="checkbox" id="remember-me" class="rounded border-slate-600">
+                        Remember me
+                    </label>
+                    <a href="#" class="text-sm text-blue-400 hover:text-blue-300">Forgot password?</a>
+                </div>
+                <button type="submit" id="login-btn" class="w-full btn-primary py-3 rounded-lg font-medium flex items-center justify-center gap-2">
+                    <span>Sign In</span>
+                </button>
             </form>
             <form id="register-form" class="space-y-4 hidden" onsubmit="handleRegister(event)">
                 <div><label class="block text-sm text-slate-400 mb-1">Full Name</label>
-                <input type="text" id="register-name" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" placeholder="John Doe" required></div>
+                <input type="text" id="register-name" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:outline-none transition-colors" placeholder="John Doe" required minlength="2"></div>
                 <div><label class="block text-sm text-slate-400 mb-1">Email</label>
-                <input type="email" id="register-email" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" placeholder="your@email.com" required></div>
+                <input type="email" id="register-email" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:outline-none transition-colors" placeholder="your@email.com" required></div>
                 <div><label class="block text-sm text-slate-400 mb-1">Password</label>
-                <input type="password" id="register-password" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" placeholder="••••••••" required></div>
-                <button type="submit" class="w-full btn-primary py-3 rounded-lg font-medium">Create Account</button>
+                <input type="password" id="register-password" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:outline-none transition-colors" placeholder="••••••••" required minlength="8">
+                <div class="mt-1 flex gap-1">
+                    <div id="password-strength-1" class="h-1 flex-1 bg-slate-700 rounded"></div>
+                    <div id="password-strength-2" class="h-1 flex-1 bg-slate-700 rounded"></div>
+                    <div id="password-strength-3" class="h-1 flex-1 bg-slate-700 rounded"></div>
+                </div>
+                <p id="password-hint" class="text-xs text-slate-500 mt-1">At least 8 characters</p>
+                </div>
+                <button type="submit" id="register-btn" class="w-full btn-primary py-3 rounded-lg font-medium flex items-center justify-center gap-2">
+                    <span>Create Account</span>
+                </button>
             </form>
             <div class="mt-6 p-4 bg-slate-800/30 rounded-lg">
                 <p class="text-xs text-slate-500 mb-2">Demo Credentials</p>
@@ -82,7 +112,7 @@
                     <span class="text-xl font-bold gradient-text">Pipways</span>
                 </div>
             </div>
-            <nav class="p-4 space-y-1">
+            <nav class="p-4 space-y-1 overflow-y-auto" style="max-height: calc(100vh - 140px);">
                 <button onclick="navigateTo('dashboard')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all">
                     <i data-lucide="layout-dashboard" class="w-5 h-5"></i><span>Dashboard</span>
                 </button>
@@ -117,9 +147,18 @@
                     <i data-lucide="newspaper" class="w-5 h-5"></i><span>Blog</span>
                 </button>
             </nav>
-            <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/5">
-                <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all">
-                    <i data-lucide="log-out" class="w-5 h-5"></i><span>Sign Out</span>
+            <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/5 bg-slate-900/90">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
+                        <span id="user-initial" class="text-sm font-bold text-white">U</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p id="user-name-display" class="text-sm font-medium truncate">User</p>
+                        <p id="user-status" class="text-xs text-slate-400">Free Trial</p>
+                    </div>
+                </div>
+                <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-red-400 hover:bg-red-500/10 transition-all text-sm">
+                    <i data-lucide="log-out" class="w-4 h-4"></i><span>Sign Out</span>
                 </button>
             </div>
         </aside>
@@ -139,7 +178,7 @@
                     <i data-lucide="bar-chart-2" class="w-5 h-5"></i><span class="text-xs">Stats</span>
                 </button>
                 <button onclick="navigateTo('journal')" class="flex flex-col items-center gap-1 p-2 text-slate-400">
-                    <div class="w-10 h-10 -mt-4 bg-gradient-to-br from-blue-500 to-violet-600 rounded-full flex items-center justify-center">
+                    <div class="w-10 h-10 -mt-4 bg-gradient-to-br from-blue-500 to-violet-600 rounded-full flex items-center justify-center shadow-lg">
                         <i data-lucide="plus" class="w-5 h-5 text-white"></i>
                     </div>
                 </button>
@@ -156,24 +195,24 @@
     <!-- Mobile More Menu Modal -->
     <div id="more-menu" class="hidden fixed inset-0 z-50">
         <div class="absolute inset-0 bg-black/60" onclick="hideMoreMenu()"></div>
-        <div class="absolute bottom-20 left-4 right-4 glass rounded-2xl p-4">
+        <div class="absolute bottom-20 left-4 right-4 glass rounded-2xl p-4 animate-fade-in">
             <div class="grid grid-cols-3 gap-4">
-                <button onclick="hideMoreMenu(); navigateTo('chart-analysis')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5">
+                <button onclick="hideMoreMenu(); navigateTo('chart-analysis')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5 transition-colors">
                     <i data-lucide="scan-eye" class="w-6 h-6 text-blue-400"></i><span class="text-xs">Analyze</span>
                 </button>
-                <button onclick="hideMoreMenu(); navigateTo('discipline')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5">
+                <button onclick="hideMoreMenu(); navigateTo('discipline')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5 transition-colors">
                     <i data-lucide="shield-check" class="w-6 h-6 text-green-400"></i><span class="text-xs">Discipline</span>
                 </button>
-                <button onclick="hideMoreMenu(); navigateTo('mentor')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5">
+                <button onclick="hideMoreMenu(); navigateTo('mentor')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5 transition-colors">
                     <i data-lucide="message-circle" class="w-6 h-6 text-violet-400"></i><span class="text-xs">Mentor</span>
                 </button>
-                <button onclick="hideMoreMenu(); navigateTo('courses')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5">
+                <button onclick="hideMoreMenu(); navigateTo('courses')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5 transition-colors">
                     <i data-lucide="graduation-cap" class="w-6 h-6 text-yellow-400"></i><span class="text-xs">Courses</span>
                 </button>
-                <button onclick="hideMoreMenu(); navigateTo('webinars')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5">
+                <button onclick="hideMoreMenu(); navigateTo('webinars')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5 transition-colors">
                     <i data-lucide="video" class="w-6 h-6 text-red-400"></i><span class="text-xs">Webinars</span>
                 </button>
-                <button onclick="hideMoreMenu(); navigateTo('subscription')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5">
+                <button onclick="hideMoreMenu(); navigateTo('subscription')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5 transition-colors">
                     <i data-lucide="crown" class="w-6 h-6 text-amber-400"></i><span class="text-xs">Pro</span>
                 </button>
             </div>
@@ -181,73 +220,7 @@
     </div>
 
     <script>
-
-        // ============================================
-        // API CONFIGURATION - CORS FIX
-        // ============================================
-        const CURRENT_DOMAIN = window.location.hostname;
-        const API_URL = CURRENT_DOMAIN.includes('localhost') || CURRENT_DOMAIN.includes('127.0.0.1')
-            ? 'http://localhost:8000'
-            : 'https://pipways-api-nhem.onrender.com';
-
-        // State
-        let currentUser = null;
-        let authToken = localStorage.getItem('pipways_token');
-        let currentPage = 'dashboard';
-
-        // ============================================
-        // UTILITY FUNCTIONS
-        // ============================================
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            const colors = { info: 'bg-blue-500', success: 'bg-green-500', error: 'bg-red-500', warning: 'bg-yellow-500' };
-            toast.className = `${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg animate-fade-in`;
-            toast.textContent = message;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-
-        function formatDate(dateStr) {
-            return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        }
-
-        function formatNumber(num) {
-            return num?.toLocaleString() || '0';
-        }
-
-        function getGradeColor(grade) {
-            const colors = { 'A': 'text-green-400', 'B': 'text-blue-400', 'C': 'text-yellow-400', 'D': 'text-red-400' };
-            return colors[grade] || 'text-slate-400';
-        }
-
-        // ============================================
-        // API HELPER
-        // ============================================
-        async function apiCall(endpoint, options = {}) {
-            const url = `${API_URL}${endpoint}`;
-            const config = {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                    ...options.headers
-                },
-                ...options
-            };
-
-            try {
-                const response = await fetch(url, config);
-                if (response.status === 401) {
-                    logout();
-                    throw new Error('Session expired. Please login again.');
-                }
-                return response;
-            } catch (error) {
-                console.error('API Error:', error);
-                // Handle network errors or other fetch failures
-                if (error instanceof TypeError && error.message.includes('fetch')) {
-                    throw new Error('Network error. Please check your connection.');
-                }
+         }
                 throw error;
             }
         }
@@ -1237,6 +1210,1849 @@
                 document.getElementById('auth-screen').classList.remove('hidden');
             }
             lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
+
+        // ============================================
+        // API CONFIGURATION
+        // ============================================
+        const CURRENT_DOMAIN = window.location.hostname;
+        const API_URL = CURRENT_DOMAIN.includes('localhost') || CURRENT_DOMAIN.includes('127.0.0.1')
+            ? 'http://localhost:8000'
+            : 'https://pipways-api-nhem.onrender.com';
+
+        // State
+        let currentUser = null;
+        let authToken = localStorage.getItem('pipways_token');
+        let currentPage = 'dashboard';
+        let charts = {};
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const colors = { 
+                info: 'bg-blue-500', 
+                success: 'bg-green-500', 
+                error: 'bg-red-500', 
+                warning: 'bg-yellow-500' 
+            };
+            toast.className = `${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg animate-fade-in flex items-center gap-2`;
+            toast.innerHTML = `
+                <i data-lucide="${type === 'success' ? 'check-circle' : type === 'error' ? 'alert-circle' : 'info'}" class="w-5 h-5"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function formatNumber(num) {
+            return num?.toLocaleString() || '0';
+        }
+
+        function getGradeColor(grade) {
+            const colors = { 
+                'A': 'text-green-400', 
+                'B': 'text-blue-400', 
+                'C': 'text-yellow-400', 
+                'D': 'text-red-400' 
+            };
+            return colors[grade] || 'text-slate-400';
+        }
+
+        function showLoading(buttonId) {
+            const btn = document.getElementById(buttonId);
+            if (btn) {
+                btn.dataset.originalText = btn.innerHTML;
+                btn.innerHTML = '<div class="loading-spinner w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>';
+                btn.disabled = true;
+            }
+        }
+
+        function hideLoading(buttonId) {
+            const btn = document.getElementById(buttonId);
+            if (btn && btn.dataset.originalText) {
+                btn.innerHTML = btn.dataset.originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // ============================================
+        // SKELETON LOADING COMPONENTS
+        // ============================================
+        function renderSkeletonDashboard() {
+            return `
+                <div class="animate-fade-in">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="skeleton h-8 w-32 rounded"></div>
+                        <div class="skeleton h-10 w-28 rounded-lg"></div>
+                    </div>
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        ${Array(4).fill().map(() => `
+                            <div class="glass rounded-xl p-4">
+                                <div class="skeleton h-4 w-20 rounded mb-2"></div>
+                                <div class="skeleton h-8 w-16 rounded"></div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="glass rounded-xl p-6">
+                        <div class="skeleton h-6 w-32 rounded mb-4"></div>
+                        ${Array(5).fill().map(() => `
+                            <div class="flex justify-between items-center py-3 border-b border-white/5">
+                                <div class="flex items-center gap-4">
+                                    <div class="skeleton h-4 w-20 rounded"></div>
+                                    <div class="skeleton h-4 w-16 rounded"></div>
+                                    <div class="skeleton h-6 w-14 rounded"></div>
+                                </div>
+                                <div class="skeleton h-4 w-12 rounded"></div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSkeletonCourses() {
+            return `
+                <div class="animate-fade-in">
+                    <div class="skeleton h-8 w-48 rounded mb-6"></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${Array(6).fill().map(() => `
+                            <div class="glass rounded-xl overflow-hidden">
+                                <div class="skeleton h-40 w-full"></div>
+                                <div class="p-6">
+                                    <div class="skeleton h-4 w-16 rounded mb-2"></div>
+                                    <div class="skeleton h-6 w-full rounded mb-2"></div>
+                                    <div class="skeleton h-4 w-3/4 rounded mb-4"></div>
+                                    <div class="skeleton h-10 w-full rounded-lg"></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSkeletonWebinars() {
+            return `
+                <div class="animate-fade-in">
+                    <div class="skeleton h-8 w-40 rounded mb-6"></div>
+                    <div class="glass rounded-xl p-6 mb-6">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="skeleton h-16 w-16 rounded-xl"></div>
+                            <div class="flex-1">
+                                <div class="skeleton h-6 w-48 rounded mb-2"></div>
+                                <div class="skeleton h-4 w-32 rounded"></div>
+                            </div>
+                        </div>
+                        <div class="skeleton h-10 w-32 rounded-lg"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // API HELPER
+        // ============================================
+        async function apiCall(endpoint, options = {}) {
+            const url = `${API_URL}${endpoint}`;
+            const config = {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                },
+                ...options
+            };
+
+            try {
+                const response = await fetch(url, config);
+                if (response.status === 401) {
+                    logout();
+                    throw new Error('Session expired. Please login again.');
+                }
+                if (response.status === 429) {
+                    throw new Error('Too many requests. Please wait a moment.');
+                }
+                if (response.status === 503) {
+                    throw new Error('Service temporarily unavailable. Please try again later.');
+                }
+                return response;
+            } catch (error) {
+                if (error.message.includes('fetch') || error.message.includes('Network')) {
+                    throw new Error('Network error. Please check your connection.');
+                }
+                throw error;
+            }
+        }
+
+        // ============================================
+        // PASSWORD STRENGTH METER
+        // ============================================
+        function updatePasswordStrength(password) {
+            const bars = [
+                document.getElementById('password-strength-1'),
+                document.getElementById('password-strength-2'),
+                document.getElementById('password-strength-3')
+            ];
+            const hint = document.getElementById('password-hint');
+
+            let strength = 0;
+            if (password.length >= 8) strength++;
+            if (password.match(/[A-Z]/)) strength++;
+            if (password.match(/[0-9!@#$%^&*]/)) strength++;
+
+            const colors = ['bg-slate-700', 'bg-red-500', 'bg-yellow-500', 'bg-green-500'];
+
+            bars.forEach((bar, i) => {
+                if (bar) {
+                    bar.className = `h-1 flex-1 rounded transition-colors ${i < strength ? colors[strength] : 'bg-slate-700'}`;
+                }
+            });
+
+            if (hint) {
+                const messages = ['Too weak', 'Weak', 'Good', 'Strong'];
+                hint.textContent = strength > 0 ? messages[strength] : 'At least 8 characters';
+                hint.className = `text-xs mt-1 ${strength === 0 ? 'text-slate-500' : strength === 1 ? 'text-red-400' : strength === 2 ? 'text-yellow-400' : 'text-green-400'}`;
+            }
+        }
+
+        // ============================================
+        // AUTHENTICATION
+        // ============================================
+        function switchAuthTab(tab) {
+            document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
+            document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
+            document.getElementById('login-tab').className = `flex-1 py-2 px-4 rounded-md text-sm font-medium ${tab === 'login' ? 'bg-blue-600 text-white' : 'text-slate-400'}`;
+            document.getElementById('register-tab').className = `flex-1 py-2 px-4 rounded-md text-sm font-medium ${tab === 'register' ? 'bg-blue-600 text-white' : 'text-slate-400'}`;
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            showLoading('login-btn');
+
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const formData = new URLSearchParams();
+                formData.append('email', email);
+                formData.append('password', password);
+
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    const errorMsg = typeof data.detail === 'string' ? data.detail : 
+                                    data.message || 'Login failed';
+                    throw new Error(errorMsg);
+                }
+
+                authToken = data.access_token;
+                currentUser = data;
+                localStorage.setItem('pipways_token', authToken);
+
+                // Save email if remember me is checked
+                if (document.getElementById('remember-me')?.checked) {
+                    localStorage.setItem('pipways_email', email);
+                }
+
+                showApp();
+                showToast('Welcome back!', 'success');
+            } catch (error) {
+                console.error('Login error:', error);
+                let errorMsg = 'Login failed. Please try again.';
+                if (error && typeof error.message === 'string') {
+                    errorMsg = error.message;
+                }
+                showToast(errorMsg, 'error');
+            } finally {
+                hideLoading('login-btn');
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            showLoading('register-btn');
+
+            const name = document.getElementById('register-name').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+
+            // Validate password
+            if (password.length < 8) {
+                hideLoading('register-btn');
+                showToast('Password must be at least 8 characters', 'error');
+                return;
+            }
+
+            try {
+                const formData = new URLSearchParams();
+                formData.append('name', name);
+                formData.append('email', email);
+                formData.append('password', password);
+
+                const response = await fetch(`${API_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    const errorMsg = typeof data.detail === 'string' ? data.detail : 
+                                    data.message || 'Registration failed';
+                    throw new Error(errorMsg);
+                }
+
+                authToken = data.access_token;
+                currentUser = data;
+                localStorage.setItem('pipways_token', authToken);
+                showApp();
+                showToast('Welcome! Your trial has started.', 'success');
+            } catch (error) {
+                console.error('Register error:', error);
+                let errorMsg = 'Registration failed. Please try again.';
+                if (error && typeof error.message === 'string') {
+                    errorMsg = error.message;
+                }
+                showToast(errorMsg, 'error');
+            } finally {
+                hideLoading('register-btn');
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            currentUser = null;
+            localStorage.removeItem('pipways_token');
+            document.getElementById('auth-screen').classList.remove('hidden');
+            document.getElementById('main-app').classList.add('hidden');
+        }
+
+        function showApp() {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+
+            // Update user info in sidebar
+            if (currentUser) {
+                document.getElementById('user-name-display').textContent = currentUser.name || 'User';
+                document.getElementById('user-initial').textContent = (currentUser.name || 'U')[0].toUpperCase();
+                document.getElementById('user-status').textContent = currentUser.subscription_status === 'trial' ? 'Free Trial' : 'Pro Member';
+            }
+
+            navigateTo('dashboard');
+            lucide.createIcons();
+        }
+
+        // ============================================
+        // NAVIGATION
+        // ============================================
+        function navigateTo(page) {
+            currentPage = page;
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll(`[onclick="navigateTo('${page}')"]`).forEach(el => el.classList.add('active'));
+
+            const renderers = {
+                'dashboard': renderDashboard,
+                'journal': renderJournal,
+                'analytics': renderAnalytics,
+                'performance': renderPerformance,
+                'chart-analysis': renderChartAnalysis,
+                'discipline': renderDiscipline,
+                'mentor': renderMentor,
+                'courses': renderCourses,
+                'webinars': renderWebinars,
+                'subscription': renderSubscription,
+                'blog': renderBlog
+            };
+
+            if (renderers[page]) {
+                renderers[page]();
+            }
+            lucide.createIcons();
+        }
+
+        function showMoreMenu() {
+            document.getElementById('more-menu').classList.remove('hidden');
+        }
+
+        function hideMoreMenu() {
+            document.getElementById('more-menu').classList.add('hidden');
+        }
+
+        // ============================================
+        // PAGE RENDERERS
+        // ============================================
+        async function renderDashboard() {
+            const container = document.getElementById('page-content');
+            container.innerHTML = renderSkeletonDashboard();
+
+            try {
+                const response = await apiCall('/trades');
+                const trades = await response.json();
+
+                const totalPips = trades.reduce((sum, t) => sum + (t.pips || 0), 0);
+                const wins = trades.filter(t => t.pips > 0).length;
+                const winRate = trades.length ? Math.round((wins / trades.length) * 100) : 0;
+
+                // Show trial banner if applicable
+                let trialBanner = '';
+                if (currentUser?.subscription_status === 'trial' && currentUser?.trial_ends_at) {
+                    const daysLeft = Math.ceil((new Date(currentUser.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24));
+                    trialBanner = `
+                        <div class="glass rounded-xl p-4 mb-6 border border-yellow-500/30 bg-yellow-500/10">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <i data-lucide="clock" class="w-5 h-5 text-yellow-400"></i>
+                                    <span class="text-yellow-200">${daysLeft} days left in your free trial</span>
+                                </div>
+                                <button onclick="navigateTo('subscription')" class="px-4 py-2 bg-yellow-500 text-slate-900 rounded-lg font-medium text-sm hover:bg-yellow-400 transition-colors">
+                                    Upgrade Now
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                container.innerHTML = `
+                    <div class="animate-fade-in">
+                        ${trialBanner}
+                        <div class="flex justify-between items-center mb-6">
+                            <div>
+                                <h1 class="text-2xl font-bold">Dashboard</h1>
+                                <p class="text-slate-400 text-sm">Welcome back, ${currentUser?.name || 'Trader'}!</p>
+                            </div>
+                            <button onclick="navigateTo('journal')" class="btn-primary px-4 py-2 rounded-lg flex items-center gap-2">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                <span class="hide-mobile">New Trade</span>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <div class="glass rounded-xl p-4 hover:bg-white/5 transition-colors cursor-pointer" onclick="navigateTo('journal')">
+                                <div class="text-slate-400 text-sm mb-1">Total Trades</div>
+                                <div class="text-2xl font-bold">${trades.length}</div>
+                                <div class="text-xs text-slate-500 mt-1">${trades.length > 0 ? '+' + trades.length + ' this month' : 'Start trading!'}</div>
+                            </div>
+                            <div class="glass rounded-xl p-4 hover:bg-white/5 transition-colors cursor-pointer" onclick="navigateTo('analytics')">
+                                <div class="text-slate-400 text-sm mb-1">Win Rate</div>
+                                <div class="text-2xl font-bold ${winRate >= 50 ? 'text-green-400' : 'text-red-400'}">${winRate}%</div>
+                                <div class="text-xs ${winRate >= 50 ? 'text-green-500/70' : 'text-red-500/70'} mt-1">${winRate >= 50 ? 'Good job!' : 'Keep practicing!'}</div>
+                            </div>
+                            <div class="glass rounded-xl p-4 hover:bg-white/5 transition-colors cursor-pointer" onclick="navigateTo('analytics')">
+                                <div class="text-slate-400 text-sm mb-1">Total Pips</div>
+                                <div class="text-2xl font-bold ${totalPips >= 0 ? 'text-green-400' : 'text-red-400'}">${totalPips > 0 ? '+' : ''}${totalPips}</div>
+                                <div class="text-xs ${totalPips >= 0 ? 'text-green-500/70' : 'text-red-500/70'} mt-1">${totalPips >= 0 ? 'Profitable!' : 'Keep learning!'}</div>
+                            </div>
+                            <div class="glass rounded-xl p-4 hover:bg-white/5 transition-colors cursor-pointer" onclick="navigateTo('discipline')">
+                                <div class="text-slate-400 text-sm mb-1">Discipline</div>
+                                <div class="text-2xl font-bold text-blue-400">87%</div>
+                                <div class="text-xs text-blue-500/70 mt-1">Great consistency!</div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <button onclick="navigateTo('performance')" class="glass rounded-xl p-4 text-left hover:bg-white/5 transition-colors group">
+                                <div class="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center mb-3 group-hover:bg-violet-500/30 transition-colors">
+                                    <i data-lucide="target" class="w-5 h-5 text-violet-400"></i>
+                                </div>
+                                <div class="font-medium text-sm">AI Performance</div>
+                                <div class="text-xs text-slate-500">Get your score</div>
+                            </button>
+                            <button onclick="navigateTo('chart-analysis')" class="glass rounded-xl p-4 text-left hover:bg-white/5 transition-colors group">
+                                <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center mb-3 group-hover:bg-blue-500/30 transition-colors">
+                                    <i data-lucide="scan-eye" class="w-5 h-5 text-blue-400"></i>
+                                </div>
+                                <div class="font-medium text-sm">Analyze Chart</div>
+                                <div class="text-xs text-slate-500">AI-powered analysis</div>
+                            </button>
+                            <button onclick="navigateTo('mentor')" class="glass rounded-xl p-4 text-left hover:bg-white/5 transition-colors group">
+                                <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center mb-3 group-hover:bg-green-500/30 transition-colors">
+                                    <i data-lucide="message-circle" class="w-5 h-5 text-green-400"></i>
+                                </div>
+                                <div class="font-medium text-sm">Ask Mentor</div>
+                                <div class="text-xs text-slate-500">Get expert advice</div>
+                            </button>
+                            <button onclick="navigateTo('courses')" class="glass rounded-xl p-4 text-left hover:bg-white/5 transition-colors group">
+                                <div class="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center mb-3 group-hover:bg-yellow-500/30 transition-colors">
+                                    <i data-lucide="graduation-cap" class="w-5 h-5 text-yellow-400"></i>
+                                </div>
+                                <div class="font-medium text-sm">Learn</div>
+                                <div class="text-xs text-slate-500">Trading courses</div>
+                            </button>
+                        </div>
+
+                        <div class="glass rounded-xl p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-lg font-semibold">Recent Trades</h2>
+                                <button onclick="navigateTo('journal')" class="text-blue-400 text-sm hover:text-blue-300">View All</button>
+                            </div>
+                            ${trades.slice(0, 5).length > 0 ? trades.slice(0, 5).map(t => `
+                                <div class="flex justify-between items-center py-3 border-b border-white/5 hover:bg-white/5 px-2 -mx-2 rounded transition-colors cursor-pointer" onclick="navigateTo('journal')">
+                                    <div class="flex items-center gap-4">
+                                        <span class="text-slate-400 text-sm">${formatDate(t.created_at)}</span>
+                                        <span class="font-semibold">${t.pair}</span>
+                                        <span class="px-2 py-1 rounded text-xs ${t.direction === 'LONG' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${t.direction}</span>
+                                        <span class="text-xs ${getGradeColor(t.grade)}">Grade ${t.grade}</span>
+                                    </div>
+                                    <span class="font-mono font-bold ${t.pips >= 0 ? 'text-green-400' : 'text-red-400'}">${t.pips > 0 ? '+' : ''}${t.pips}</span>
+                                </div>
+                            `).join('') : '<p class="text-slate-500 text-center py-8">No trades yet. Start by logging your first trade!</p>'}
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Dashboard error:', error);
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 'Failed to load dashboard';
+                container.innerHTML = `
+                    <div class="text-center py-20">
+                        <i data-lucide="alert-circle" class="w-16 h-16 mx-auto mb-4 text-red-400"></i>
+                        <p class="text-red-400 mb-4">${errorMsg}</p>
+                        <button onclick="renderDashboard()" class="btn-primary px-6 py-2 rounded-lg">Retry</button>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+
+        async function renderJournal() {
+            const container = document.getElementById('page-content');
+            container.innerHTML = `
+                <div class="animate-fade-in">
+                    <h1 class="text-2xl font-bold mb-6">Trade Journal</h1>
+                    <div class="glass rounded-xl p-6 mb-6">
+                        <h2 class="text-lg font-semibold mb-4">Log New Trade</h2>
+                        <form id="trade-form" onsubmit="handleTradeSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-1">Currency Pair *</label>
+                                <input type="text" name="pair" placeholder="EURUSD" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:outline-none uppercase" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-1">Direction *</label>
+                                <select name="direction" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:outline-none">
+                                    <option value="LONG">Long</option>
+                                    <option value="SHORT">Short</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-1">Pips *</label>
+                                <input type="number" name="pips" step="0.1" placeholder="+45.5 or -20.3" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:outline-none" required>
+                                <p class="text-xs text-slate-500 mt-1">Positive for profit, negative for loss</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-1">Grade *</label>
+                                <select name="grade" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:outline-none">
+                                    <option value="A">A - Excellent Setup</option>
+                                    <option value="B">B - Good Setup</option>
+                                    <option value="C">C - Poor Setup</option>
+                                    <option value="D">D - Mistake</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-1">Entry Price</label>
+                                <input type="number" name="entry_price" step="0.00001" placeholder="1.08500" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-1">Exit Price</label>
+                                <input type="number" name="exit_price" step="0.00001" placeholder="1.09000" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:outline-none">
+                            </div>
+                            <div class="md:col-span-2">
+                                <button type="submit" id="trade-submit-btn" class="w-full btn-primary py-3 rounded-lg font-medium flex items-center justify-center gap-2">
+                                    <i data-lucide="save" class="w-5 h-5"></i>
+                                    <span>Save Trade</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div id="trades-list"></div>
+                </div>
+            `;
+            loadTradesList();
+        }
+
+        async function loadTradesList() {
+            const container = document.getElementById('trades-list');
+            container.innerHTML = `
+                <div class="glass rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold">Trade History</h2>
+                        <button onclick="exportTrades()" class="text-blue-400 text-sm hover:text-blue-300 flex items-center gap-1">
+                            <i data-lucide="download" class="w-4 h-4"></i> Export CSV
+                        </button>
+                    </div>
+                    <div class="flex justify-center py-8">
+                        <div class="loading-spinner w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const response = await apiCall('/trades');
+                const trades = await response.json();
+
+                container.innerHTML = `
+                    <div class="glass rounded-xl p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-semibold">Trade History</h2>
+                            <button onclick="exportTrades()" class="text-blue-400 text-sm hover:text-blue-300 flex items-center gap-1">
+                                <i data-lucide="download" class="w-4 h-4"></i> Export CSV
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="text-slate-400 text-sm">
+                                    <tr>
+                                        <th class="text-left py-2">Date</th>
+                                        <th class="text-left">Pair</th>
+                                        <th class="text-left">Direction</th>
+                                        <th class="text-center">Grade</th>
+                                        <th class="text-right">Pips</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${trades.map(t => `
+                                        <tr class="border-t border-white/5 hover:bg-white/5 transition-colors">
+                                            <td class="py-3">${formatDate(t.created_at)}</td>
+                                            <td class="font-semibold">${t.pair}</td>
+                                            <td><span class="px-2 py-1 rounded text-xs ${t.direction === 'LONG' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${t.direction}</span></td>
+                                            <td class="text-center ${getGradeColor(t.grade)}">${t.grade}</td>
+                                            <td class="text-right font-mono ${t.pips >= 0 ? 'text-green-400' : 'text-red-400'}">${t.pips > 0 ? '+' : ''}${t.pips}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        ${trades.length === 0 ? '<p class="text-slate-500 text-center py-8">No trades logged yet. Start by adding your first trade above!</p>' : ''}
+                    </div>
+                `;
+            } catch (error) {
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 'Failed to load trades';
+                container.innerHTML = `
+                    <div class="glass rounded-xl p-6">
+                        <div class="text-center py-8">
+                            <i data-lucide="alert-circle" class="w-12 h-12 mx-auto mb-4 text-red-400"></i>
+                            <p class="text-red-400 mb-4">${errorMsg}</p>
+                            <button onclick="loadTradesList()" class="btn-primary px-4 py-2 rounded-lg">Retry</button>
+                        </div>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        async function handleTradeSubmit(e) {
+            e.preventDefault();
+            showLoading('trade-submit-btn');
+
+            const formData = new FormData(e.target);
+
+            try {
+                const response = await apiCall('/trades', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams(formData)
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.detail || 'Failed to save trade');
+                }
+
+                showToast('Trade saved successfully!', 'success');
+                e.target.reset();
+                loadTradesList();
+            } catch (error) {
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 'Failed to save trade';
+                showToast(errorMsg, 'error');
+            } finally {
+                hideLoading('trade-submit-btn');
+            }
+        }
+
+        async function exportTrades() {
+            try {
+                const response = await apiCall('/trades/export?format=csv');
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `trades_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                showToast('Trades exported successfully!', 'success');
+            } catch (error) {
+                showToast('Failed to export trades', 'error');
+            }
+        }
+
+        async function renderAnalytics() {
+            const container = document.getElementById('page-content');
+            container.innerHTML = renderSkeletonDashboard();
+
+            try {
+                const response = await apiCall('/analytics/dashboard');
+                const data = await response.json();
+
+                // Destroy existing charts
+                Object.values(charts).forEach(chart => chart.destroy());
+                charts = {};
+
+                container.innerHTML = `
+                    <div class="animate-fade-in">
+                        <h1 class="text-2xl font-bold mb-6">Analytics</h1>
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <div class="glass rounded-xl p-4">
+                                <div class="text-slate-400 text-sm mb-1">Total Trades</div>
+                                <div class="text-2xl font-bold">${data.total_trades}</div>
+                            </div>
+                            <div class="glass rounded-xl p-4">
+                                <div class="text-slate-400 text-sm mb-1">Win Rate</div>
+                                <div class="text-2xl font-bold ${data.win_rate >= 50 ? 'text-green-400' : 'text-red-400'}">${data.win_rate}%</div>
+                            </div>
+                            <div class="glass rounded-xl p-4">
+                                <div class="text-slate-400 text-sm mb-1">Total Pips</div>
+                                <div class="text-2xl font-bold ${data.total_pips >= 0 ? 'text-green-400' : 'text-red-400'}">${data.total_pips > 0 ? '+' : ''}${data.total_pips}</div>
+                            </div>
+                            <div class="glass rounded-xl p-4">
+                                <div class="text-slate-400 text-sm mb-1">Profit Factor</div>
+                                <div class="text-2xl font-bold text-blue-400">${data.profit_factor}</div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                            <div class="glass rounded-xl p-6">
+                                <h2 class="text-lg font-semibold mb-4">Equity Curve</h2>
+                                <canvas id="equityChart" height="200"></canvas>
+                            </div>
+                            <div class="glass rounded-xl p-6">
+                                <h2 class="text-lg font-semibold mb-4">Monthly Performance</h2>
+                                <canvas id="monthlyChart" height="200"></canvas>
+                            </div>
+                        </div>
+                        <div class="glass rounded-xl p-6">
+                            <h2 class="text-lg font-semibold mb-4">Performance by Pair</h2>
+                            <table class="w-full">
+                                <thead class="text-slate-400 text-sm">
+                                    <tr><th class="text-left py-2">Pair</th><th class="text-center">Trades</th><th class="text-center">Win Rate</th><th class="text-right">Pips</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${data.pair_performance.map(p => `
+                                        <tr class="border-t border-white/5">
+                                            <td class="py-3 font-semibold">${p.pair}</td>
+                                            <td class="text-center">${p.trades}</td>
+                                            <td class="text-center ${p.win_rate >= 50 ? 'text-green-400' : 'text-red-400'}">${p.win_rate}%</td>
+                                            <td class="text-right font-mono ${p.total_pips >= 0 ? 'text-green-400' : 'text-red-400'}">${p.total_pips > 0 ? '+' : ''}${p.total_pips}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+
+                // Render charts
+                if (data.equity_curve.length > 0) {
+                    charts.equity = new Chart(document.getElementById('equityChart'), {
+                        type: 'line',
+                        data: {
+                            labels: data.equity_curve.map(d => formatDate(d.date)),
+                            datasets: [{
+                                label: 'Cumulative Pips',
+                                data: data.equity_curve.map(d => d.cumulative_pips),
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            plugins: { legend: { display: false } }, 
+                            scales: { 
+                                x: { display: false }, 
+                                y: { grid: { color: 'rgba(255,255,255,0.05)' } } 
+                            } 
+                        }
+                    });
+                }
+
+                if (data.monthly_performance.length > 0) {
+                    charts.monthly = new Chart(document.getElementById('monthlyChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: data.monthly_performance.map(d => d.month),
+                            datasets: [{
+                                label: 'Pips',
+                                data: data.monthly_performance.map(d => d.pips),
+                                backgroundColor: data.monthly_performance.map(d => d.pips >= 0 ? '#10b981' : '#ef4444')
+                            }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            plugins: { legend: { display: false } }, 
+                            scales: { 
+                                y: { grid: { color: 'rgba(255,255,255,0.05)' } } 
+                            } 
+                        }
+                    });
+                }
+            } catch (error) {
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 'Failed to load analytics';
+                container.innerHTML = `
+                    <div class="text-center py-20">
+                        <i data-lucide="alert-circle" class="w-16 h-16 mx-auto mb-4 text-red-400"></i>
+                        <p class="text-red-400 mb-4">${errorMsg}</p>
+                        <button onclick="renderAnalytics()" class="btn-primary px-6 py-2 rounded-lg">Retry</button>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+
+        async function renderPerformance() {
+            const container = document.getElementById('page-content');
+            container.innerHTML = `
+                <div class="animate-fade-in">
+                    <h1 class="text-2xl font-bold mb-6">AI Performance Analysis</h1>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                        <div class="glass rounded-xl p-6 text-center">
+                            <div class="text-5xl font-bold gradient-text mb-2">--</div>
+                            <div class="text-slate-400">Performance Score</div>
+                            <div class="mt-4 h-3 bg-slate-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-blue-500 to-violet-500 progress-bar-animated" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="glass rounded-xl p-6 text-center">
+                            <div class="text-5xl font-bold text-slate-400 mb-2">--</div>
+                            <div class="text-slate-400">Trader Type</div>
+                        </div>
+                        <div class="glass rounded-xl p-6 text-center">
+                            <div class="text-5xl font-bold text-slate-400 mb-2">--</div>
+                            <div class="text-slate-400">Risk Appetite</div>
+                        </div>
+                    </div>
+                    <div class="glass rounded-xl p-6 mb-6">
+                        <h2 class="text-lg font-semibold mb-4">Upload Trading History</h2>
+                        <p class="text-slate-400 mb-4">Upload your trading history file (CSV, Excel, or screenshot) for AI analysis.</p>
+                        <div class="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center hover:border-blue-500 transition-colors" id="drop-zone">
+                            <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto mb-4 text-slate-500"></i>
+                            <p class="text-slate-400 mb-2">Drag and drop your file here</p>
+                            <p class="text-slate-500 text-sm mb-4">or</p>
+                            <input type="file" id="file-input" class="hidden" accept=".csv,.xlsx,.xls,.png,.jpg,.jpeg" onchange="handleFileUpload(event)">
+                            <button onclick="document.getElementById('file-input').click()" class="btn-primary px-6 py-2 rounded-lg">Select File</button>
+                        </div>
+                    </div>
+                    <div id="analysis-result"></div>
+                    <div id="performance-history"></div>
+                </div>
+            `;
+            loadPerformanceHistory();
+            lucide.createIcons();
+        }
+
+        async function loadPerformanceHistory() {
+            const container = document.getElementById('performance-history');
+            try {
+                const response = await apiCall('/performance/history');
+                const data = await response.json();
+
+                if (data.history && data.history.length > 0) {
+                    container.innerHTML = `
+                        <div class="glass rounded-xl p-6 mt-6">
+                            <h2 class="text-lg font-semibold mb-4">Your Progress Over Time</h2>
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="text-3xl font-bold ${data.improvement >= 0 ? 'text-green-400' : 'text-red-400'}">
+                                    ${data.improvement >= 0 ? '+' : ''}${data.improvement} pts
+                                </div>
+                                <div class="text-slate-400">${data.trend === 'improving' ? '📈 Improving' : data.trend === 'declining' ? '📉 Declining' : '➡️ Stable'}</div>
+                            </div>
+                            <canvas id="progressChart" height="150"></canvas>
+                        </div>
+                    `;
+
+                    setTimeout(() => {
+                        new Chart(document.getElementById('progressChart'), {
+                            type: 'line',
+                            data: {
+                                labels: data.history.map(h => formatDate(h.created_at)).reverse(),
+                                datasets: [{
+                                    label: 'Performance Score',
+                                    data: data.history.map(h => h.performance_score).reverse(),
+                                    borderColor: '#8b5cf6',
+                                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                                    fill: true,
+                                    tension: 0.4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' } },
+                                    x: { grid: { display: false } }
+                                }
+                            }
+                        });
+                    }, 100);
+                }
+            } catch (error) {
+                console.log('No performance history yet');
+            }
+        }
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const resultContainer = document.getElementById('analysis-result');
+            resultContainer.innerHTML = `
+                <div class="glass rounded-xl p-8 text-center">
+                    <div class="loading-spinner w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p class="text-slate-400">Analyzing your trading history...</p>
+                    <p class="text-slate-500 text-sm mt-2">This may take a moment</p>
+                </div>
+            `;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await apiCall('/performance/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Analysis failed');
+
+                const analysis = data.analysis;
+                resultContainer.innerHTML = `
+                    <div class="glass rounded-xl p-6 animate-fade-in">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 class="text-xl font-bold">Performance Score</h2>
+                                <p class="text-slate-400">Based on your trading history analysis</p>
+                            </div>
+                            <div class="text-5xl font-bold gradient-text">${analysis.performance_score}/100</div>
+                        </div>
+
+                        <!-- Radar Chart -->
+                        <div class="mb-6">
+                            <canvas id="radarChart" height="250"></canvas>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div class="bg-slate-800/50 rounded-lg p-4">
+                                <h3 class="font-semibold mb-2 text-violet-400">Trader Type</h3>
+                                <p class="text-slate-300">${analysis.trader_type}</p>
+                            </div>
+                            <div class="bg-slate-800/50 rounded-lg p-4">
+                                <h3 class="font-semibold mb-2 text-blue-400">Risk Appetite</h3>
+                                <p class="text-slate-300">${analysis.risk_appetite}</p>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h3 class="font-semibold mb-3">Score Breakdown</h3>
+                            <div class="space-y-3">
+                                ${Object.entries(analysis.score_breakdown).map(([key, value]) => `
+                                    <div>
+                                        <div class="flex justify-between text-sm mb-1">
+                                            <span class="capitalize">${key.replace('_', ' ')}</span>
+                                            <span>${value}%</span>
+                                        </div>
+                                        <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+                                            <div class="h-full rounded-full progress-bar-animated ${value >= 80 ? 'bg-green-500' : value >= 60 ? 'bg-blue-500' : value >= 40 ? 'bg-yellow-500' : 'bg-red-500'}" style="width: ${value}%"></div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <h3 class="font-semibold mb-2 text-green-400 flex items-center gap-2">
+                                    <i data-lucide="thumbs-up" class="w-4 h-4"></i> Strengths
+                                </h3>
+                                <ul class="list-disc list-inside text-slate-300 space-y-1">
+                                    ${analysis.strengths.map(s => `<li>${s}</li>`).join('')}
+                                </ul>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold mb-2 text-red-400 flex items-center gap-2">
+                                    <i data-lucide="alert-triangle" class="w-4 h-4"></i> Areas to Improve
+                                </h3>
+                                <ul class="list-disc list-inside text-slate-300 space-y-1">
+                                    ${analysis.weaknesses.map(w => `<li>${w}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="bg-gradient-to-r from-blue-600/20 to-violet-600/20 rounded-lg p-4 border border-blue-500/30">
+                            <h3 class="font-semibold mb-2 flex items-center gap-2">
+                                <i data-lucide="target" class="w-5 h-5 text-blue-400"></i> Suggested Goal
+                            </h3>
+                            <p class="text-slate-300 mb-3">${analysis.suggested_goal.description}</p>
+                            <button onclick="navigateTo('courses')" class="btn-primary px-4 py-2 rounded-lg text-sm">
+                                Start Learning
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                // Render radar chart
+                setTimeout(() => {
+                    new Chart(document.getElementById('radarChart'), {
+                        type: 'radar',
+                        data: {
+                            labels: Object.keys(analysis.score_breakdown).map(k => k.replace('_', ' ').toUpperCase()),
+                            datasets: [{
+                                label: 'Your Score',
+                                data: Object.values(analysis.score_breakdown),
+                                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                borderColor: '#3b82f6',
+                                pointBackgroundColor: '#3b82f6',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: '#3b82f6'
+                            }, {
+                                label: 'Pro Average',
+                                data: [85, 90, 80, 85],
+                                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                                borderColor: '#8b5cf6',
+                                borderDash: [5, 5],
+                                pointRadius: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                r: {
+                                    min: 0,
+                                    max: 100,
+                                    ticks: { stepSize: 20, color: 'rgba(255,255,255,0.5)' },
+                                    grid: { color: 'rgba(255,255,255,0.1)' },
+                                    angleLines: { color: 'rgba(255,255,255,0.1)' },
+                                    pointLabels: { color: 'rgba(255,255,255,0.7)' }
+                                }
+                            },
+                            plugins: {
+                                legend: { labels: { color: 'rgba(255,255,255,0.7)' } }
+                            }
+                        }
+                    });
+                }, 100);
+
+                showToast('Analysis complete!', 'success');
+                loadPerformanceHistory();
+            } catch (error) {
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 'Analysis failed';
+                resultContainer.innerHTML = `
+                    <div class="glass rounded-xl p-6 text-center">
+                        <i data-lucide="alert-circle" class="w-12 h-12 mx-auto mb-4 text-red-400"></i>
+                        <p class="text-red-400 mb-4">${errorMsg}</p>
+                        <button onclick="document.getElementById('file-input').click()" class="btn-primary px-4 py-2 rounded-lg">Try Again</button>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        async function renderChartAnalysis() {
+            const container = document.getElementById('page-content');
+            container.innerHTML = `
+                <div class="animate-fade-in">
+                    <h1 class="text-2xl font-bold mb-6">Chart Analysis</h1>
+                    <div class="glass rounded-xl p-6 mb-6">
+                        <h2 class="text-lg font-semibold mb-4">Upload Chart Image</h2>
+                        <p class="text-slate-400 mb-4">Upload a chart screenshot for AI-powered setup analysis.</p>
+                        <div class="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center hover:border-blue-500 transition-colors cursor-pointer" id="chart-drop-zone" onclick="document.getElementById('chart-input').click()">
+                            <i data-lucide="image" class="w-12 h-12 mx-auto mb-4 text-slate-500"></i>
+                            <p class="text-slate-400 mb-2">Click or drag to upload chart image</p>
+                            <p class="text-slate-500 text-sm">Supports PNG, JPG (max 5MB)</p>
+                            <input type="file" id="chart-input" class="hidden" accept="image/*" onchange="handleChartUpload(event)">
+                        </div>
+                    </div>
+                    <div id="chart-analysis-result"></div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        async function handleChartUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('File too large. Max 5MB allowed.', 'error');
+                return;
+            }
+
+            const resultContainer = document.getElementById('chart-analysis-result');
+
+            // Show image preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                resultContainer.innerHTML = `
+                    <div class="glass rounded-xl p-6 animate-fade-in">
+                        <img src="${e.target.result}" class="w-full max-h-96 object-contain rounded-lg mb-4 bg-slate-800">
+                        <div class="flex items-center justify-center gap-2 text-slate-400">
+                            <div class="loading-spinner w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                            <span>Analyzing chart with AI...</span>
+                        </div>
+                    </div>
+                `;
+            };
+            reader.readAsDataURL(file);
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await apiCall('/analyze-chart', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Analysis failed');
+
+                const analysis = data.analysis;
+                resultContainer.innerHTML = `
+                    <div class="glass rounded-xl p-6 animate-fade-in">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold">Setup Analysis</h2>
+                            <span class="px-3 py-1 rounded-full text-sm font-semibold ${analysis.setup_quality === 'A' ? 'bg-green-500/20 text-green-400' : analysis.setup_quality === 'B' ? 'bg-blue-500/20 text-blue-400' : analysis.setup_quality === 'C' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}">Grade ${analysis.setup_quality}</span>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            <div class="bg-slate-800/50 rounded-lg p-3">
+                                <div class="text-slate-400 text-sm">Pair</div>
+                                <div class="font-semibold">${analysis.pair}</div>
+                            </div>
+                            <div class="bg-slate-800/50 rounded-lg p-3">
+                                <div class="text-slate-400 text-sm">Direction</div>
+                                <div class="font-semibold ${analysis.direction === 'LONG' ? 'text-green-400' : 'text-red-400'}">${analysis.direction}</div>
+                            </div>
+                            <div class="bg-slate-800/50 rounded-lg p-3">
+                                <div class="text-slate-400 text-sm">Entry</div>
+                                <div class="font-mono">${analysis.entry_price}</div>
+                            </div>
+                            <div class="bg-slate-800/50 rounded-lg p-3">
+                                <div class="text-slate-400 text-sm">R:R</div>
+                                <div class="font-mono text-blue-400">${analysis.risk_reward}</div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div class="bg-slate-800/50 rounded-lg p-3">
+                                <div class="text-slate-400 text-sm">Stop Loss</div>
+                                <div class="font-mono text-red-400">${analysis.stop_loss}</div>
+                            </div>
+                            <div class="bg-slate-800/50 rounded-lg p-3">
+                                <div class="text-slate-400 text-sm">Take Profit</div>
+                                <div class="font-mono text-green-400">${analysis.take_profit}</div>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <h3 class="font-semibold mb-2">Technical Analysis</h3>
+                            <p class="text-slate-300">${analysis.analysis}</p>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold mb-2">Recommendations</h3>
+                            <p class="text-slate-300">${analysis.recommendations}</p>
+                        </div>
+                        ${analysis.key_levels ? `
+                        <div class="mt-4">
+                            <h3 class="font-semibold mb-2">Key Levels</h3>
+                            <div class="flex flex-wrap gap-2">
+                                ${analysis.key_levels.map(level => `<span class="px-3 py-1 bg-slate-800 rounded-lg font-mono text-sm">${level}</span>`).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                showToast('Chart analysis complete!', 'success');
+            } catch (error) {
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 'Chart analysis failed';
+                resultContainer.innerHTML += `
+                    <div class="glass rounded-xl p-6 mt-4 text-center">
+                        <i data-lucide="alert-circle" class="w-12 h-12 mx-auto mb-4 text-red-400"></i>
+                        <p class="text-red-400 mb-4">${errorMsg}</p>
+                        <button onclick="document.getElementById('chart-input').click()" class="btn-primary px-4 py-2 rounded-lg">Try Again</button>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+
+        async function renderDiscipline() {
+            const container = document.getElementById('page-content');
+            container.innerHTML = `
+                <div class="animate-fade-in">
+                    <h1 class="text-2xl font-bold mb-6">Trading Discipline</h1>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                        <div class="glass rounded-xl p-6 text-center">
+                            <div class="text-5xl font-bold gradient-text mb-2">87</div>
+                            <div class="text-slate-400">Discipline Score</div>
+                            <div class="mt-4 h-3 bg-slate-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-blue-500 to-violet-500 progress-bar-animated" style="width: 87%"></div>
+                            </div>
+                        </div>
+                        <div class="glass rounded-xl p-6 text-center">
+                            <div class="text-5xl font-bold text-green-400 mb-2">12</div>
+                            <div class="text-slate-400">Day Streak</div>
+                            <p class="text-sm text-slate-500 mt-2">Keep it up!</p>
+                        </div>
+                        <div class="glass rounded-xl p-6 text-center">
+                            <div class="text-5xl font-bold text-blue-400 mb-2">94%</div>
+                            <div class="text-slate-400">Checklist Adherence</div>
+                            <p class="text-sm text-slate-500 mt-2">Last 30 days</p>
+                        </div>
+                    </div>
+                    <div class="glass rounded-xl p-6">
+                        <h2 class="text-lg font-semibold mb-4">Pre-Trade Checklist</h2>
+                        <p class="text-slate-400 mb-4">Complete this checklist before entering any trade to maintain discipline.</p>
+                        <div class="space-y-3" id="checklist-container">
+                            ${[
+                                { id: 1, text: "I have a clear entry strategy based on my trading plan" },
+                                { id: 2, text: "I have identified and set a definitive stop loss level" },
+                                { id: 3, text: "I have a realistic take profit target (min 1:1.5 R:R)" },
+                                { id: 4, text: "I have calculated position size (risking only 1-2%)" },
+                                { id: 5, text: "I am not trading out of FOMO, revenge, or emotion" },
+                                { id: 6, text: "I have checked the economic calendar for high-impact news" },
+                                { id: 7, text: "This setup meets my minimum A or B grade criteria" },
+                                { id: 8, text: "I have analyzed the higher timeframe trend direction" }
+                            ].map(item => `
+                                <label class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg cursor-pointer hover:bg-slate-800 transition-colors checklist-item">
+                                    <input type="checkbox" class="w-5 h-5 rounded border-slate-600 text-blue-500 focus:ring-blue-500" onchange="updateChecklistProgress()">
+                                    <span class="text-sm">${item.text}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                        <div class="mt-4 p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
+                            <div class="flex items-center justify-between">
+                                <span class="text-blue-300">Checklist Progress</span>
+                                <span id="checklist-progress" class="font-bold text-blue-400">0/8</span>
+                            </div>
+                            <div class="mt-2 h-2 bg-slate-700 rounded-full overflow-hidden">
+                                <div id="checklist-bar" class="h-full bg-blue-500 progress-bar-animated" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function updateChecklistProgress() {
+            const checkboxes = document.querySelectorAll('.checklist-item input[type="checkbox"]');
+            const checked = Array.from(checkboxes).filter(cb => cb.checked).length;
+            const total = checkboxes.length;
+            const percentage = (checked / total) * 100;
+
+            document.getElementById('checklist-progress').textContent = `${checked}/${total}`;
+            document.getElementById('checklist-bar').style.width = `${percentage}%`;
+
+            if (checked === total) {
+                showToast('All checklist items complete! Good discipline!', 'success');
+            }
+        }
+
+        async function renderMentor() {
+            const container = document.getElementById('page-content');
+            container.innerHTML = `
+                <div class="animate-fade-in">
+                    <h1 class="text-2xl font-bold mb-6">AI Trading Mentor</h1>
+                    <div class="glass rounded-xl p-6 mb-6">
+                        <div class="flex items-start gap-4 mb-4">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+                            </div>
+                            <div class="bg-slate-800/50 rounded-lg p-4 max-w-[80%]">
+                                <p>Hello! I'm your AI trading mentor. I can help you with:</p>
+                                <ul class="list-disc list-inside mt-2 text-slate-400">
+                                    <li>Trading psychology and mindset</li>
+                                    <li>Risk management strategies</li>
+                                    <li>Trade review and analysis</li>
+                                    <li>Overcoming emotional trading</li>
+                                </ul>
+                                <p class="mt-2">What would you like to discuss?</p>
+                            </div>
+                        </div>
+                        <div id="chat-messages"></div>
+                    </div>
+                    <div class="glass rounded-xl p-4">
+                        <div class="flex gap-2 mb-3 flex-wrap">
+                            <button onclick="sendQuickMessage('How do I overcome FOMO?')" class="px-3 py-1 bg-slate-800 rounded-full text-sm hover:bg-slate-700 transition-colors">Overcome FOMO</button>
+                            <button onclick="sendQuickMessage('Help me review my last losing trade')" class="px-3 py-1 bg-slate-800 rounded-full text-sm hover:bg-slate-700 transition-colors">Review Losing Trade</button>
+                            <button onclick="sendQuickMessage('What is good risk management?')" class="px-3 py-1 bg-slate-800 rounded-full text-sm hover:bg-slate-700 transition-colors">Risk Management</button>
+                            <button onclick="sendQuickMessage('How to control emotions while trading?')" class="px-3 py-1 bg-slate-800 rounded-full text-sm hover:bg-slate-700 transition-colors">Control Emotions</button>
+                        </div>
+                        <form onsubmit="sendMentorMessage(event)" class="flex gap-2">
+                            <input type="text" id="mentor-input" class="flex-1 px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:outline-none" placeholder="Ask your question...">
+                            <button type="submit" class="btn-primary px-6 py-3 rounded-lg">
+                                <i data-lucide="send" class="w-5 h-5"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        async function sendQuickMessage(message) {
+            document.getElementById('mentor-input').value = message;
+            sendMentorMessage({ preventDefault: () => {} });
+        }
+
+        async function sendMentorMessage(e) {
+            e.preventDefault();
+            const input = document.getElementById('mentor-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const chatContainer = document.getElementById('chat-messages');
+            chatContainer.innerHTML += `
+                <div class="flex items-start gap-4 mb-4 justify-end">
+                    <div class="bg-blue-600 rounded-lg p-4 max-w-[80%]">
+                        <p>${message}</p>
+                    </div>
+                </div>
+            `;
+            input.value = '';
+
+            // Show loading
+            chatContainer.innerHTML += `
+                <div id="mentor-loading" class="flex items-start gap-4 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <div class="bg-slate-800/50 rounded-lg p-4">
+                        <div class="flex gap-1">
+                            <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
+                            <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                            <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            try {
+                const response = await apiCall(`/mentor-chat?message=${encodeURIComponent(message)}`);
+                const data = await response.json();
+
+                document.getElementById('mentor-loading').remove();
+
+                chatContainer.innerHTML += `
+                    <div class="flex items-start gap-4 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+                        </div>
+                        <div class="bg-slate-800/50 rounded-lg p-4 max-w-[80%]">
+                            <p class="whitespace-pre-wrap">${data.response}</p>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            } catch (error) {
+                document.getElementById('mentor-loading').remove();
+                chatContainer.innerHTML += `
+                    <div class="flex items-start gap-4 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+                        </div>
+                        <div class="bg-slate-800/50 rounded-lg p-4 max-w-[80%]">
+                            <p class="text-red-400">Sorry, I'm having trouble responding right now. Please try again.</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        async function renderCourses() {
+            const container = document.getElementById('page-content');
+            container.innerHTML = renderSkeletonCourses();
+
+            try {
+                const response = await apiCall('/courses');
+                const courses = await response.json();
+
+                // Get unique categories
+                const categories = [...new Set(courses.map(c => c.category).filter(Boolean))];
+
+                container.innerHTML = `
+                    <div class="animate-fade-in">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                            <h1 class="text-2xl font-bold">Trading Courses</h1>
+                            <div class="flex gap-2 flex-wrap">
+                                <button onclick="filterCourses('all')" class="filter-btn px-3 py-1 rounded-full text-sm bg-blue-600 text-white" data-filter="all">All</button>
+                                <button onclick="filterCourses('beginner')" class="filter-btn px-3 py-1 rounded-full text-sm bg-slate-800 text-slate-400 hover:bg-slate-700" data-filter="beginner">Beginner</button>
+                                <button onclick="filterCourses('intermediate')" class="filter-btn px-3 py-1 rounded-full text-sm bg-slate-800 text-slate-400 hover:bg-slate-700" data-filter="intermediate">Intermediate</button>
+                                <button onclick="filterCourses('advanced')" class="filter-btn px-3 py-1 rounded-full text-sm bg-slate-800 text-slate-400 hover:bg-slate-700" data-filter="advanced">Advanced</button>
+                            </div>
+                        </div>
+                        <div id="courses-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            ${courses.map(course => renderCourseCard(course)).join('')}
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 'Failed to load courses';
+                container.innerHTML = `
+                    <div class="text-center py-20">
+                        <i data-lucide="alert-circle" class="w-16 h-16 mx-auto mb-4 text-red-400"></i>
+                        <p class="text-red-400 mb-4">${errorMsg}</p>
+                        <button onclick="renderCourses()" class="btn-primary px-6 py-2 rounded-lg">Retry</button>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        function renderCourseCard(course) {
+            const levelColors = {
+                'beginner': 'bg-green-500/20 text-green-400',
+                'intermediate': 'bg-yellow-500/20 text-yellow-400',
+                'advanced': 'bg-red-500/20 text-red-400'
+            };
+
+            return `
+                <div class="glass rounded-xl overflow-hidden hover:bg-white/5 transition-colors course-card" data-level="${course.level}" data-category="${course.category || ''}">
+                    <div class="h-40 bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center relative">
+                        <i data-lucide="graduation-cap" class="w-16 h-16 text-white/50"></i>
+                        ${course.progress_percentage > 0 ? `
+                            <div class="absolute bottom-0 left-0 right-0 h-1 bg-slate-800">
+                                <div class="h-full bg-green-500 progress-bar-animated" style="width: ${course.progress_percentage}%"></div>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="p-6">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="px-2 py-1 rounded text-xs ${levelColors[course.level] || 'bg-slate-500/20 text-slate-400'}">${course.level}</span>
+                            ${course.category ? `<span class="px-2 py-1 rounded text-xs bg-slate-700 text-slate-400">${course.category}</span>` : ''}
+                        </div>
+                        <h3 class="text-lg font-semibold mb-2">${course.title}</h3>
+                        <p class="text-slate-400 text-sm mb-4 line-clamp-2">${course.description || 'Learn essential trading skills'}</p>
+
+                        ${course.avg_rating ? `
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="flex text-yellow-400">${'★'.repeat(Math.round(course.avg_rating))}${'☆'.repeat(5 - Math.round(course.avg_rating))}</div>
+                                <span class="text-xs text-slate-500">(${course.review_count} reviews)</span>
+                            </div>
+                        ` : ''}
+
+                        ${course.progress_percentage > 0 ? `
+                            <div class="mb-3">
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-slate-400">Progress</span>
+                                    <span class="text-green-400">${course.progress_percentage}%</span>
+                                </div>
+                                <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+                                    <div class="h-full bg-green-500 progress-bar-animated" style="width: ${course.progress_percentage}%"></div>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <button onclick="enrollCourse(${course.id})" class="w-full btn-primary py-2 rounded-lg text-sm">
+                            ${course.progress_percentage > 0 ? 'Continue Learning' : course.certificate_issued ? 'View Certificate' : 'Start Learning'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function filterCourses(filter) {
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.dataset.filter === filter) {
+                    btn.className = 'filter-btn px-3 py-1 rounded-full text-sm bg-blue-600 text-white';
+                } else {
+                    btn.className = 'filter-btn px-3 py-1 rounded-full text-sm bg-slate-800 text-slate-400 hover:bg-slate-700';
+                }
+            });
+
+            // Filter courses
+            document.querySelectorAll('.course-card').forEach(card => {
+                if (filter === 'all' || card.dataset.level === filter) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        async function enrollCourse(courseId) {
+            try {
+                const response = await apiCall(`/courses/${courseId}/enroll`, { method: 'POST' });
+                if (response.ok) {
+                    showToast('Enrolled successfully!', 'success');
+                    renderCourses();
+                } else {
+                    const data = await response.json();
+                    throw new Error(data.detail || 'Enrollment failed');
+                }
+            } catch (error) {
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 'Enrollment failed';
+                showToast(errorMsg, 'error');
+            }
+        }
+
+
+        async function renderWebinars() {
+            const container = document.getElementById('page-content');
+            container.innerHTML = renderSkeletonWebinars();
+
+            try {
+                const response = await apiCall('/webinars');
+                const webinars = await response.json();
+
+                const upcoming = webinars.filter(w => !w.is_live && new Date(w.scheduled_at) > new Date());
+                const live = webinars.filter(w => w.is_live);
+                const past = webinars.filter(w => new Date(w.scheduled_at) < new Date() && !w.is_live);
+
+                container.innerHTML = `
+                    <div class="animate-fade-in">
+                        <h1 class="text-2xl font-bold mb-6">Live Webinars</h1>
+
+                        ${live.length > 0 ? `
+                            <div class="mb-6">
+                                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                                    <span class="w-3 h-3 bg-red-500 rounded-full live-pulse"></span>
+                                    Live Now
+                                </h2>
+                                ${live.map(w => renderWebinarCard(w, true)).join('')}
+                            </div>
+                        ` : ''}
+
+                        ${upcoming.length > 0 ? `
+                            <div class="mb-6">
+                                <h2 class="text-lg font-semibold mb-4">Upcoming</h2>
+                                <div class="space-y-4">
+                                    ${upcoming.map(w => renderWebinarCard(w, false)).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${past.length > 0 ? `
+                            <div>
+                                <h2 class="text-lg font-semibold mb-4">Past Recordings</h2>
+                                <div class="space-y-4">
+                                    ${past.slice(0, 3).map(w => renderWebinarCard(w, false, true)).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            } catch (error) {
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 'Failed to load webinars';
+                container.innerHTML = `
+                    <div class="text-center py-20">
+                        <i data-lucide="alert-circle" class="w-16 h-16 mx-auto mb-4 text-red-400"></i>
+                        <p class="text-red-400 mb-4">${errorMsg}</p>
+                        <button onclick="renderWebinars()" class="btn-primary px-6 py-2 rounded-lg">Retry</button>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        function renderWebinarCard(webinar, isLive, isPast = false) {
+            if (isLive) {
+                return `
+                    <div class="glass rounded-xl p-6 border-2 border-red-500/50 bg-red-500/10">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
+                                <i data-lucide="video" class="w-8 h-8 text-white"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="w-2 h-2 bg-red-500 rounded-full live-pulse"></span>
+                                    <span class="text-red-400 text-sm font-medium">LIVE NOW</span>
+                                </div>
+                                <h3 class="text-xl font-semibold">${webinar.title}</h3>
+                                <p class="text-slate-400">${webinar.description || ''}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 mb-4">
+                            <span class="flex items-center gap-1 text-slate-400 text-sm">
+                                <i data-lucide="users" class="w-4 h-4"></i> ${webinar.registered_count} watching
+                            </span>
+                        </div>
+                        <a href="${webinar.zoom_join_url || '#'})" target="_blank" class="btn-primary px-6 py-2 rounded-lg inline-flex items-center gap-2">
+                            <i data-lucide="video" class="w-4 h-4"></i> Join Now
+                        </a>
+                    </div>
+                `;
+            }
+
+            if (isPast) {
+                return `
+                    <div class="glass rounded-xl p-4 opacity-70">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="play-circle" class="w-8 h-8 text-slate-500"></i>
+                                <div>
+                                    <p class="font-medium">${webinar.title}</p>
+                                    <p class="text-sm text-slate-500">${formatDate(webinar.scheduled_at)}</p>
+                                </div>
+                            </div>
+                            <button class="px-4 py-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors text-sm">Watch Recording</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="glass rounded-xl p-6">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
+                            <i data-lucide="calendar" class="w-8 h-8 text-white"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-xl font-semibold">${webinar.title}</h3>
+                            <p class="text-slate-400">${webinar.description || ''}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 mb-4 flex-wrap">
+                        <span class="flex items-center gap-1 text-slate-400 text-sm">
+                            <i data-lucide="clock" class="w-4 h-4"></i> 
+                            ${webinar.time_until.days > 0 ? `${webinar.time_until.days}d ` : ''}
+                            ${webinar.time_until.hours}h ${webinar.time_until.minutes}m
+                        </span>
+                        <span class="flex items-center gap-1 text-slate-400 text-sm">
+                            <i data-lucide="users" class="w-4 h-4"></i> ${webinar.registered_count} registered
+                        </span>
+                        ${webinar.level ? `<span class="px-2 py-1 rounded text-xs bg-slate-700 text-slate-400">${webinar.level}</span>` : ''}
+                    </div>
+                    ${webinar.is_registered ? `
+                        <div class="flex items-center gap-2 text-green-400">
+                            <i data-lucide="check-circle" class="w-5 h-5"></i>
+                            <span>You're registered!</span>
+                        </div>
+                    ` : `
+                        <button onclick="registerWebinar(${webinar.id})" class="btn-primary px-6 py-2 rounded-lg">
+                            Register Now
+                        </button>
+                    `}
+                </div>
+            `;
+        }
+
+        async function registerWebinar(webinarId) {
+            try {
+                const response = await apiCall(`/webinars/${webinarId}/register`, { method: 'POST' });
+                if (response.ok) {
+                    showToast('Registered for webinar!', 'success');
+                    renderWebinars();
+                } else {
+                    const data = await response.json();
+                    throw new Error(data.detail || 'Registration failed');
+                }
+            } catch (error) {
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 'Registration failed';
+                showToast(errorMsg, 'error');
+            }
+        }
+
+        async function renderSubscription() {
+            const container = document.getElementById('page-content');
+
+            // Get subscription status
+            let status = { subscription_status: 'trial' };
+            try {
+                const response = await apiCall('/subscription/status');
+                status = await response.json();
+            } catch (e) {}
+
+            const isPro = status.subscription_status === 'active';
+
+            container.innerHTML = `
+                <div class="animate-fade-in">
+                    <h1 class="text-2xl font-bold mb-6">Subscription</h1>
+
+                    ${isPro ? `
+                        <div class="glass rounded-xl p-6 mb-6 border-2 border-green-500/50 bg-green-500/10">
+                            <div class="flex items-center gap-4">
+                                <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                                    <i data-lucide="check-circle" class="w-8 h-8 text-white"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-xl font-semibold text-green-400">Pro Plan Active</h2>
+                                    <p class="text-slate-400">You have full access to all features</p>
+                                    ${status.subscription_ends_at ? `<p class="text-sm text-slate-500 mt-1">Renews on ${formatDate(status.subscription_ends_at)}</p>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                        <div class="glass rounded-xl p-6 ${isPro ? 'opacity-50' : 'border-2 border-yellow-500/50'}">
+                            <div class="text-center mb-6">
+                                <h2 class="text-xl font-semibold mb-2">Free Trial</h2>
+                                <div class="text-4xl font-bold mb-2">$0</div>
+                                <p class="text-slate-400">3 days access</p>
+                            </div>
+                            <ul class="space-y-3 mb-6">
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>5 trade logs</span></li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>1 chart analysis</span></li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>Basic analytics</span></li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>AI Mentor access</span></li>
+                                <li class="flex items-center gap-2 text-slate-500"><i data-lucide="x" class="w-5 h-5"></i><span>Limited courses</span></li>
+                            </ul>
+                            <button disabled class="w-full py-3 bg-slate-700 text-slate-500 rounded-lg cursor-not-allowed">${isPro ? 'Not Available' : 'Current Plan'}</button>
+                        </div>
+                        <div class="glass rounded-xl p-6 border-2 border-blue-500 relative">
+                            <div class="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-blue-500 text-white text-sm font-medium rounded-full">Recommended</div>
+                            <div class="text-center mb-6">
+                                <h2 class="text-xl font-semibold mb-2">Pro Trader</h2>
+                                <div class="text-4xl font-bold mb-2">$15<span class="text-lg text-slate-400">/month</span></div>
+                                <p class="text-slate-400">Full access to all features</p>
+                            </div>
+                            <ul class="space-y-3 mb-6">
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>Unlimited trade logs</span></li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>Unlimited chart analysis</span></li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>Advanced analytics & reports</span></li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>All courses & certificates</span></li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>Live webinars</span></li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>Priority AI Mentor support</span></li>
+                            </ul>
+                            <button onclick="initiatePayment()" class="w-full btn-primary py-3 rounded-lg font-medium" ${isPro ? 'disabled' : ''}>
+                                ${isPro ? 'Already Subscribed' : 'Subscribe Now'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        async function initiatePayment() {
+            showToast('Payment integration coming soon! Contact support for manual upgrade.', 'info');
+        }
+
+        async function renderBlog() {
+            const container = document.getElementById('page-content');
+            container.innerHTML = `
+                <div class="animate-fade-in">
+                    <h1 class="text-2xl font-bold mb-6">Trading Blog</h1>
+                    <div class="flex justify-center py-20">
+                        <div class="loading-spinner w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const response = await apiCall('/blog/posts');
+                const posts = await response.json();
+
+                container.innerHTML = `
+                    <div class="animate-fade-in">
+                        <h1 class="text-2xl font-bold mb-6">Trading Blog</h1>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            ${posts.length > 0 ? posts.map(post => `
+                                <div class="glass rounded-xl overflow-hidden hover:bg-white/5 transition-colors cursor-pointer" onclick="readBlogPost('${post.slug}')">
+                                    <div class="h-40 bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
+                                        <i data-lucide="file-text" class="w-12 h-12 text-slate-600"></i>
+                                    </div>
+                                    <div class="p-6">
+                                        ${post.category ? `<span class="px-2 py-1 rounded text-xs bg-blue-500/20 text-blue-400">${post.category}</span>` : ''}
+                                        <h3 class="text-lg font-semibold mt-2 mb-2">${post.title}</h3>
+                                        <p class="text-slate-400 text-sm mb-4 line-clamp-2">${post.excerpt || post.content.substring(0, 100) + '...'}</p>
+                                        <div class="flex items-center justify-between text-sm text-slate-500">
+                                            <span>${formatDate(post.created_at)}</span>
+                                            <span class="flex items-center gap-1"><i data-lucide="eye" class="w-4 h-4"></i> ${post.view_count || 0}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('') : `
+                                <div class="col-span-3 text-center py-12">
+                                    <i data-lucide="newspaper" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i>
+                                    <p class="text-slate-400">No blog posts yet. Check back soon!</p>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="animate-fade-in">
+                        <h1 class="text-2xl font-bold mb-6">Trading Blog</h1>
+                        <div class="text-center py-12">
+                            <i data-lucide="newspaper" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i>
+                            <p class="text-slate-400">Blog posts coming soon!</p>
+                        </div>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        async function readBlogPost(slug) {
+            showToast('Blog post reader coming soon!', 'info');
+        }
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load saved email
+            const savedEmail = localStorage.getItem('pipways_email');
+            if (savedEmail) {
+                document.getElementById('login-email').value = savedEmail;
+                document.getElementById('remember-me').checked = true;
+            }
+
+            // Password strength meter
+            const passwordInput = document.getElementById('register-password');
+            if (passwordInput) {
+                passwordInput.addEventListener('input', (e) => {
+                    updatePasswordStrength(e.target.value);
+                });
+            }
+
+            if (authToken) {
+                showApp();
+            } else {
+                document.getElementById('auth-screen').classList.remove('hidden');
+            }
+            lucide.createIcons();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                navigateTo('journal');
+            }
+            if (e.ctrlKey && e.key === 'd') {
+                e.preventDefault();
+                navigateTo('dashboard');
+            }
+            if (e.key === 'Escape') {
+                hideMoreMenu();
+            }
         });
     </script>
 </body>
