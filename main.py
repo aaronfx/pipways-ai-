@@ -1601,40 +1601,47 @@ async def create_webinar(
         logger.error(f"Error creating webinar: {e}")
         raise HTTPException(status_code=500, detail="Failed to create webinar")
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-t_admin_user)):
-    """Get platform statistics"""
-    try:
-        async with db_pool.acquire() as conn:
-            stats = {
-                "total_users": await conn.fetchval("SELECT COUNT(*) FROM users"),
-                "total_trades": await conn.fetchval("SELECT COUNT(*) FROM trades"),
-                "active_subscriptions": await conn.fetchval("""
-                    SELECT COUNT(*) FROM users 
-                    WHERE subscription_status = 'active' AND subscription_ends_at > NOW()
-                """),
-                "trial_users": await conn.fetchval("""
-                    SELECT COUNT(*) FROM users 
-                    WHERE subscription_status = 'trial' AND trial_ends_at > NOW()
-                """),
-                "total_courses": await conn.fetchval("SELECT COUNT(*) FROM courses"),
-                "total_webinars": await conn.fetchval("SELECT COUNT(*) FROM webinars"),
-                "total_blog_posts": await conn.fetchval("SELECT COUNT(*) FROM blog_posts"),
-                "published_blog_posts": await conn.fetchval("SELECT COUNT(*) FROM blog_posts WHERE published = TRUE"),
-                "recent_signups": await conn.fetchval("""
-                    SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '7 days'
-                """),
-                "recent_trades": await conn.fetchval("""
-                    SELECT COUNT(*) FROM trades WHERE created_at > NOW() - INTERVAL '7 days'
-                """)
-            }
-            
-            return stats
-    except Exception as e:
-        logger.error(f"Admin stats error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch stats")
+# =============================================================================
+# ADMIN MODELS & DEPENDENCIES
+# =============================================================================
+
+class BlogPostCreate(BaseModel):
+    title: str
+    slug: str
+    content: str
+    excerpt: Optional[str] = None
+    category: Optional[str] = None
+    tags: Optional[List[str]] = None
+    featured_image: Optional[str] = None
+    published: bool = False
+
+class CourseCreate(BaseModel):
+    title: str
+    description: str
+    level: str
+    thumbnail_url: Optional[str] = None
+    lessons: List[Dict[str, Any]] = []
+    quiz_questions: List[Dict[str, Any]] = []
+    passing_score: int = 70
+
+class WebinarCreate(BaseModel):
+    title: str
+    description: str
+    level: Optional[str] = None
+    scheduled_at: datetime
+    zoom_meeting_id: Optional[str] = None
+    zoom_join_url: Optional[str] = None
+
+async def get_admin_user(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
+    """Get admin user from JWT token"""
+    user = await get_current_user(credentials)
+    if not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+# =============================================================================
+# ADMIN ENDPOINTS
+# =============================================================================
 
 @app.get("/admin/blog/posts")
 async def get_all_blog_posts_admin(admin: Dict[str, Any] = Depends(get_admin_user)):
