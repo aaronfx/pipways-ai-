@@ -244,6 +244,10 @@
                 return response;
             } catch (error) {
                 console.error('API Error:', error);
+                // Handle network errors or other fetch failures
+                if (error instanceof TypeError && error.message.includes('fetch')) {
+                    throw new Error('Network error. Please check your connection.');
+                }
                 throw error;
             }
         }
@@ -275,7 +279,12 @@
                 });
 
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.detail || 'Login failed');
+                if (!response.ok) {
+                    const errorMsg = typeof data.detail === 'string' ? data.detail : 
+                                    typeof data.detail === 'object' && data.detail !== null ? JSON.stringify(data.detail) : 
+                                    data.message || 'Login failed';
+                    throw new Error(errorMsg);
+                }
 
                 authToken = data.access_token;
                 currentUser = data;
@@ -283,7 +292,10 @@
                 showApp();
                 showToast('Welcome back!', 'success');
             } catch (error) {
-                showToast(error.message, 'error');
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 
+                                typeof error === 'string' ? error : 
+                                'An error occurred. Please try again.';
+                showToast(errorMsg, 'error');
             }
         }
 
@@ -306,7 +318,12 @@
                 });
 
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.detail || 'Registration failed');
+                if (!response.ok) {
+                    const errorMsg = typeof data.detail === 'string' ? data.detail : 
+                                    typeof data.detail === 'object' && data.detail !== null ? JSON.stringify(data.detail) : 
+                                    data.message || 'Registration failed';
+                    throw new Error(errorMsg);
+                }
 
                 authToken = data.access_token;
                 currentUser = data;
@@ -314,7 +331,10 @@
                 showApp();
                 showToast('Welcome! Your trial has started.', 'success');
             } catch (error) {
-                showToast(error.message, 'error');
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 
+                                typeof error === 'string' ? error : 
+                                'An error occurred. Please try again.';
+                showToast(errorMsg, 'error');
             }
         }
 
@@ -424,7 +444,10 @@
                     </div>
                 `;
             } catch (error) {
-                container.innerHTML = `<div class="text-red-400 text-center py-20">Error loading dashboard: ${error.message}</div>`;
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 
+                                typeof error === 'string' ? error : 
+                                'Failed to load dashboard';
+                container.innerHTML = `<div class="text-red-400 text-center py-20">Error loading dashboard: ${errorMsg}</div>`;
             }
         }
 
@@ -500,7 +523,10 @@
                     </div>
                 `;
             } catch (error) {
-                container.innerHTML = `<div class="text-red-400">Error loading trades: ${error.message}</div>`;
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 
+                                typeof error === 'string' ? error : 
+                                'Failed to load trades';
+                container.innerHTML = `<div class="text-red-400">Error loading trades: ${errorMsg}</div>`;
             }
         }
 
@@ -524,7 +550,10 @@
                 e.target.reset();
                 loadTradesList();
             } catch (error) {
-                showToast(error.message, 'error');
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 
+                                typeof error === 'string' ? error : 
+                                'Failed to save trade';
+                showToast(errorMsg, 'error');
             }
         }
 
@@ -623,7 +652,10 @@
                     });
                 }
             } catch (error) {
-                container.innerHTML = `<div class="text-red-400 text-center py-20">Error loading analytics: ${error.message}</div>`;
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 
+                                typeof error === 'string' ? error : 
+                                'Failed to load analytics';
+                container.innerHTML = `<div class="text-red-400 text-center py-20">Error loading analytics: ${errorMsg}</div>`;
             }
         }
 
@@ -715,7 +747,10 @@
                 `;
                 showToast('Analysis complete!', 'success');
             } catch (error) {
-                resultContainer.innerHTML = `<div class="text-red-400">Error: ${error.message}</div>`;
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 
+                                typeof error === 'string' ? error : 
+                                'Analysis failed';
+                resultContainer.innerHTML = `<div class="text-red-400">Error: ${errorMsg}</div>`;
             }
         }
 
@@ -793,7 +828,10 @@
                 `;
                 showToast('Chart analysis complete!', 'success');
             } catch (error) {
-                resultContainer.innerHTML = `<div class="text-red-400">Error: ${error.message}</div>`;
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 
+                                typeof error === 'string' ? error : 
+                                'Chart analysis failed';
+                resultContainer.innerHTML = `<div class="text-red-400">Error: ${errorMsg}</div>`;
             }
         }
 
@@ -978,7 +1016,10 @@
                 `;
                 lucide.createIcons();
             } catch (error) {
-                container.innerHTML = `<div class="text-red-400">Error loading courses: ${error.message}</div>`;
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 
+                                typeof error === 'string' ? error : 
+                                'Failed to load courses';
+                container.innerHTML = `<div class="text-red-400">Error loading courses: ${errorMsg}</div>`;
             }
         }
 
@@ -991,7 +1032,10 @@
                     throw new Error('Enrollment failed');
                 }
             } catch (error) {
-                showToast(error.message, 'error');
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 
+                                typeof error === 'string' ? error : 
+                                'Enrollment failed';
+                showToast(errorMsg, 'error');
             }
         }
 
@@ -1054,7 +1098,10 @@
                     throw new Error('Registration failed');
                 }
             } catch (error) {
-                showToast(error.message, 'error');
+                const errorMsg = error && typeof error.message === 'string' ? error.message : 
+                                typeof error === 'string' ? error : 
+                                'Registration failed';
+                showToast(errorMsg, 'error');
             }
         }
 
