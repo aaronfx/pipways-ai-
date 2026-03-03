@@ -1401,6 +1401,30 @@ async def create_course(
         cache_delete("courses:all")
         return {"id": course_id, "message": "Course created"}
 
+@app.post("/admin/make-admin")
+async def make_user_admin(email: str = Form(...)):
+    """Make a user an admin by email (no auth required for initial setup)"""
+    async with db_pool.acquire() as conn:
+        # Check if user exists
+        user = await conn.fetchrow("SELECT id, is_admin FROM users WHERE email = $1", email)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Update to admin
+        await conn.execute("UPDATE users SET is_admin = TRUE WHERE id = $1", user["id"])
+        return {"message": f"User {email} is now an admin", "user_id": user["id"]}
+
+@app.post("/setup/make-admin-default")
+async def make_default_admin():
+    """Make admin@pipways.com an admin (convenience endpoint for setup)"""
+    async with db_pool.acquire() as conn:
+        user = await conn.fetchrow("SELECT id, is_admin FROM users WHERE email = 'admin@pipways.com'")
+        if not user:
+            raise HTTPException(status_code=404, detail="Default admin user not found. Please register first.")
+        
+        await conn.execute("UPDATE users SET is_admin = TRUE WHERE id = $1", user["id"])
+        return {"message": "admin@pipways.com is now an admin", "user_id": user["id"]}
+
 @app.post("/admin/webinars")
 async def create_webinar(
     title: str = Form(...),
