@@ -157,7 +157,22 @@
     </div>
 
     <script>
-        const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:8000' : 'https://pipways-api.onrender.com';
+        // Auto-detect API URL - works for both local and deployed environments
+        const API_URL = (() => {
+            const hostname = window.location.hostname;
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return 'http://localhost:8000';
+            }
+            // For Render deployments, try to infer the API URL from frontend URL
+            if (hostname.includes('render.com')) {
+                // Replace web with api in the URL
+                return `https://${hostname.replace('web', 'api')}`;
+            }
+            return 'https://pipways-api.onrender.com';
+        })();
+        
+        console.log('API URL:', API_URL); // Debug log
+        
         let authToken = localStorage.getItem('pipways_token');
         let currentUser = null;
         let currentPage = 'dashboard';
@@ -193,7 +208,10 @@
                 if (response.status === 401) { logout(); throw new Error('Session expired'); }
                 return response;
             } catch (error) {
-                if (error.message.includes('fetch')) throw new Error('Network error');
+                console.error('API Call Error:', error);
+                if (error.message.includes('fetch') || error.message.includes('NetworkError') || error.name === 'TypeError') {
+                    throw new Error('Cannot connect to server. Please check your internet connection or try again later.');
+                }
                 throw error;
             }
         }
@@ -223,7 +241,7 @@
                 });
 
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.detail || 'Login failed');
+                if (!response.ok) throw new Error(data.detail || `Login failed (${response.status})`);
 
                 authToken = data.access_token;
                 currentUser = data;
@@ -231,7 +249,14 @@
                 showApp();
                 showToast('Welcome back!', 'success');
             } catch (error) {
-                showToast(error.message, 'error');
+                console.error('Login error:', error);
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    showToast('Cannot connect to server. Please check your internet connection.', 'error');
+                } else if (error.message.includes('Failed to fetch')) {
+                    showToast('Server unreachable. Please try again later.', 'error');
+                } else {
+                    showToast(error.message, 'error');
+                }
             } finally {
                 btn.innerHTML = '<span>Sign In</span>';
                 btn.disabled = false;
@@ -257,7 +282,7 @@
                 });
 
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.detail || 'Registration failed');
+                if (!response.ok) throw new Error(data.detail || `Registration failed (${response.status})`);
 
                 authToken = data.access_token;
                 currentUser = data;
@@ -265,7 +290,14 @@
                 showApp();
                 showToast('Welcome! Your trial has started.', 'success');
             } catch (error) {
-                showToast(error.message, 'error');
+                console.error('Register error:', error);
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    showToast('Cannot connect to server. Please check your internet connection.', 'error');
+                } else if (error.message.includes('Failed to fetch')) {
+                    showToast('Server unreachable. Please try again later.', 'error');
+                } else {
+                    showToast(error.message, 'error');
+                }
             } finally {
                 btn.innerHTML = '<span>Create Account</span>';
                 btn.disabled = false;
@@ -1208,7 +1240,27 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        // Health check function to verify backend connectivity
+        async function checkBackendHealth() {
+            try {
+                const response = await fetch(`${API_URL}/health`, { method: 'GET' });
+                if (response.ok) {
+                    console.log('Backend is healthy');
+                    return true;
+                }
+            } catch (error) {
+                console.error('Backend health check failed:', error);
+            }
+            return false;
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check backend health first
+            const isHealthy = await checkBackendHealth();
+            if (!isHealthy) {
+                console.warn('Backend may not be accessible. API URL:', API_URL);
+            }
+            
             if (authToken) { 
                 showApp(); 
             } else { 
