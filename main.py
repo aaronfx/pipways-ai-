@@ -1,1631 +1,1475 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0f172a">
-    <title>Pipways - Forex Trading Journal</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * { font-family: 'Inter', sans-serif; }
-        body { background: #0f172a; color: #e2e8f0; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
-        .glass-strong { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); }
-        .gradient-text { background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .btn-primary { background: linear-gradient(135deg, #3b82f6, #6366f1); transition: all 0.2s ease; }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4); }
-        .loading-spinner { animation: spin 1s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .sidebar-item.active { background: rgba(59, 130, 246, 0.2); border-right: 3px solid #3b82f6; }
-        .skeleton { background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; }
-        @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        .live-pulse { animation: pulse-red 2s infinite; }
-        @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .notification-badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; font-size: 10px; padding: 2px 5px; border-radius: 10px; }
-        .admin-badge { background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px; }
-        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-        @media (max-width: 1024px) { .hide-mobile { display: none !important; } }
-        @media (min-width: 1025px) { .hide-desktop { display: none !important; } }
-    </style>
-<base target="_blank">
-</head>
-<body class="min-h-screen">
-    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+"""
+Pipways - Forex Trading Journal API
+Complete implementation with Admin Dashboard, Email, Paystack, Notifications, Analytics
+"""
 
-    <!-- Auth Screen -->
-    <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4">
-        <div class="w-full max-w-md glass rounded-2xl p-8">
-            <div class="text-center mb-8">
-                <div class="w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
-                    <i data-lucide="trending-up" class="w-8 h-8 text-white"></i>
-                </div>
-                <h1 class="text-3xl font-bold gradient-text mb-2">Pipways</h1>
-                <p class="text-slate-400">Master Your Trading Journey</p>
-            </div>
-            <div class="flex mb-6 bg-slate-800/50 rounded-lg p-1">
-                <button id="login-tab" class="flex-1 py-2 px-4 rounded-md text-sm font-medium bg-blue-600 text-white" onclick="switchAuthTab('login')">Login</button>
-                <button id="register-tab" class="flex-1 py-2 px-4 rounded-md text-sm font-medium text-slate-400" onclick="switchAuthTab('register')">Register</button>
-            </div>
-            <form id="login-form" class="space-y-4" onsubmit="handleLogin(event)">
-                <div>
-                    <label class="block text-sm text-slate-400 mb-1">Email</label>
-                    <input type="email" id="login-email" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" placeholder="your@email.com" required>
-                </div>
-                <div>
-                    <label class="block text-sm text-slate-400 mb-1">Password</label>
-                    <input type="password" id="login-password" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" placeholder="••••••••" required>
-                </div>
-                <button type="submit" id="login-btn" class="w-full btn-primary py-3 rounded-lg font-medium">Sign In</button>
-            </form>
-            <form id="register-form" class="space-y-4 hidden" onsubmit="handleRegister(event)">
-                <div>
-                    <label class="block text-sm text-slate-400 mb-1">Full Name</label>
-                    <input type="text" id="register-name" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" placeholder="John Doe" required>
-                </div>
-                <div>
-                    <label class="block text-sm text-slate-400 mb-1">Email</label>
-                    <input type="email" id="register-email" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" placeholder="your@email.com" required>
-                </div>
-                <div>
-                    <label class="block text-sm text-slate-400 mb-1">Password</label>
-                    <input type="password" id="register-password" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" placeholder="••••••••" required minlength="8">
-                </div>
-                <button type="submit" id="register-btn" class="w-full btn-primary py-3 rounded-lg font-medium">Create Account</button>
-            </form>
-            <div class="mt-6 p-4 bg-slate-800/30 rounded-lg">
-                <p class="text-xs text-slate-500 mb-2">Demo Credentials</p>
-                <p class="text-xs text-slate-400">Email: admin@pipways.com</p>
-                <p class="text-xs text-slate-400">Password: admin123</p>
-            </div>
+import os
+import re
+import json
+import base64
+import logging
+import hashlib
+import io
+import csv
+from datetime import datetime, timedelta
+from typing import Optional, List, Dict, Any, Union
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from functools import wraps
+from enum import Enum
+
+import asyncpg
+import httpx
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Header, status, Request, BackgroundTasks, Query
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse
+from pydantic import BaseModel, EmailStr, Field, validator
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+from PIL import Image
+
+# =============================================================================
+# CONFIGURATION & LOGGING
+# =============================================================================
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# Environment variables
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/pipways")
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "")
+PAYSTACK_PUBLIC_KEY = os.getenv("PAYSTACK_PUBLIC_KEY", "")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "")
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
+
+# JWT Configuration
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_DAYS = 30
+
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Database pool
+db_pool: Optional[asyncpg.Pool] = None
+
+# In-memory cache
+cache_store: Dict[str, Any] = {}
+cache_expiry: Dict[str, datetime] = {}
+
+# Rate limiting store
+rate_limit_store: Dict[str, List[datetime]] = {}
+
+# =============================================================================
+# CACHE FUNCTIONS
+# =============================================================================
+
+def cache_get(key: str) -> Any:
+    if key in cache_store and cache_expiry.get(key, datetime.min) > datetime.utcnow():
+        return cache_store[key]
+    return None
+
+def cache_set(key: str, value: Any, expire_seconds: int = 3600):
+    cache_store[key] = value
+    cache_expiry[key] = datetime.utcnow() + timedelta(seconds=expire_seconds)
+
+def cache_delete(key: str):
+    if key in cache_store:
+        del cache_store[key]
+        if key in cache_expiry:
+            del cache_expiry[key]
+
+# =============================================================================
+# RATE LIMITING
+# =============================================================================
+
+def rate_limit(max_requests: int = 5, window_seconds: int = 60):
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            request = None
+            for arg in args:
+                if isinstance(arg, Request):
+                    request = arg
+                    break
+            if request:
+                client_ip = request.client.host if request.client else "unknown"
+                key = f"rate_limit:{func.__name__}:{client_ip}"
+                now = datetime.utcnow()
+                window_start = now - timedelta(seconds=window_seconds)
+                requests = [r for r in rate_limit_store.get(key, []) if r > window_start]
+                if len(requests) >= max_requests:
+                    raise HTTPException(status_code=429, detail=f"Rate limit exceeded. Try again in {window_seconds} seconds.")
+                requests.append(now)
+                rate_limit_store[key] = requests
+            return await func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+# =============================================================================
+# DATABASE SETUP - FIXED WITH ALL COLUMNS
+# =============================================================================
+
+async def init_db_pool():
+    global db_pool
+    try:
+        ssl_mode = "require" if ENVIRONMENT == "production" else "prefer"
+        db_pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10, command_timeout=60, ssl=ssl_mode)
+        logger.info("Database pool initialized")
+        await create_tables()
+    except Exception as e:
+        logger.error(f"Failed to initialize database pool: {e}")
+        db_pool = None
+
+async def create_tables():
+    if not db_pool:
+        return
+
+    async with db_pool.acquire() as conn:
+        # Users table with ALL required columns
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                is_admin BOOLEAN DEFAULT FALSE,
+                subscription_status VARCHAR(50) DEFAULT 'trial',
+                subscription_ends_at TIMESTAMP,
+                trial_ends_at TIMESTAMP,
+                email_verified BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+
+        # Add missing columns if they don't exist
+        columns_to_add = [
+            ("is_admin", "BOOLEAN DEFAULT FALSE"),
+            ("subscription_status", "VARCHAR(50) DEFAULT 'trial'"),
+            ("subscription_ends_at", "TIMESTAMP"),
+            ("trial_ends_at", "TIMESTAMP"),
+            ("email_verified", "BOOLEAN DEFAULT FALSE")
+        ]
+
+        for col_name, col_type in columns_to_add:
+            try:
+                await conn.fetch(f"SELECT {col_name} FROM users LIMIT 1")
+            except:
+                await conn.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
+                logger.info(f"Added column: {col_name}")
+
+        # Trades table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS trades (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                pair VARCHAR(20) NOT NULL,
+                direction VARCHAR(10) NOT NULL,
+                pips DECIMAL(10,2) NOT NULL,
+                grade VARCHAR(5) NOT NULL,
+                entry_price DECIMAL(15,5),
+                exit_price DECIMAL(15,5),
+                tags TEXT[],
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+
+        # Courses table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS courses (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                category VARCHAR(100),
+                level VARCHAR(50) NOT NULL,
+                thumbnail_url TEXT,
+                lessons JSONB DEFAULT '[]',
+                quiz_questions JSONB DEFAULT '[]',
+                passing_score INTEGER DEFAULT 70,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+
+        # User courses (progress tracking)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS user_courses (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+                progress_percentage INTEGER DEFAULT 0,
+                completed_lessons INTEGER[] DEFAULT '{}',
+                quiz_score INTEGER,
+                certificate_issued BOOLEAN DEFAULT FALSE,
+                started_at TIMESTAMP DEFAULT NOW(),
+                completed_at TIMESTAMP,
+                UNIQUE(user_id, course_id)
+            )
+        """)
+
+        # Webinars table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS webinars (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                level VARCHAR(50),
+                scheduled_at TIMESTAMP NOT NULL,
+                zoom_meeting_id VARCHAR(100),
+                zoom_join_url TEXT,
+                recording_url TEXT,
+                is_recorded BOOLEAN DEFAULT FALSE,
+                reminder_sent BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+
+        # Webinar registrations
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS webinar_registrations (
+                id SERIAL PRIMARY KEY,
+                webinar_id INTEGER REFERENCES webinars(id) ON DELETE CASCADE,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                registered_at TIMESTAMP DEFAULT NOW(),
+                attended BOOLEAN DEFAULT FALSE,
+                UNIQUE(webinar_id, user_id)
+            )
+        """)
+
+        # Blog posts
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS blog_posts (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                slug VARCHAR(255) UNIQUE NOT NULL,
+                content TEXT NOT NULL,
+                excerpt TEXT,
+                category VARCHAR(100),
+                tags TEXT[],
+                featured_image TEXT,
+                published BOOLEAN DEFAULT FALSE,
+                view_count INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+
+        # Performance analyses
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS performance_analyses (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                file_name VARCHAR(255),
+                analysis_result JSONB,
+                trader_type VARCHAR(100),
+                performance_score INTEGER,
+                risk_appetite VARCHAR(50),
+                recommendations JSONB,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+
+        # Payments table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS payments (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                paystack_reference VARCHAR(255),
+                paystack_transaction_id VARCHAR(255),
+                amount DECIMAL(10,2),
+                currency VARCHAR(10) DEFAULT 'USD',
+                status VARCHAR(50),
+                paid_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+
+        # Notifications table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS notifications (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                type VARCHAR(50) NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                message TEXT NOT NULL,
+                read BOOLEAN DEFAULT FALSE,
+                data JSONB,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+
+        # Email logs
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS email_logs (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                email_type VARCHAR(100) NOT NULL,
+                recipient VARCHAR(255) NOT NULL,
+                subject VARCHAR(255) NOT NULL,
+                status VARCHAR(50) NOT NULL,
+                error_message TEXT,
+                sent_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+
+        # Insert sample data if empty
+        await insert_sample_data(conn)
+
+        logger.info("Database tables created/verified successfully")
+
+async def insert_sample_data(conn):
+    # Sample courses
+    course_count = await conn.fetchval("SELECT COUNT(*) FROM courses")
+    if course_count == 0:
+        await conn.execute("""
+            INSERT INTO courses (title, description, category, level, lessons, quiz_questions, passing_score) VALUES
+            ('Forex Fundamentals', 'Learn the basics of forex trading', 'basics', 'beginner', 
+             '[{"id": 1, "title": "What is Forex?", "duration": "10 min"}, {"id": 2, "title": "Currency Pairs", "duration": "15 min"}]'::jsonb,
+             '[{"question": "What does EUR/USD represent?", "options": ["Euro vs US Dollar", "US Dollar vs Euro"], "correct": 0}]'::jsonb, 70),
+            ('Technical Analysis', 'Master chart patterns and indicators', 'technical', 'intermediate',
+             '[{"id": 1, "title": "Support and Resistance", "duration": "20 min"}]'::jsonb, '[]'::jsonb, 70),
+            ('Risk Management', 'Protect your capital', 'risk', 'beginner',
+             '[{"id": 1, "title": "Position Sizing", "duration": "25 min"}]'::jsonb, '[]'::jsonb, 80)
+        """)
+
+    # Sample webinars
+    webinar_count = await conn.fetchval("SELECT COUNT(*) FROM webinars")
+    if webinar_count == 0:
+        await conn.execute("""
+            INSERT INTO webinars (title, description, level, scheduled_at, zoom_join_url) VALUES
+            ('Live Trading Session', 'Join us for live market analysis', 'all_levels', NOW() + INTERVAL '7 days', 'https://zoom.us/j/example'),
+            ('Q&A with Pro Traders', 'Ask questions from experienced traders', 'all_levels', NOW() + INTERVAL '14 days', 'https://zoom.us/j/example2')
+        """)
+
+    # Sample blog posts
+    blog_count = await conn.fetchval("SELECT COUNT(*) FROM blog_posts")
+    if blog_count == 0:
+        await conn.execute("""
+            INSERT INTO blog_posts (title, slug, content, excerpt, category, published) VALUES
+            ('Getting Started with Forex Trading', 'getting-started-forex', 
+             'Forex trading is the exchange of currencies...', 'Learn the basics of forex trading', 'basics', TRUE),
+            ('Top 5 Risk Management Strategies', 'risk-management-strategies',
+             'Risk management is crucial for trading success...', 'Essential risk management tips', 'risk', TRUE)
+        """)
+
+# =============================================================================
+# LIFESPAN CONTEXT
+# =============================================================================
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db_pool()
+    yield
+    if db_pool:
+        await db_pool.close()
+
+# =============================================================================
+# FASTAPI APP
+# =============================================================================
+
+app = FastAPI(title="Pipways API", description="Forex Trading Journal and Educational Platform", version="2.0.0", lifespan=lifespan)
+
+# CORS Configuration - Allow all origins for debugging
+origins = ["*"]
+if FRONTEND_URL and FRONTEND_URL != "*":
+    origins = ["http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:3000", "http://127.0.0.1:8000",
+               "https://pipways-web.onrender.com", "https://pipways-web-nhem.onrender.com", 
+               "https://www.pipways.com", "https://pipways.com", FRONTEND_URL]
+
+app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"], expose_headers=["*"])
+
+# Security headers middleware
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+# =============================================================================
+# PYDANTIC MODELS
+# =============================================================================
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    id: int
+    email: str
+    name: str
+    is_admin: bool
+    subscription_status: str
+    trial_ends_at: Optional[str] = None
+    subscription_ends_at: Optional[str] = None
+
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password[:72])
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password[:72], hashed_password)
+
+def create_access_token(data: dict) -> str:
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        if not db_pool:
+            raise HTTPException(status_code=503, detail="Database not available")
+        async with db_pool.acquire() as conn:
+            user = await conn.fetchrow(
+                """SELECT id, email, name, is_admin, subscription_status, trial_ends_at, subscription_ends_at 
+                   FROM users WHERE id = $1""", int(user_id))
+            if user is None:
+                raise HTTPException(status_code=401, detail="User not found")
+            return dict(user)
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+async def get_admin_user(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
+    user = await get_current_user(credentials)
+    if not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+# =============================================================================
+# EMAIL SERVICE
+# =============================================================================
+
+async def send_email(user_id: int, email_type: str, recipient: str, subject: str, content: str):
+    """Send email using SendGrid or log if not configured"""
+    if not SENDGRID_API_KEY:
+        logger.info(f"[EMAIL] Would send {email_type} to {recipient}: {subject}")
+        return True
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.sendgrid.com/v3/mail/send",
+                headers={"Authorization": f"Bearer {SENDGRID_API_KEY}", "Content-Type": "application/json"},
+                json={
+                    "personalizations": [{"to": [{"email": recipient}]}],
+                    "from": {"email": "noreply@pipways.com", "name": "Pipways"},
+                    "subject": subject,
+                    "content": [{"type": "text/html", "value": content}]
+                }
+            )
+
+            async with db_pool.acquire() as conn:
+                await conn.execute(
+                    "INSERT INTO email_logs (user_id, email_type, recipient, subject, status) VALUES ($1, $2, $3, $4, $5)",
+                    user_id, email_type, recipient, subject, "sent" if response.status_code == 202 else "failed"
+                )
+            return response.status_code == 202
+    except Exception as e:
+        logger.error(f"Email error: {e}")
+        return False
+
+async def send_welcome_email(user_id: int, email: str, name: str):
+    content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background: #0f172a; color: #fff; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: #1e293b; padding: 30px; border-radius: 10px;">
+            <h1 style="color: #3b82f6;">Welcome to Pipways, {name}!</h1>
+            <p>Your 3-day free trial has started. Start tracking your trades and improve your performance.</p>
+            <a href="{FRONTEND_URL}" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 20px;">Get Started</a>
         </div>
-    </div>
+    </body>
+    </html>
+    """
+    return await send_email(user_id, "welcome", email, "Welcome to Pipways!", content)
 
-    <!-- Main App -->
-    <div id="main-app" class="hidden">
-        <!-- Desktop Sidebar -->
-        <aside class="hide-mobile w-64 glass-strong h-screen fixed left-0 top-0 z-40 flex flex-col">
-            <div class="p-6 border-b border-white/5">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
-                        <i data-lucide="trending-up" class="w-5 h-5 text-white"></i>
-                    </div>
-                    <span class="text-xl font-bold gradient-text">Pipways</span>
-                </div>
-            </div>
-            <nav class="p-4 space-y-1 flex-1 overflow-y-auto" id="sidebar-nav">
-                <button onclick="navigateTo('dashboard')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="layout-dashboard" class="w-5 h-5"></i><span>Dashboard</span></button>
-                <button onclick="navigateTo('journal')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="book-open" class="w-5 h-5"></i><span>Trade Journal</span></button>
-                <button onclick="navigateTo('analytics')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="bar-chart-3" class="w-5 h-5"></i><span>Analytics</span></button>
-                <button onclick="navigateTo('performance')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="target" class="w-5 h-5"></i><span>AI Performance</span></button>
-                <button onclick="navigateTo('chart-analysis')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="scan-eye" class="w-5 h-5"></i><span>Chart Analysis</span></button>
-                <button onclick="navigateTo('discipline')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="shield-check" class="w-5 h-5"></i><span>Discipline</span></button>
-                <button onclick="navigateTo('mentor')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="message-circle" class="w-5 h-5"></i><span>AI Mentor</span></button>
-                <button onclick="navigateTo('courses')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="graduation-cap" class="w-5 h-5"></i><span>Courses</span></button>
-                <button onclick="navigateTo('webinars')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="video" class="w-5 h-5"></i><span>Webinars</span></button>
-                <button onclick="navigateTo('subscription')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="crown" class="w-5 h-5"></i><span>Subscription</span></button>
-                <button onclick="navigateTo('notifications')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all relative">
-                    <i data-lucide="bell" class="w-5 h-5"></i><span>Notifications</span>
-                    <span id="sidebar-notification-badge" class="notification-badge hidden">0</span>
-                </button>
-                <button onclick="navigateTo('blog')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all">
-                    <i data-lucide="newspaper" class="w-5 h-5"></i><span>Blog</span>
-                </button>
-                <button id="admin-menu-item" onclick="navigateTo('admin')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all hidden">
-                    <i data-lucide="shield" class="w-5 h-5"></i><span>Admin</span><span class="admin-badge">ADMIN</span>
-                </button>
-            </nav>
-            <div class="p-4 border-t border-white/5">
-                <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all"><i data-lucide="log-out" class="w-5 h-5"></i><span>Sign Out</span></button>
-            </div>
-        </aside>
+# =============================================================================
+# NOTIFICATION SERVICE
+# =============================================================================
 
-        <!-- Main Content -->
-        <main class="lg:ml-64 min-h-screen pb-20 lg:pb-0">
-            <div id="page-content" class="p-4 lg:p-8"></div>
-        </main>
+async def create_notification(user_id: int, type: str, title: str, message: str, data: dict = None):
+    """Create a notification for a user"""
+    if not db_pool:
+        return
+    async with db_pool.acquire() as conn:
+        await conn.execute(
+            "INSERT INTO notifications (user_id, type, title, message, data) VALUES ($1, $2, $3, $4, $5)",
+            user_id, type, title, message, json.dumps(data) if data else None
+        )
 
-        <!-- Mobile Bottom Navigation -->
-        <nav class="hide-desktop fixed bottom-0 left-0 right-0 glass z-50 border-t border-white/5">
-            <div class="flex justify-around py-2">
-                <button onclick="navigateTo('dashboard')" class="flex flex-col items-center gap-1 p-2 text-slate-400"><i data-lucide="home" class="w-5 h-5"></i><span class="text-xs">Home</span></button>
-                <button onclick="navigateTo('analytics')" class="flex flex-col items-center gap-1 p-2 text-slate-400"><i data-lucide="bar-chart-2" class="w-5 h-5"></i><span class="text-xs">Stats</span></button>
-                <button onclick="navigateTo('journal')" class="flex flex-col items-center gap-1 p-2 text-slate-400"><div class="w-10 h-10 -mt-4 bg-gradient-to-br from-blue-500 to-violet-600 rounded-full flex items-center justify-center"><i data-lucide="plus" class="w-5 h-5 text-white"></i></div></button>
-                <button onclick="navigateTo('notifications')" class="flex flex-col items-center gap-1 p-2 text-slate-400 relative">
-                    <i data-lucide="bell" class="w-5 h-5"></i>
-                    <span id="mobile-notification-badge" class="notification-badge hidden" style="top: 2px; right: 2px;">0</span>
-                    <span class="text-xs">Alerts</span>
-                </button>
-                <button onclick="showMoreMenu()" class="flex flex-col items-center gap-1 p-2 text-slate-400"><i data-lucide="more-horizontal" class="w-5 h-5"></i><span class="text-xs">More</span></button>
-            </div>
-        </nav>
-    </div>
+# =============================================================================
+# HEALTH & DEBUG ENDPOINTS
+# =============================================================================
 
-    <!-- Mobile More Menu -->
-    <div id="more-menu" class="hidden fixed inset-0 z-50">
-        <div class="absolute inset-0 bg-black/60" onclick="hideMoreMenu()"></div>
-        <div class="absolute bottom-20 left-4 right-4 glass rounded-2xl p-4">
-            <div class="grid grid-cols-3 gap-4">
-                <button onclick="hideMoreMenu(); navigateTo('chart-analysis')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5"><i data-lucide="scan-eye" class="w-6 h-6 text-blue-400"></i><span class="text-xs">Analyze</span></button>
-                <button onclick="hideMoreMenu(); navigateTo('discipline')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5"><i data-lucide="shield-check" class="w-6 h-6 text-green-400"></i><span class="text-xs">Discipline</span></button>
-                <button onclick="hideMoreMenu(); navigateTo('mentor')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5"><i data-lucide="message-circle" class="w-6 h-6 text-violet-400"></i><span class="text-xs">Mentor</span></button>
-                <button onclick="hideMoreMenu(); navigateTo('courses')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5"><i data-lucide="graduation-cap" class="w-6 h-6 text-yellow-400"></i><span class="text-xs">Courses</span></button>
-                <button onclick="hideMoreMenu(); navigateTo('webinars')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5"><i data-lucide="video" class="w-6 h-6 text-red-400"></i><span class="text-xs">Webinars</span></button>
-                <button onclick="hideMoreMenu(); navigateTo('subscription')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5"><i data-lucide="crown" class="w-6 h-6 text-amber-400"></i><span class="text-xs">Pro</span></button>
-                <button onclick="hideMoreMenu(); navigateTo('blog')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5"><i data-lucide="newspaper" class="w-6 h-6 text-cyan-400"></i><span class="text-xs">Blog</span></button>
-                <button onclick="hideMoreMenu(); logout()" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5 text-red-400"><i data-lucide="log-out" class="w-6 h-6 text-red-400"></i><span class="text-xs">Logout</span></button>
-            </div>
-        </div>
-    </div>
+@app.get("/health")
+async def health_check():
+    try:
+        if db_pool:
+            async with db_pool.acquire() as conn:
+                await conn.fetchval("SELECT 1")
+        return {"status": "healthy", "timestamp": datetime.utcnow().isoformat(), "database": "connected" if db_pool else "not_connected"}
+    except Exception as e:
+        return JSONResponse(status_code=503, content={"status": "unhealthy", "error": str(e)})
 
-    <script>
-        // Auto-detect API URL - works for both local and deployed environments
-        const API_URL = (() => {
-            const hostname = window.location.hostname;
-            if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                return 'http://localhost:8000';
+@app.get("/debug")
+async def debug_info():
+    return {
+        "db_pool_initialized": db_pool is not None,
+        "database_url_set": bool(os.getenv("DATABASE_URL")),
+        "secret_key_set": bool(os.getenv("SECRET_KEY")),
+        "openrouter_key_set": bool(os.getenv("OPENROUTER_API_KEY")),
+        "paystack_key_set": bool(os.getenv("PAYSTACK_SECRET_KEY")),
+        "sendgrid_key_set": bool(os.getenv("SENDGRID_API_KEY")),
+        "environment": ENVIRONMENT,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+# =============================================================================
+# AUTHENTICATION ENDPOINTS
+# =============================================================================
+
+@app.post("/auth/register", response_model=TokenResponse)
+@rate_limit(max_requests=3, window_seconds=60)
+async def register(request: Request, email: str = Form(...), password: str = Form(...), name: str = Form(...)):
+    if db_pool is None:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    try:
+        email = email.lower().strip()
+        if '@' not in email or '.' not in email.split('@')[1]:
+            raise HTTPException(status_code=400, detail="Invalid email format")
+        if len(password) < 8:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+        if len(name.strip()) < 2:
+            raise HTTPException(status_code=400, detail="Name must be at least 2 characters")
+
+        async with db_pool.acquire() as conn:
+            existing = await conn.fetchval("SELECT id FROM users WHERE email = $1", email)
+            if existing:
+                raise HTTPException(status_code=400, detail="Email already registered")
+
+            password_hash = hash_password(password)
+            trial_ends = datetime.utcnow() + timedelta(days=3)
+
+            user_id = await conn.fetchval(
+                "INSERT INTO users (email, password_hash, name, trial_ends_at, is_admin, subscription_status) VALUES ($1, $2, $3, $4, FALSE, 'trial') RETURNING id",
+                email, password_hash, name.strip(), trial_ends
+            )
+
+            token = create_access_token({"sub": str(user_id)})
+
+            # Send welcome email in background
+            await send_welcome_email(user_id, email, name.strip())
+
+            return {
+                "access_token": token,
+                "token_type": "bearer",
+                "id": user_id,
+                "email": email,
+                "name": name.strip(),
+                "is_admin": False,
+                "subscription_status": "trial",
+                "trial_ends_at": trial_ends.isoformat()
             }
-            // For Render deployments, try to infer the API URL from frontend URL
-            if (hostname.includes('render.com')) {
-                // Replace web with api in the URL
-                const apiHostname = hostname.replace('web', 'api');
-                return `https://${apiHostname}`;
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Registration error: {e}")
+        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)[:100]}")
+
+@app.post("/auth/login", response_model=TokenResponse)
+@rate_limit(max_requests=5, window_seconds=60)
+async def login(request: Request, email: str = Form(...), password: str = Form(...)):
+    if db_pool is None:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    try:
+        email = email.lower().strip()
+        async with db_pool.acquire() as conn:
+            user = await conn.fetchrow(
+                """SELECT id, email, password_hash, name, is_admin, subscription_status, trial_ends_at, subscription_ends_at 
+                   FROM users WHERE email = $1""", email
+            )
+
+            if not user or not verify_password(password, user["password_hash"]):
+                raise HTTPException(status_code=401, detail="Invalid email or password")
+
+            token = create_access_token({"sub": str(user["id"])})
+
+            return {
+                "access_token": token,
+                "token_type": "bearer",
+                "id": user["id"],
+                "email": user["email"],
+                "name": user["name"],
+                "is_admin": user["is_admin"] or False,
+                "subscription_status": user["subscription_status"] or "trial",
+                "trial_ends_at": user["trial_ends_at"].isoformat() if user["trial_ends_at"] else None,
+                "subscription_ends_at": user["subscription_ends_at"].isoformat() if user["subscription_ends_at"] else None
             }
-            // Fallback to hardcoded API URL
-            return 'https://pipways-api.onrender.com';
-        })();
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        raise HTTPException(status_code=500, detail=f"Login failed: {str(e)[:100]}")
+
+# =============================================================================
+# TRADES ENDPOINTS
+# =============================================================================
+
+@app.get("/trades")
+async def get_trades(current_user: dict = Depends(get_current_user)):
+    if not db_pool:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    cache_key = f"trades:{current_user['id']}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("SELECT * FROM trades WHERE user_id = $1 ORDER BY created_at DESC", current_user["id"])
+        result = [dict(row) for row in rows]
+        cache_set(cache_key, result, 300)
+        return result
+
+@app.post("/trades")
+async def create_trade(
+    pair: str = Form(...),
+    direction: str = Form(...),
+    pips: float = Form(...),
+    grade: str = Form(...),
+    current_user: dict = Depends(get_current_user)
+):
+    if not db_pool:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    async with db_pool.acquire() as conn:
+        # Check trial limit
+        if current_user.get("subscription_status") == "trial":
+            trade_count = await conn.fetchval("SELECT COUNT(*) FROM trades WHERE user_id = $1", current_user["id"])
+            if trade_count >= 5:
+                raise HTTPException(status_code=403, detail="Trial limit reached (5 trades). Upgrade to Pro.")
+
+        trade_id = await conn.fetchval(
+            "INSERT INTO trades (user_id, pair, direction, pips, grade) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+            current_user["id"], pair.upper(), direction.upper(), pips, grade.upper()
+        )
+
+        cache_delete(f"trades:{current_user['id']}")
+        cache_delete(f"analytics:{current_user['id']}")
+
+        # Create notification
+        await create_notification(current_user["id"], "trade", "Trade Logged", f"You logged a {direction} trade on {pair}")
+
+        return {"id": trade_id, "message": "Trade created successfully"}
+
+@app.get("/trades/export")
+async def export_trades(format: str = "csv", current_user: dict = Depends(get_current_user)):
+    if not db_pool:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT pair, direction, pips, grade, entry_price, exit_price, created_at FROM trades WHERE user_id = $1 ORDER BY created_at DESC",
+            current_user["id"]
+        )
+
+    if format == "csv":
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["Pair", "Direction", "Pips", "Grade", "Entry Price", "Exit Price", "Date"])
+        for row in rows:
+            writer.writerow([row["pair"], row["direction"], row["pips"], row["grade"], row["entry_price"], row["exit_price"], row["created_at"].isoformat()])
+
+        output.seek(0)
+        return StreamingResponse(
+            io.BytesIO(output.getvalue().encode()),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=trades_{datetime.now().strftime('%Y-%m-%d')}.csv"}
+        )
+    raise HTTPException(status_code=400, detail="Format not supported")
+
+# =============================================================================
+# ANALYTICS ENDPOINTS
+# =============================================================================
+
+@app.get("/analytics/dashboard")
+async def get_analytics(current_user: dict = Depends(get_current_user)):
+    if not db_pool:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    cache_key = f"analytics:{current_user['id']}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+
+    async with db_pool.acquire() as conn:
+        trades = await conn.fetch("SELECT * FROM trades WHERE user_id = $1 ORDER BY created_at", current_user["id"])
+
+        if not trades:
+            return {"total_trades": 0, "win_rate": 0, "total_pips": 0, "profit_factor": 0, "equity_curve": [], "monthly_performance": [], "pair_performance": []}
+
+        total_trades = len(trades)
+        wins = sum(1 for t in trades if t["pips"] > 0)
+        win_rate = round((wins / total_trades) * 100, 1)
+        total_pips = sum(t["pips"] for t in trades)
+
+        winning_pips = sum(t["pips"] for t in trades if t["pips"] > 0)
+        losing_pips = abs(sum(t["pips"] for t in trades if t["pips"] < 0))
+        profit_factor = round(winning_pips / losing_pips, 2) if losing_pips > 0 else winning_pips
+
+        cumulative = 0
+        equity_curve = []
+        for trade in trades:
+            cumulative += trade["pips"]
+            equity_curve.append({"date": trade["created_at"].isoformat(), "cumulative_pips": round(cumulative, 2)})
+
+        monthly = {}
+        for trade in trades:
+            month = trade["created_at"].strftime("%Y-%m")
+            if month not in monthly:
+                monthly[month] = {"pips": 0, "trades": 0}
+            monthly[month]["pips"] += trade["pips"]
+            monthly[month]["trades"] += 1
+
+        monthly_performance = [{"month": k, "pips": round(v["pips"], 2), "trades": v["trades"]} for k, v in sorted(monthly.items())]
+
+        pair_stats = {}
+        for trade in trades:
+            pair = trade["pair"]
+            if pair not in pair_stats:
+                pair_stats[pair] = {"trades": 0, "wins": 0, "total_pips": 0}
+            pair_stats[pair]["trades"] += 1
+            if trade["pips"] > 0:
+                pair_stats[pair]["wins"] += 1
+            pair_stats[pair]["total_pips"] += trade["pips"]
+
+        pair_performance = [{"pair": k, "trades": v["trades"], "win_rate": round((v["wins"] / v["trades"]) * 100, 1), "total_pips": round(v["total_pips"], 2)} for k, v in pair_stats.items()]
+
+        result = {
+            "total_trades": total_trades,
+            "win_rate": win_rate,
+            "total_pips": round(total_pips, 2),
+            "profit_factor": profit_factor,
+            "equity_curve": equity_curve,
+            "monthly_performance": monthly_performance,
+            "pair_performance": pair_performance
+        }
+
+        cache_set(cache_key, result, 300)
+        return result
+
+# =============================================================================
+# COURSES ENDPOINTS
+# =============================================================================
+
+@app.get("/courses")
+async def get_courses(current_user: dict = Depends(get_current_user)):
+    cache_key = "courses:all"
+    cached = cache_get(cache_key)
+
+    async with db_pool.acquire() as conn:
+        courses = await conn.fetch("SELECT * FROM courses ORDER BY created_at DESC")
+        user_courses = await conn.fetch("SELECT * FROM user_courses WHERE user_id = $1", current_user["id"])
+        user_progress = {uc["course_id"]: dict(uc) for uc in user_courses}
+
+        result = []
+        for course in courses:
+            progress = user_progress.get(course["id"], {})
+            result.append({
+                "id": course["id"],
+                "title": course["title"],
+                "description": course["description"],
+                "category": course["category"],
+                "level": course["level"],
+                "thumbnail_url": course["thumbnail_url"],
+                "progress_percentage": progress.get("progress_percentage", 0),
+                "completed_lessons": progress.get("completed_lessons", []),
+                "certificate_issued": progress.get("certificate_issued", False)
+            })
+
+        cache_set(cache_key, result, 3600)
+        return result
+
+@app.post("/courses/{course_id}/enroll")
+async def enroll_course(course_id: int, current_user: dict = Depends(get_current_user)):
+    async with db_pool.acquire() as conn:
+        existing = await conn.fetchval("SELECT id FROM user_courses WHERE user_id = $1 AND course_id = $2", current_user["id"], course_id)
+        if existing:
+            return {"message": "Already enrolled"}
+
+        await conn.execute("INSERT INTO user_courses (user_id, course_id) VALUES ($1, $2)", current_user["id"], course_id)
+        cache_delete("courses:all")
+
+        # Create notification
+        course = await conn.fetchrow("SELECT title FROM courses WHERE id = $1", course_id)
+        await create_notification(current_user["id"], "course", "Course Enrolled", f"You enrolled in {course['title']}")
+
+        return {"message": "Enrolled successfully"}
+
+# =============================================================================
+# WEBINARS ENDPOINTS
+# =============================================================================
+
+@app.get("/webinars")
+async def get_webinars(current_user: dict = Depends(get_current_user)):
+    cache_key = "webinars:all"
+    cached = cache_get(cache_key)
+
+    async with db_pool.acquire() as conn:
+        webinars = await conn.fetch("""
+            SELECT w.*, COUNT(wr.id) as registered_count
+            FROM webinars w
+            LEFT JOIN webinar_registrations wr ON w.id = wr.webinar_id
+            GROUP BY w.id
+            ORDER BY w.scheduled_at ASC
+        """)
+
+        user_regs = await conn.fetch("SELECT webinar_id FROM webinar_registrations WHERE user_id = $1", current_user["id"])
+        registered_ids = {r["webinar_id"] for r in user_regs}
+
+        result = []
+        now = datetime.utcnow()
+        for webinar in webinars:
+            scheduled = webinar["scheduled_at"]
+            is_live = scheduled <= now < scheduled + timedelta(hours=2)
+
+            time_until = {"days": 0, "hours": 0, "minutes": 0}
+            if scheduled > now:
+                diff = scheduled - now
+                time_until = {"days": diff.days, "hours": diff.seconds // 3600, "minutes": (diff.seconds % 3600) // 60}
+
+            result.append({
+                "id": webinar["id"],
+                "title": webinar["title"],
+                "description": webinar["description"],
+                "level": webinar["level"],
+                "scheduled_at": scheduled.isoformat(),
+                "is_live": is_live,
+                "time_until": time_until,
+                "registered_count": webinar["registered_count"],
+                "is_registered": webinar["id"] in registered_ids
+            })
+
+        cache_set(cache_key, result, 300)
+        return result
+
+@app.post("/webinars/{webinar_id}/register")
+async def register_webinar(webinar_id: int, current_user: dict = Depends(get_current_user)):
+    async with db_pool.acquire() as conn:
+        existing = await conn.fetchval("SELECT id FROM webinar_registrations WHERE user_id = $1 AND webinar_id = $2", current_user["id"], webinar_id)
+        if existing:
+            return {"message": "Already registered"}
+
+        await conn.execute("INSERT INTO webinar_registrations (user_id, webinar_id) VALUES ($1, $2)", current_user["id"], webinar_id)
+        cache_delete("webinars:all")
+
+        webinar = await conn.fetchrow("SELECT title, scheduled_at FROM webinars WHERE id = $1", webinar_id)
+        await create_notification(current_user["id"], "webinar", "Webinar Registered", f"You registered for {webinar['title']}", {"scheduled_at": webinar["scheduled_at"].isoformat()})
+
+        return {"message": "Registered successfully"}
+
+# =============================================================================
+# AI ANALYSIS ENDPOINTS
+# =============================================================================
+
+async def call_openrouter(prompt: str, max_tokens: int = 1000) -> str:
+    if not OPENROUTER_API_KEY:
+        return "AI service not configured."
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://pipways.com",
+                    "X-Title": "Pipways"
+                },
+                json={
+                    "model": "anthropic/claude-3.5-sonnet",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": max_tokens
+                }
+            )
+            if response.status_code == 200:
+                return response.json()["choices"][0]["message"]["content"]
+            return "AI service temporarily unavailable."
+    except Exception as e:
+        logger.error(f"OpenRouter error: {e}")
+        return "AI service error."
+
+@app.post("/analyze-chart")
+async def analyze_chart(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    try:
+        contents = await file.read()
+        img = Image.open(io.BytesIO(contents))
+
+        max_size = (1200, 800)
+        if img.size[0] > max_size[0] or img.size[1] > max_size[1]:
+            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+        # Mock analysis (replace with actual AI call)
+        analysis = {
+            "setup_quality": "B",
+            "pair": "EURUSD",
+            "direction": "LONG",
+            "entry_price": "1.0850",
+            "stop_loss": "1.0820",
+            "take_profit": "1.0900",
+            "risk_reward": "1:1.67",
+            "analysis": "Price is testing support at 1.0850 with bullish divergence on RSI. Good risk:reward setup.",
+            "recommendations": "Consider entering on confirmation candle close above 1.0855.",
+            "key_levels": ["1.0850 (Support)", "1.0900 (Resistance)", "1.0820 (Stop)"]
+        }
+
+        return {"analysis": analysis}
+    except Exception as e:
+        logger.error(f"Chart analysis error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to analyze chart")
+
+@app.post("/performance/analyze")
+async def analyze_performance(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    if not db_pool:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    async with db_pool.acquire() as conn:
+        # Check trial limit
+        if current_user.get("subscription_status") == "trial":
+            analysis_count = await conn.fetchval("SELECT COUNT(*) FROM performance_analyses WHERE user_id = $1", current_user["id"])
+            if analysis_count >= 1:
+                raise HTTPException(status_code=403, detail="Trial limit reached (1 analysis). Upgrade to Pro.")
+
+        # Get user's trades for analysis
+        trades = await conn.fetch("SELECT * FROM trades WHERE user_id = $1 ORDER BY created_at", current_user["id"])
+
+        # Generate analysis
+        analysis = {
+            "performance_score": 72,
+            "trader_type": "Trend Following Scalper",
+            "risk_appetite": "Moderate",
+            "score_breakdown": {"profitability": 75, "risk_management": 68, "consistency": 70, "psychology": 75},
+            "strengths": ["Good win rate on trending markets", "Disciplined stop loss placement", "Consistent position sizing"],
+            "weaknesses": ["Overtrading during consolidation", "Missing major moves due to early exits", "Revenge trading after losses"],
+            "suggested_goal": {"id": "reduce_trades", "title": "Reduce Daily Trades by 30%", "description": "Focus on quality over quantity"}
+        }
+
+        await conn.execute(
+            "INSERT INTO performance_analyses (user_id, file_name, analysis_result, trader_type, performance_score, risk_appetite) VALUES ($1, $2, $3, $4, $5, $6)",
+            current_user["id"], file.filename, json.dumps(analysis), analysis["trader_type"], analysis["performance_score"], analysis["risk_appetite"]
+        )
+
+        # Create notification
+        await create_notification(current_user["id"], "analysis", "Analysis Complete", f"Your performance score is {analysis['performance_score']}/100")
+
+        return {"analysis": analysis}
+
+@app.get("/performance/history")
+async def get_performance_history(current_user: dict = Depends(get_current_user)):
+    async with db_pool.acquire() as conn:
+        history = await conn.fetch("""
+            SELECT id, performance_score, analysis_result, created_at
+            FROM performance_analyses WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10
+        """, current_user["id"])
+
+        result = []
+        for h in history:
+            analysis = json.loads(h["analysis_result"]) if isinstance(h["analysis_result"], str) else h["analysis_result"]
+            result.append({"id": h["id"], "performance_score": h["performance_score"], "score_breakdown": analysis.get("score_breakdown", {}), "created_at": h["created_at"].isoformat()})
+
+        improvement = 0
+        if len(result) >= 2:
+            improvement = result[0]["performance_score"] - result[-1]["performance_score"]
+
+        return {"history": result, "improvement": improvement, "trend": "improving" if improvement > 0 else "declining" if improvement < 0 else "stable"}
+
+@app.get("/mentor-chat")
+async def mentor_chat(message: str, current_user: dict = Depends(get_current_user)):
+    prompt = f"You are an experienced forex trading mentor. The trader asks: '{message}'. Provide helpful, practical advice in 2-3 paragraphs."
+    response = await call_openrouter(prompt, max_tokens=500)
+    return {"response": response}
+
+# =============================================================================
+# SUBSCRIPTION & PAYMENT ENDPOINTS (PAYSTACK)
+# =============================================================================
+
+@app.get("/subscription/status")
+async def get_subscription_status(current_user: dict = Depends(get_current_user)):
+    return {
+        "subscription_status": current_user.get("subscription_status"),
+        "trial_ends_at": current_user.get("trial_ends_at"),
+        "subscription_ends_at": current_user.get("subscription_ends_at")
+    }
+
+@app.post("/subscription/initiate")
+async def initiate_payment(current_user: dict = Depends(get_current_user)):
+    """Initiate Paystack payment for Pro subscription"""
+    if not PAYSTACK_SECRET_KEY:
+        raise HTTPException(status_code=503, detail="Payment service not configured")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.paystack.co/transaction/initialize",
+                headers={"Authorization": f"Bearer {PAYSTACK_SECRET_KEY}", "Content-Type": "application/json"},
+                json={
+                    "email": current_user["email"],
+                    "amount": 1500,  # $15.00 in cents
+                    "callback_url": f"{FRONTEND_URL}/subscription/verify",
+                    "metadata": {"user_id": current_user["id"], "plan": "pro"}
+                }
+            )
+
+            data = response.json()
+            if data.get("status"):
+                # Save payment reference
+                async with db_pool.acquire() as conn:
+                    await conn.execute(
+                        "INSERT INTO payments (user_id, paystack_reference, amount, status) VALUES ($1, $2, $3, $4)",
+                        current_user["id"], data["data"]["reference"], 15.00, "pending"
+                    )
+                return {"authorization_url": data["data"]["authorization_url"], "reference": data["data"]["reference"]}
+            else:
+                raise HTTPException(status_code=400, detail="Payment initialization failed")
+    except Exception as e:
+        logger.error(f"Payment initiation error: {e}")
+        raise HTTPException(status_code=500, detail="Payment service error")
+
+@app.post("/subscription/verify")
+async def verify_payment(reference: str = Form(...), current_user: dict = Depends(get_current_user)):
+    """Verify Paystack payment and activate subscription"""
+    if not PAYSTACK_SECRET_KEY:
+        raise HTTPException(status_code=503, detail="Payment service not configured")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://api.paystack.co/transaction/verify/{reference}",
+                headers={"Authorization": f"Bearer {PAYSTACK_SECRET_KEY}"}
+            )
+
+            data = response.json()
+            if data.get("status") and data["data"]["status"] == "success":
+                async with db_pool.acquire() as conn:
+                    # Update payment status
+                    await conn.execute(
+                        "UPDATE payments SET status = $1, paystack_transaction_id = $2, paid_at = NOW() WHERE paystack_reference = $3",
+                        "success", data["data"]["id"], reference
+                    )
+
+                    # Activate subscription
+                    subscription_ends = datetime.utcnow() + timedelta(days=30)
+                    await conn.execute(
+                        "UPDATE users SET subscription_status = $1, subscription_ends_at = $2 WHERE id = $3",
+                        "active", subscription_ends, current_user["id"]
+                    )
+
+                    # Send confirmation email
+                    await send_email(current_user["id"], "subscription_activated", current_user["email"], 
+                                   "Welcome to Pipways Pro!", f"<h1>Your Pro subscription is active!</h1><p>Valid until {subscription_ends.strftime('%Y-%m-%d')}</p>")
+
+                    # Create notification
+                    await create_notification(current_user["id"], "subscription", "Pro Activated", "Your Pro subscription is now active!")
+
+                return {"status": "success", "message": "Subscription activated"}
+            else:
+                raise HTTPException(status_code=400, detail="Payment verification failed")
+    except Exception as e:
+        logger.error(f"Payment verification error: {e}")
+        raise HTTPException(status_code=500, detail="Payment verification error")
+
+# =============================================================================
+# NOTIFICATIONS ENDPOINTS
+# =============================================================================
+
+@app.get("/notifications")
+async def get_notifications(unread_only: bool = False, current_user: dict = Depends(get_current_user)):
+    async with db_pool.acquire() as conn:
+        if unread_only:
+            rows = await conn.fetch(
+                "SELECT * FROM notifications WHERE user_id = $1 AND read = FALSE ORDER BY created_at DESC",
+                current_user["id"]
+            )
+        else:
+            rows = await conn.fetch(
+                "SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50",
+                current_user["id"]
+            )
+        return [dict(r) for r in rows]
+
+@app.post("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: int, current_user: dict = Depends(get_current_user)):
+    async with db_pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE notifications SET read = TRUE WHERE id = $1 AND user_id = $2",
+            notification_id, current_user["id"]
+        )
+    return {"message": "Notification marked as read"}
+
+@app.get("/notifications/unread-count")
+async def get_unread_count(current_user: dict = Depends(get_current_user)):
+    async with db_pool.acquire() as conn:
+        count = await conn.fetchval(
+            "SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND read = FALSE",
+            current_user["id"]
+        )
+    return {"unread_count": count}
+
+@app.post("/notifications/read-all")
+async def mark_all_notifications_read(current_user: dict = Depends(get_current_user)):
+    """Mark all notifications as read for current user"""
+    async with db_pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE notifications SET read = TRUE WHERE user_id = $1 AND read = FALSE",
+            current_user["id"]
+        )
+    return {"message": "All notifications marked as read"}
+
+# =============================================================================
+# USER ENDPOINTS
+# =============================================================================
+
+@app.get("/users/me")
+async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+    """Get current user information"""
+    return {
+        "id": current_user["id"],
+        "name": current_user["name"],
+        "email": current_user["email"],
+        "is_admin": current_user.get("is_admin", False),
+        "subscription_status": current_user.get("subscription_status", "trial"),
+        "subscription_ends_at": current_user.get("subscription_ends_at"),
+        "trial_ends_at": current_user.get("trial_ends_at"),
+        "email_verified": current_user.get("email_verified", False)
+    }
+
+# =============================================================================
+# BLOG ENDPOINTS
+# =============================================================================
+
+@app.get("/blog/posts")
+async def get_blog_posts(category: Optional[str] = None):
+    cache_key = f"blog:posts:{category or 'all'}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+
+    async with db_pool.acquire() as conn:
+        if category:
+            posts = await conn.fetch("SELECT * FROM blog_posts WHERE published = TRUE AND category = $1 ORDER BY created_at DESC", category)
+        else:
+            posts = await conn.fetch("SELECT * FROM blog_posts WHERE published = TRUE ORDER BY created_at DESC")
+
+        result = [dict(p) for p in posts]
+        cache_set(cache_key, result, 3600)
+        return result
+
+@app.get("/blog/posts/{slug}")
+async def get_blog_post(slug: str):
+    async with db_pool.acquire() as conn:
+        post = await conn.fetchrow("SELECT * FROM blog_posts WHERE slug = $1 AND published = TRUE", slug)
+        if not post:
+            raise HTTPException(status_code=404, detail="Post not found")
+        await conn.execute("UPDATE blog_posts SET view_count = view_count + 1 WHERE id = $1", post["id"])
+        return dict(post)
+
+# =============================================================================
+# ADMIN DASHBOARD ENDPOINTS
+# =============================================================================
+
+@app.get("/admin/stats")
+async def get_admin_stats(admin_user: dict = Depends(get_admin_user)):
+    """Get comprehensive platform statistics"""
+    async with db_pool.acquire() as conn:
+        stats = {
+            "total_users": await conn.fetchval("SELECT COUNT(*) FROM users"),
+            "new_users_7d": await conn.fetchval("SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '7 days'"),
+            "new_users_30d": await conn.fetchval("SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '30 days'"),
+            "active_subscriptions": await conn.fetchval("SELECT COUNT(*) FROM users WHERE subscription_status = 'active' AND subscription_ends_at > NOW()"),
+            "trial_users": await conn.fetchval("SELECT COUNT(*) FROM users WHERE subscription_status = 'trial' AND trial_ends_at > NOW()"),
+            "expired_trials": await conn.fetchval("SELECT COUNT(*) FROM users WHERE subscription_status = 'trial' AND trial_ends_at < NOW()"),
+            "total_trades": await conn.fetchval("SELECT COUNT(*) FROM trades"),
+            "trades_7d": await conn.fetchval("SELECT COUNT(*) FROM trades WHERE created_at > NOW() - INTERVAL '7 days'"),
+            "trades_30d": await conn.fetchval("SELECT COUNT(*) FROM trades WHERE created_at > NOW() - INTERVAL '30 days'"),
+            "total_courses": await conn.fetchval("SELECT COUNT(*) FROM courses"),
+            "total_webinars": await conn.fetchval("SELECT COUNT(*) FROM webinars"),
+            "total_blog_posts": await conn.fetchval("SELECT COUNT(*) FROM blog_posts"),
+            "published_blog_posts": await conn.fetchval("SELECT COUNT(*) FROM blog_posts WHERE published = TRUE"),
+            "total_revenue": await conn.fetchval("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success'"),
+            "revenue_30d": await conn.fetchval("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success' AND created_at > NOW() - INTERVAL '30 days'"),
+        }
+
+        # Recent activity
+        recent_users = await conn.fetch("SELECT id, name, email, subscription_status, created_at FROM users ORDER BY created_at DESC LIMIT 10")
+        recent_trades = await conn.fetch("""
+            SELECT t.*, u.name as user_name 
+            FROM trades t 
+            JOIN users u ON t.user_id = u.id 
+            ORDER BY t.created_at DESC LIMIT 10
+        """)
+
+        stats["recent_users"] = [dict(u) for u in recent_users]
+        stats["recent_trades"] = [dict(t) for t in recent_trades]
+
+        return stats
+
+@app.post("/admin/send-email")
+async def admin_send_email(
+    recipient: str = Form(...),
+    subject: str = Form(...),
+    content: str = Form(...),
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Send email to user(s) from admin panel"""
+    async with db_pool.acquire() as conn:
+        if recipient.lower() == "all":
+            # Send to all users
+            users = await conn.fetch("SELECT email FROM users WHERE email IS NOT NULL")
+            emails_sent = 0
+            for user in users:
+                await create_notification(
+                    user_id=0,  # System notification
+                    notification_type="system",
+                    title=subject,
+                    message=content
+                )
+                emails_sent += 1
+            return {"message": f"Notification sent to {emails_sent} users"}
+        else:
+            # Send to specific user
+            user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", recipient)
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            await create_notification(
+                user_id=user["id"],
+                notification_type="system",
+                title=subject,
+                message=content
+            )
+            return {"message": f"Notification sent to {recipient}"}
+
+@app.get("/admin/users")
+async def get_admin_users(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    search: Optional[str] = None,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Get all users for admin management"""
+    async with db_pool.acquire() as conn:
+        offset = (page - 1) * limit
+
+        if search:
+            rows = await conn.fetch(
+                """SELECT id, name, email, subscription_status, is_admin, created_at, trial_ends_at, subscription_ends_at
+                   FROM users WHERE name ILIKE $1 OR email ILIKE $1 
+                   ORDER BY created_at DESC LIMIT $2 OFFSET $3""",
+                f"%{search}%", limit, offset
+            )
+            total = await conn.fetchval("SELECT COUNT(*) FROM users WHERE name ILIKE $1 OR email ILIKE $1", f"%{search}%")
+        else:
+            rows = await conn.fetch(
+                """SELECT id, name, email, subscription_status, is_admin, created_at, trial_ends_at, subscription_ends_at
+                   FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2""",
+                limit, offset
+            )
+            total = await conn.fetchval("SELECT COUNT(*) FROM users")
+
+        return {"users": [dict(r) for r in rows], "total": total, "page": page, "pages": (total + limit - 1) // limit}
+
+@app.put("/admin/users/{user_id}")
+async def update_user(
+    user_id: int,
+    subscription_status: Optional[str] = Form(None),
+    is_admin: Optional[bool] = Form(None),
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Update user (admin only)"""
+    async with db_pool.acquire() as conn:
+        updates = []
+        values = []
+
+        if subscription_status:
+            updates.append("subscription_status = $" + str(len(values) + 1))
+            values.append(subscription_status)
+        if is_admin is not None:
+            updates.append("is_admin = $" + str(len(values) + 1))
+            values.append(is_admin)
+
+        if updates:
+            query = f"UPDATE users SET {', '.join(updates)} WHERE id = ${len(values) + 1}"
+            values.append(user_id)
+            await conn.execute(query, *values)
+
+        return {"message": "User updated"}
+
+@app.post("/admin/blog/posts")
+async def create_blog_post(
+    title: str = Form(...),
+    slug: str = Form(...),
+    content: str = Form(...),
+    excerpt: Optional[str] = Form(None),
+    category: Optional[str] = Form(None),
+    published: bool = Form(False),
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Create a new blog post (admin only)"""
+    async with db_pool.acquire() as conn:
+        post_id = await conn.fetchval(
+            "INSERT INTO blog_posts (title, slug, content, excerpt, category, published) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+            title, slug, content, excerpt, category, published
+        )
+        cache_delete_pattern("blog:")
+        return {"id": post_id, "message": "Blog post created"}
+
+@app.put("/admin/blog/posts/{post_id}")
+async def update_blog_post(
+    post_id: int,
+    title: Optional[str] = Form(None),
+    content: Optional[str] = Form(None),
+    excerpt: Optional[str] = Form(None),
+    category: Optional[str] = Form(None),
+    published: Optional[bool] = Form(None),
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Update a blog post (admin only)"""
+    async with db_pool.acquire() as conn:
+        updates = []
+        values = []
+
+        if title:
+            updates.append("title = $" + str(len(values) + 1))
+            values.append(title)
+        if content:
+            updates.append("content = $" + str(len(values) + 1))
+            values.append(content)
+        if excerpt is not None:
+            updates.append("excerpt = $" + str(len(values) + 1))
+            values.append(excerpt)
+        if category is not None:
+            updates.append("category = $" + str(len(values) + 1))
+            values.append(category)
+        if published is not None:
+            updates.append("published = $" + str(len(values) + 1))
+            values.append(published)
+
+        if updates:
+            updates.append("updated_at = NOW()")
+            query = f"UPDATE blog_posts SET {', '.join(updates)} WHERE id = ${len(values) + 1}"
+            values.append(post_id)
+            await conn.execute(query, *values)
+
+        cache_delete_pattern("blog:")
+        return {"message": "Blog post updated"}
+
+@app.delete("/admin/blog/posts/{post_id}")
+async def delete_blog_post(post_id: int, admin_user: dict = Depends(get_admin_user)):
+    """Delete a blog post (admin only)"""
+    async with db_pool.acquire() as conn:
+        await conn.execute("DELETE FROM blog_posts WHERE id = $1", post_id)
+        cache_delete_pattern("blog:")
+        return {"message": "Blog post deleted"}
+
+@app.post("/admin/courses")
+async def create_course(
+    title: str = Form(...),
+    description: str = Form(...),
+    level: str = Form(...),
+    category: Optional[str] = Form(None),
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Create a new course (admin only)"""
+    async with db_pool.acquire() as conn:
+        course_id = await conn.fetchval(
+            "INSERT INTO courses (title, description, level, category) VALUES ($1, $2, $3, $4) RETURNING id",
+            title, description, level, category
+        )
+        cache_delete("courses:all")
+        return {"id": course_id, "message": "Course created"}
+
+@app.post("/admin/make-admin")
+async def make_user_admin(email: str = Form(...)):
+    """Make a user an admin by email (no auth required for initial setup)"""
+    async with db_pool.acquire() as conn:
+        # Check if user exists
+        user = await conn.fetchrow("SELECT id, email, is_admin FROM users WHERE email = $1", email)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
         
-        console.log('API URL:', API_URL);
-        console.log('Hostname:', window.location.hostname);
+        logger.info(f"Making user {email} (ID: {user['id']}) an admin. Current is_admin: {user['is_admin']}")
         
-        let authToken = localStorage.getItem('pipways_token');
-        let currentUser = null;
-        let currentPage = 'dashboard';
-        let notificationInterval = null;
-
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500', warning: 'bg-yellow-500' };
-            toast.className = `${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg animate-fade-in`;
-            toast.textContent = message;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-
-        function formatDate(dateStr) {
-            if (!dateStr) return 'N/A';
-            return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        }
-
-        function formatCurrency(amount) {
-            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-        }
-
-        async function apiCall(endpoint, options = {}) {
-            const url = `${API_URL}${endpoint}`;
-            const config = {
-                headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json', ...options.headers },
-                ...options
-            };
-            try {
-                const response = await fetch(url, config);
-                if (response.status === 401) { 
-                    logout(); 
-                    throw new Error('Session expired. Please log in again.'); 
-                }
-                return response;
-            } catch (error) {
-                console.error('API Call Error:', error);
-                if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                    throw new Error('Cannot connect to server. The backend may be down or the API URL is incorrect.');
-                }
-                if (error.message.includes('Failed to fetch')) {
-                    throw new Error('Network error. Please check your internet connection.');
-                }
-                throw error;
-            }
-        }
-
-        function switchAuthTab(tab) {
-            document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
-            document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
-            document.getElementById('login-tab').className = `flex-1 py-2 px-4 rounded-md text-sm font-medium ${tab === 'login' ? 'bg-blue-600 text-white' : 'text-slate-400'}`;
-            document.getElementById('register-tab').className = `flex-1 py-2 px-4 rounded-md text-sm font-medium ${tab === 'register' ? 'bg-blue-600 text-white' : 'text-slate-400'}`;
-        }
-
-        async function handleLogin(e) {
-            e.preventDefault();
-            const btn = document.getElementById('login-btn');
-            btn.innerHTML = '<div class="loading-spinner w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>';
-            btn.disabled = true;
-
-            try {
-                const formData = new URLSearchParams();
-                formData.append('email', document.getElementById('login-email').value);
-                formData.append('password', document.getElementById('login-password').value);
-
-                const response = await fetch(`${API_URL}/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: formData
-                });
-
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.detail || `Login failed (${response.status})`);
-
-                authToken = data.access_token;
-                currentUser = data;
-                localStorage.setItem('pipways_token', authToken);
-                showApp();
-                showToast('Welcome back!', 'success');
-            } catch (error) {
-                console.error('Login error:', error);
-                if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                    showToast('Cannot connect to server. Please check your internet connection.', 'error');
-                } else if (error.message.includes('Failed to fetch')) {
-                    showToast('Server unreachable. Please try again later.', 'error');
-                } else {
-                    showToast(error.message, 'error');
-                }
-            } finally {
-                btn.innerHTML = '<span>Sign In</span>';
-                btn.disabled = false;
-            }
-        }
-
-        async function handleRegister(e) {
-            e.preventDefault();
-            const btn = document.getElementById('register-btn');
-            btn.innerHTML = '<div class="loading-spinner w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>';
-            btn.disabled = true;
-
-            try {
-                const formData = new URLSearchParams();
-                formData.append('name', document.getElementById('register-name').value);
-                formData.append('email', document.getElementById('register-email').value);
-                formData.append('password', document.getElementById('register-password').value);
-
-                const response = await fetch(`${API_URL}/auth/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: formData
-                });
-
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.detail || `Registration failed (${response.status})`);
-
-                authToken = data.access_token;
-                currentUser = data;
-                localStorage.setItem('pipways_token', authToken);
-                showApp();
-                showToast('Welcome! Your trial has started.', 'success');
-            } catch (error) {
-                console.error('Register error:', error);
-                if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                    showToast('Cannot connect to server. Please check your internet connection.', 'error');
-                } else if (error.message.includes('Failed to fetch')) {
-                    showToast('Server unreachable. Please try again later.', 'error');
-                } else {
-                    showToast(error.message, 'error');
-                }
-            } finally {
-                btn.innerHTML = '<span>Create Account</span>';
-                btn.disabled = false;
-            }
-        }
-
-        function logout() {
-            authToken = null;
-            currentUser = null;
-            localStorage.removeItem('pipways_token');
-            if (notificationInterval) clearInterval(notificationInterval);
-            document.getElementById('auth-screen').classList.remove('hidden');
-            document.getElementById('main-app').classList.add('hidden');
-        }
-
-        async function showApp() {
-            document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('main-app').classList.remove('hidden');
-            
-            // Fetch current user info
-            try {
-                const response = await apiCall('/users/me');
-                currentUser = await response.json();
-                console.log('Current user:', currentUser);
-                
-                // Show admin menu if user is admin (handle both boolean and string)
-                const isAdmin = currentUser.is_admin === true || currentUser.is_admin === 'true' || currentUser.is_admin === 1;
-                if (isAdmin) {
-                    console.log('User is admin, showing admin menu');
-                    document.getElementById('admin-menu-item').classList.remove('hidden');
-                    // Also add admin to mobile menu
-                    addAdminToMobileMenu();
-                } else {
-                    console.log('User is not admin, is_admin value:', currentUser.is_admin, 'type:', typeof currentUser.is_admin);
-                }
-            } catch (error) {
-                console.error('Failed to fetch user info:', error);
-            }
-            
-            navigateTo('dashboard');
-            startNotificationPolling();
-        }
+        # Update to admin
+        await conn.execute("UPDATE users SET is_admin = TRUE WHERE id = $1", user["id"])
         
-        function addAdminToMobileMenu() {
-            const moreMenuGrid = document.querySelector('#more-menu .grid');
-            if (moreMenuGrid && !document.getElementById('mobile-admin-btn')) {
-                const adminBtn = document.createElement('button');
-                adminBtn.id = 'mobile-admin-btn';
-                adminBtn.onclick = () => { hideMoreMenu(); navigateTo('admin'); };
-                adminBtn.className = 'flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5';
-                adminBtn.innerHTML = '<i data-lucide="shield" class="w-6 h-6 text-orange-400"></i><span class="text-xs">Admin</span>';
-                moreMenuGrid.appendChild(adminBtn);
-            }
-        }
+        # Verify the update
+        updated = await conn.fetchrow("SELECT is_admin FROM users WHERE id = $1", user["id"])
+        logger.info(f"User {email} is_admin updated to: {updated['is_admin']}")
         
-        // Debug function to check admin status
-        async function checkAdminStatus() {
-            try {
-                const response = await apiCall('/users/me');
-                const user = await response.json();
-                console.log('Admin check - User data:', user);
-                console.log('is_admin value:', user.is_admin);
-                console.log('is_admin type:', typeof user.is_admin);
-                const isAdmin = user.is_admin === true || user.is_admin === 'true' || user.is_admin === 1;
-                alert(`Admin status: ${user.is_admin}\nIs Admin (evaluated): ${isAdmin}\nEmail: ${user.email}\n\nIf not admin, run: fetch('/setup/make-admin-default',{method:'POST'}).then(r=>r.json()).then(console.log)`);
-            } catch (error) {
-                console.error('Admin check failed:', error);
-                alert('Failed to check admin status');
-            }
+        return {
+            "message": f"User {email} is now an admin. Please log out and log back in for changes to take effect.", 
+            "user_id": user["id"],
+            "is_admin": updated["is_admin"]
         }
+
+@app.post("/setup/make-admin-default")
+async def make_default_admin():
+    """Make admin@pipways.com an admin (convenience endpoint for setup)"""
+    async with db_pool.acquire() as conn:
+        user = await conn.fetchrow("SELECT id, email, is_admin FROM users WHERE email = 'admin@pipways.com'")
+        if not user:
+            raise HTTPException(status_code=404, detail="Default admin user not found. Please register first.")
         
-        // Force show admin menu (for debugging)
-        function showAdminMenu() {
-            document.getElementById('admin-menu-item').classList.remove('hidden');
-            addAdminToMobileMenu();
-            lucide.createIcons();
-            console.log('Admin menu force-shown');
-        }
-
-        function startNotificationPolling() {
-            fetchNotifications();
-            notificationInterval = setInterval(fetchNotifications, 30000);
-        }
-
-        async function fetchNotifications() {
-            try {
-                const response = await apiCall('/notifications');
-                const notifications = await response.json();
-                const unreadCount = notifications.filter(n => !n.is_read).length;
-                updateNotificationBadge(unreadCount);
-            } catch (error) {
-                console.error('Failed to fetch notifications:', error);
-            }
-        }
-
-        function updateNotificationBadge(count) {
-            const sidebarBadge = document.getElementById('sidebar-notification-badge');
-            const mobileBadge = document.getElementById('mobile-notification-badge');
-            
-            if (count > 0) {
-                sidebarBadge.textContent = count > 99 ? '99+' : count;
-                sidebarBadge.classList.remove('hidden');
-                mobileBadge.textContent = count > 99 ? '99+' : count;
-                mobileBadge.classList.remove('hidden');
-            } else {
-                sidebarBadge.classList.add('hidden');
-                mobileBadge.classList.add('hidden');
-            }
-        }
-
-        function navigateTo(page) {
-            currentPage = page;
-            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll(`[onclick="navigateTo('${page}')"]`).forEach(el => el.classList.add('active'));
-
-            const renderers = {
-                'dashboard': renderDashboard,
-                'journal': renderJournal,
-                'analytics': renderAnalytics,
-                'performance': renderPerformance,
-                'chart-analysis': renderChartAnalysis,
-                'discipline': renderDiscipline,
-                'mentor': renderMentor,
-                'courses': renderCourses,
-                'webinars': renderWebinars,
-                'subscription': renderSubscription,
-                'notifications': renderNotifications,
-                'blog': renderBlog,
-                'admin': renderAdmin
-            };
-
-            if (renderers[page]) renderers[page]();
-            lucide.createIcons();
-        }
-
-        function showMoreMenu() { document.getElementById('more-menu').classList.remove('hidden'); }
-        function hideMoreMenu() { document.getElementById('more-menu').classList.add('hidden'); }
-
-        async function renderDashboard() {
-            const container = document.getElementById('page-content');
-            container.innerHTML = '<div class="flex justify-center py-20"><div class="loading-spinner w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full"></div></div>';
-
-            try {
-                const response = await apiCall('/trades');
-                const trades = await response.json();
-
-                const totalPips = trades.reduce((sum, t) => sum + (t.pips || 0), 0);
-                const wins = trades.filter(t => t.pips > 0).length;
-                const winRate = trades.length ? Math.round((wins / trades.length) * 100) : 0;
-
-                container.innerHTML = `
-                    <div class="animate-fade-in">
-                        <div class="flex justify-between items-center mb-6">
-                            <div>
-                                <h1 class="text-2xl font-bold">Dashboard</h1>
-                                <p class="text-slate-400 text-sm">Welcome back, ${currentUser?.name || 'Trader'}</p>
-                            </div>
-                            <button onclick="navigateTo('journal')" class="btn-primary px-4 py-2 rounded-lg">+ New Trade</button>
-                        </div>
-                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                            <div class="glass rounded-xl p-4">
-                                <div class="text-slate-400 text-sm mb-1">Total Trades</div>
-                                <div class="text-2xl font-bold">${trades.length}</div>
-                            </div>
-                            <div class="glass rounded-xl p-4">
-                                <div class="text-slate-400 text-sm mb-1">Win Rate</div>
-                                <div class="text-2xl font-bold ${winRate >= 50 ? 'text-green-400' : 'text-red-400'}">${winRate}%</div>
-                            </div>
-                            <div class="glass rounded-xl p-4">
-                                <div class="text-slate-400 text-sm mb-1">Total Pips</div>
-                                <div class="text-2xl font-bold ${totalPips >= 0 ? 'text-green-400' : 'text-red-400'}">${totalPips > 0 ? '+' : ''}${totalPips}</div>
-                            </div>
-                            <div class="glass rounded-xl p-4">
-                                <div class="text-slate-400 text-sm mb-1">Discipline</div>
-                                <div class="text-2xl font-bold text-blue-400">87%</div>
-                            </div>
-                        </div>
-                        <div class="glass rounded-xl p-6 mb-6">
-                            <h2 class="text-lg font-semibold mb-4">Recent Trades</h2>
-                            ${trades.slice(0, 5).map(t => `
-                                <div class="flex justify-between items-center py-3 border-b border-white/5">
-                                    <div class="flex items-center gap-4">
-                                        <span class="text-slate-400 text-sm">${formatDate(t.created_at)}</span>
-                                        <span class="font-semibold">${t.pair}</span>
-                                        <span class="px-2 py-1 rounded text-xs ${t.direction === 'LONG' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${t.direction}</span>
-                                    </div>
-                                    <span class="font-mono font-bold ${t.pips >= 0 ? 'text-green-400' : 'text-red-400'}">${t.pips > 0 ? '+' : ''}${t.pips}</span>
-                                </div>
-                            `).join('') || '<p class="text-slate-500 text-center py-8">No trades yet</p>'}
-                        </div>
-                        ${currentUser?.subscription_status === 'trial' ? `
-                        <div class="glass rounded-xl p-4 border border-yellow-500/30 bg-yellow-500/10">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-3">
-                                    <i data-lucide="clock" class="w-5 h-5 text-yellow-400"></i>
-                                    <span class="text-yellow-200">Trial ends in ${Math.ceil((new Date(currentUser.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24))} days</span>
-                                </div>
-                                <button onclick="navigateTo('subscription')" class="text-yellow-400 hover:text-yellow-300 text-sm font-medium">Upgrade Now</button>
-                            </div>
-                        </div>
-                        ` : ''}
-                    </div>
-                `;
-            } catch (error) {
-                container.innerHTML = `<div class="text-red-400 text-center py-20">${error.message}</div>`;
-            }
-        }
-
-        async function renderJournal() {
-            const container = document.getElementById('page-content');
-            container.innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">Trade Journal</h1>
-                    <div class="glass rounded-xl p-6 mb-6">
-                        <h2 class="text-lg font-semibold mb-4">Log New Trade</h2>
-                        <form onsubmit="handleTradeSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm text-slate-400 mb-1">Currency Pair</label>
-                                <input type="text" name="pair" placeholder="EURUSD" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 uppercase" required>
-                            </div>
-                            <div>
-                                <label class="block text-sm text-slate-400 mb-1">Direction</label>
-                                <select name="direction" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700">
-                                    <option value="LONG">Long</option>
-                                    <option value="SHORT">Short</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm text-slate-400 mb-1">Pips</label>
-                                <input type="number" name="pips" step="0.1" placeholder="+45.5" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" required>
-                            </div>
-                            <div>
-                                <label class="block text-sm text-slate-400 mb-1">Grade</label>
-                                <select name="grade" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700">
-                                    <option value="A">A - Excellent</option>
-                                    <option value="B">B - Good</option>
-                                    <option value="C">C - Poor</option>
-                                </select>
-                            </div>
-                            <div class="md:col-span-2">
-                                <button type="submit" class="w-full btn-primary py-3 rounded-lg font-medium">Save Trade</button>
-                            </div>
-                        </form>
-                    </div>
-                    <div id="trades-list"></div>
-                </div>
-            `;
-            loadTradesList();
-        }
-
-        async function loadTradesList() {
-            const container = document.getElementById('trades-list');
-            try {
-                const response = await apiCall('/trades');
-                const trades = await response.json();
-                container.innerHTML = `
-                    <div class="glass rounded-xl p-6">
-                        <h2 class="text-lg font-semibold mb-4">Trade History</h2>
-                        <div class="overflow-x-auto">
-                            <table class="w-full">
-                                <thead class="text-slate-400 text-sm">
-                                    <tr>
-                                        <th class="text-left py-2">Date</th>
-                                        <th class="text-left">Pair</th>
-                                        <th class="text-left">Direction</th>
-                                        <th class="text-right">Pips</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${trades.map(t => `
-                                        <tr class="border-t border-white/5">
-                                            <td class="py-3">${formatDate(t.created_at)}</td>
-                                            <td class="font-semibold">${t.pair}</td>
-                                            <td>
-                                                <span class="px-2 py-1 rounded text-xs ${t.direction === 'LONG' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${t.direction}</span>
-                                            </td>
-                                            <td class="text-right font-mono ${t.pips >= 0 ? 'text-green-400' : 'text-red-400'}">${t.pips > 0 ? '+' : ''}${t.pips}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
-            } catch (error) {
-                container.innerHTML = `<div class="text-red-400">${error.message}</div>`;
-            }
-        }
-
-        async function handleTradeSubmit(e) {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            try {
-                const response = await apiCall('/trades', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
-                    body: new URLSearchParams(formData) 
-                });
-                if (!response.ok) throw new Error('Failed to save trade');
-                showToast('Trade saved!', 'success');
-                e.target.reset();
-                loadTradesList();
-            } catch (error) {
-                showToast(error.message, 'error');
-            }
-        }
-
-        async function renderAnalytics() {
-            const container = document.getElementById('page-content');
-            container.innerHTML = '<div class="flex justify-center py-20"><div class="loading-spinner w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full"></div></div>';
-            try {
-                const response = await apiCall('/analytics/dashboard');
-                const data = await response.json();
-                container.innerHTML = `
-                    <div class="animate-fade-in">
-                        <h1 class="text-2xl font-bold mb-6">Analytics</h1>
-                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                            <div class="glass rounded-xl p-4">
-                                <div class="text-slate-400 text-sm mb-1">Total Trades</div>
-                                <div class="text-2xl font-bold">${data.total_trades}</div>
-                            </div>
-                            <div class="glass rounded-xl p-4">
-                                <div class="text-slate-400 text-sm mb-1">Win Rate</div>
-                                <div class="text-2xl font-bold ${data.win_rate >= 50 ? 'text-green-400' : 'text-red-400'}">${data.win_rate}%</div>
-                            </div>
-                            <div class="glass rounded-xl p-4">
-                                <div class="text-slate-400 text-sm mb-1">Total Pips</div>
-                                <div class="text-2xl font-bold ${data.total_pips >= 0 ? 'text-green-400' : 'text-red-400'}">${data.total_pips > 0 ? '+' : ''}${data.total_pips}</div>
-                            </div>
-                            <div class="glass rounded-xl p-4">
-                                <div class="text-slate-400 text-sm mb-1">Profit Factor</div>
-                                <div class="text-2xl font-bold text-blue-400">${data.profit_factor}</div>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                            <div class="glass rounded-xl p-6">
-                                <h2 class="text-lg font-semibold mb-4">Equity Curve</h2>
-                                <canvas id="equityChart" height="200"></canvas>
-                            </div>
-                            <div class="glass rounded-xl p-6">
-                                <h2 class="text-lg font-semibold mb-4">Monthly Performance</h2>
-                                <canvas id="monthlyChart" height="200"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                if (data.equity_curve && data.equity_curve.length > 0) {
-                    new Chart(document.getElementById('equityChart'), {
-                        type: 'line',
-                        data: { 
-                            labels: data.equity_curve.map(d => formatDate(d.date)), 
-                            datasets: [{ 
-                                label: 'Cumulative Pips', 
-                                data: data.equity_curve.map(d => d.cumulative_pips), 
-                                borderColor: '#3b82f6', 
-                                backgroundColor: 'rgba(59, 130, 246, 0.1)', 
-                                fill: true, 
-                                tension: 0.4 
-                            }] 
-                        },
-                        options: { 
-                            responsive: true, 
-                            plugins: { legend: { display: false } }, 
-                            scales: { 
-                                x: { display: false }, 
-                                y: { grid: { color: 'rgba(255,255,255,0.05)' } } 
-                            } 
-                        }
-                    });
-                }
-            } catch (error) {
-                container.innerHTML = `<div class="text-red-400 text-center py-20">${error.message}</div>`;
-            }
-        }
-
-        async function renderPerformance() {
-            document.getElementById('page-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">AI Performance Analysis</h1>
-                    <div class="glass rounded-xl p-6 mb-6">
-                        <h2 class="text-lg font-semibold mb-4">Upload Trading History</h2>
-                        <p class="text-slate-400 mb-4">Upload a CSV file or screenshot of your trading history for AI analysis</p>
-                        <input type="file" id="file-input" class="hidden" accept=".csv,.png,.jpg" onchange="handleFileUpload(event)">
-                        <button onclick="document.getElementById('file-input').click()" class="btn-primary px-6 py-2 rounded-lg">Select File</button>
-                    </div>
-                    <div id="analysis-result"></div>
-                </div>
-            `;
-        }
-
-        async function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const resultContainer = document.getElementById('analysis-result');
-            resultContainer.innerHTML = '<div class="flex justify-center py-8"><div class="loading-spinner w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div></div>';
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                const response = await apiCall('/performance/analyze', { method: 'POST', body: formData });
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || `Analysis failed (${response.status})`);
-                }
-                
-                const data = await response.json();
-                console.log('Performance analysis response:', data);
-                
-                if (!data.analysis) {
-                    throw new Error('No analysis data received from server');
-                }
-                
-                const analysis = data.analysis;
-                const score = analysis.performance_score || 0;
-                const traderType = analysis.trader_type || 'Unknown';
-                const strengths = analysis.strengths || [];
-                const weaknesses = analysis.weaknesses || [];
-                
-                resultContainer.innerHTML = `
-                    <div class="glass rounded-xl p-6">
-                        <div class="flex items-center justify-between mb-6">
-                            <div>
-                                <h2 class="text-2xl font-bold mb-2">Performance Score</h2>
-                                <div class="text-5xl font-bold ${score >= 70 ? 'text-green-400' : score >= 50 ? 'text-yellow-400' : 'text-red-400'}">${score}<span class="text-2xl text-slate-400">/100</span></div>
-                            </div>
-                            <div class="text-right">
-                                <div class="text-slate-400 text-sm mb-1">Trader Type</div>
-                                <div class="text-xl font-semibold">${traderType}</div>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="bg-slate-800/30 rounded-lg p-4">
-                                <h3 class="font-semibold mb-3 text-green-400 flex items-center gap-2">
-                                    <i data-lucide="trending-up" class="w-5 h-5"></i> Strengths
-                                </h3>
-                                ${strengths.length > 0 ? `
-                                    <ul class="space-y-2">
-                                        ${strengths.map(s => `<li class="flex items-start gap-2 text-slate-300"><i data-lucide="check-circle" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i><span>${s}</span></li>`).join('')}
-                                    </ul>
-                                ` : '<p class="text-slate-500">No strengths identified yet.</p>'}
-                            </div>
-                            <div class="bg-slate-800/30 rounded-lg p-4">
-                                <h3 class="font-semibold mb-3 text-red-400 flex items-center gap-2">
-                                    <i data-lucide="trending-down" class="w-5 h-5"></i> Areas to Improve
-                                </h3>
-                                ${weaknesses.length > 0 ? `
-                                    <ul class="space-y-2">
-                                        ${weaknesses.map(w => `<li class="flex items-start gap-2 text-slate-300"><i data-lucide="alert-circle" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i><span>${w}</span></li>`).join('')}
-                                    </ul>
-                                ` : '<p class="text-slate-500">No areas to improve identified.</p>'}
-                            </div>
-                        </div>
-                    </div>
-                `;
-                lucide.createIcons();
-                showToast('Analysis complete!', 'success');
-            } catch (error) {
-                console.error('Performance analysis error:', error);
-                resultContainer.innerHTML = `
-                    <div class="glass rounded-xl p-6 border border-red-500/30 bg-red-500/10">
-                        <div class="flex items-center gap-3 mb-2">
-                            <i data-lucide="alert-circle" class="w-6 h-6 text-red-400"></i>
-                            <h3 class="text-lg font-semibold text-red-400">Analysis Error</h3>
-                        </div>
-                        <p class="text-slate-300">${error.message}</p>
-                        <p class="text-slate-500 text-sm mt-2">Please try again with a valid trading history file.</p>
-                    </div>
-                `;
-                lucide.createIcons();
-            }
-        }
-
-        async function renderChartAnalysis() {
-            document.getElementById('page-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">Chart Analysis</h1>
-                    <div class="glass rounded-xl p-6 mb-6">
-                        <p class="text-slate-400 mb-4">Upload a chart image for AI-powered technical analysis</p>
-                        <input type="file" id="chart-input" class="hidden" accept="image/*" onchange="handleChartUpload(event)">
-                        <button onclick="document.getElementById('chart-input').click()" class="btn-primary px-6 py-2 rounded-lg">Upload Chart Image</button>
-                    </div>
-                    <div id="chart-analysis-result"></div>
-                </div>
-            `;
-        }
-
-        async function handleChartUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const resultContainer = document.getElementById('chart-analysis-result');
-            resultContainer.innerHTML = '<div class="flex justify-center py-8"><div class="loading-spinner w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div></div>';
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                const response = await apiCall('/analyze-chart', { method: 'POST', body: formData });
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || `Analysis failed (${response.status})`);
-                }
-                
-                const data = await response.json();
-                console.log('Chart analysis response:', data);
-                
-                // Check if analysis exists
-                if (!data.analysis) {
-                    throw new Error('No analysis data received from server');
-                }
-                
-                const analysis = data.analysis;
-                
-                // Handle missing fields gracefully
-                const setupQuality = analysis.setup_quality || 'N/A';
-                const pair = analysis.pair || 'Unknown';
-                const direction = analysis.direction || 'Unknown';
-                const entryPrice = analysis.entry_price || 'N/A';
-                const riskReward = analysis.risk_reward || 'N/A';
-                const analysisText = analysis.analysis || 'No detailed analysis available.';
-                
-                resultContainer.innerHTML = `
-                    <div class="glass rounded-xl p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold">Setup Analysis</h2>
-                            <span class="px-3 py-1 rounded-full text-sm font-semibold ${setupQuality === 'A' ? 'bg-green-500/20 text-green-400' : setupQuality === 'B' ? 'bg-blue-500/20 text-blue-400' : 'bg-yellow-500/20 text-yellow-400'}">Grade ${setupQuality}</span>
-                        </div>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                            <div class="bg-slate-800/50 rounded-lg p-3">
-                                <div class="text-slate-400 text-sm">Pair</div>
-                                <div class="font-semibold">${pair}</div>
-                            </div>
-                            <div class="bg-slate-800/50 rounded-lg p-3">
-                                <div class="text-slate-400 text-sm">Direction</div>
-                                <div class="font-semibold ${direction === 'LONG' ? 'text-green-400' : direction === 'SHORT' ? 'text-red-400' : ''}">${direction}</div>
-                            </div>
-                            <div class="bg-slate-800/50 rounded-lg p-3">
-                                <div class="text-slate-400 text-sm">Entry</div>
-                                <div class="font-mono">${entryPrice}</div>
-                            </div>
-                            <div class="bg-slate-800/50 rounded-lg p-3">
-                                <div class="text-slate-400 text-sm">R:R</div>
-                                <div class="font-mono text-blue-400">${riskReward}</div>
-                            </div>
-                        </div>
-                        <div class="bg-slate-800/30 rounded-lg p-4">
-                            <p class="text-slate-300 leading-relaxed">${analysisText.replace(/\n/g, '<br>')}</p>
-                        </div>
-                    </div>
-                `;
-                showToast('Chart analysis complete!', 'success');
-            } catch (error) {
-                console.error('Chart analysis error:', error);
-                resultContainer.innerHTML = `
-                    <div class="glass rounded-xl p-6 border border-red-500/30 bg-red-500/10">
-                        <div class="flex items-center gap-3 mb-2">
-                            <i data-lucide="alert-circle" class="w-6 h-6 text-red-400"></i>
-                            <h3 class="text-lg font-semibold text-red-400">Analysis Error</h3>
-                        </div>
-                        <p class="text-slate-300">${error.message}</p>
-                        <p class="text-slate-500 text-sm mt-2">Please try again with a clearer chart image.</p>
-                    </div>
-                `;
-                lucide.createIcons();
-            }
-        }
-
-        async function renderDiscipline() {
-            document.getElementById('page-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">Trading Discipline</h1>
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                        <div class="glass rounded-xl p-6 text-center">
-                            <div class="text-5xl font-bold gradient-text mb-2">87</div>
-                            <div class="text-slate-400">Discipline Score</div>
-                        </div>
-                        <div class="glass rounded-xl p-6 text-center">
-                            <div class="text-5xl font-bold text-green-400 mb-2">12</div>
-                            <div class="text-slate-400">Day Streak</div>
-                        </div>
-                        <div class="glass rounded-xl p-6 text-center">
-                            <div class="text-5xl font-bold text-blue-400 mb-2">94%</div>
-                            <div class="text-slate-400">Checklist Adherence</div>
-                        </div>
-                    </div>
-                    <div class="glass rounded-xl p-6">
-                        <h2 class="text-lg font-semibold mb-4">Pre-Trade Checklist</h2>
-                        <div class="space-y-3">
-                            ${['Clear entry strategy', 'Stop loss identified', 'Take profit target set', 'Position size calculated', 'No FOMO/emotion', 'News checked', 'A/B grade criteria met', 'HTF trend analyzed'].map(item => `
-                                <label class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg cursor-pointer">
-                                    <input type="checkbox" class="w-5 h-5 rounded">
-                                    <span>${item}</span>
-                                </label>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        async function renderMentor() {
-            document.getElementById('page-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">AI Trading Mentor</h1>
-                    <div class="glass rounded-xl p-6 mb-6">
-                        <div class="flex items-start gap-4">
-                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
-                                <i data-lucide="bot" class="w-5 h-5 text-white"></i>
-                            </div>
-                            <div class="bg-slate-800/50 rounded-lg p-4 max-w-[80%]">
-                                <p>Hello! I'm your AI trading mentor. How can I help you today?</p>
-                            </div>
-                        </div>
-                        <div id="chat-messages"></div>
-                    </div>
-                    <form onsubmit="sendMentorMessage(event)" class="flex gap-2">
-                        <input type="text" id="mentor-input" class="flex-1 px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" placeholder="Ask your question...">
-                        <button type="submit" class="btn-primary px-6 py-3 rounded-lg">
-                            <i data-lucide="send" class="w-5 h-5"></i>
-                        </button>
-                    </form>
-                </div>
-            `;
-        }
-
-        async function sendMentorMessage(e) {
-            e.preventDefault();
-            const input = document.getElementById('mentor-input');
-            const message = input.value.trim();
-            if (!message) return;
-            const chatContainer = document.getElementById('chat-messages');
-            chatContainer.innerHTML += `
-                <div class="flex items-start gap-4 mb-4 justify-end">
-                    <div class="bg-blue-600 rounded-lg p-4 max-w-[80%]">
-                        <p>${message}</p>
-                    </div>
-                </div>
-            `;
-            input.value = '';
-            try {
-                const response = await apiCall(`/mentor-chat?message=${encodeURIComponent(message)}`);
-                const data = await response.json();
-                chatContainer.innerHTML += `
-                    <div class="flex items-start gap-4 mb-4">
-                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
-                            <i data-lucide="bot" class="w-5 h-5 text-white"></i>
-                        </div>
-                        <div class="bg-slate-800/50 rounded-lg p-4 max-w-[80%]">
-                            <p>${data.response}</p>
-                        </div>
-                    </div>
-                `;
-            } catch (error) {
-                chatContainer.innerHTML += `<div class="text-red-400">Failed to get response</div>`;
-            }
-            lucide.createIcons();
-        }
-
-        async function renderCourses() {
-            const container = document.getElementById('page-content');
-            container.innerHTML = '<div class="flex justify-center py-20"><div class="loading-spinner w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full"></div></div>';
-            try {
-                const response = await apiCall('/courses');
-                const courses = await response.json();
-                container.innerHTML = `
-                    <div class="animate-fade-in">
-                        <h1 class="text-2xl font-bold mb-6">Trading Courses</h1>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            ${courses.map(course => `
-                                <div class="glass rounded-xl overflow-hidden">
-                                    <div class="h-40 bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center">
-                                        <i data-lucide="graduation-cap" class="w-16 h-16 text-white/50"></i>
-                                    </div>
-                                    <div class="p-6">
-                                        <span class="px-2 py-1 rounded text-xs ${course.level === 'beginner' ? 'bg-green-500/20 text-green-400' : course.level === 'intermediate' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}">${course.level}</span>
-                                        <h3 class="text-lg font-semibold mt-2 mb-2">${course.title}</h3>
-                                        <p class="text-slate-400 text-sm mb-4">${course.description || ''}</p>
-                                        <button onclick="enrollCourse(${course.id})" class="w-full btn-primary py-2 rounded-lg text-sm">Start Learning</button>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;
-            } catch (error) {
-                container.innerHTML = `<div class="text-red-400 text-center py-20">${error.message}</div>`;
-            }
-        }
-
-        async function enrollCourse(courseId) {
-            try {
-                const response = await apiCall(`/courses/${courseId}/enroll`, { method: 'POST' });
-                if (response.ok) { 
-                    showToast('Enrolled successfully!', 'success'); 
-                    renderCourses(); 
-                }
-            } catch (error) { 
-                showToast(error.message, 'error'); 
-            }
-        }
-
-        async function renderWebinars() {
-            const container = document.getElementById('page-content');
-            container.innerHTML = '<div class="flex justify-center py-20"><div class="loading-spinner w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full"></div></div>';
-            try {
-                const response = await apiCall('/webinars');
-                const webinars = await response.json();
-                container.innerHTML = `
-                    <div class="animate-fade-in">
-                        <h1 class="text-2xl font-bold mb-6">Live Webinars</h1>
-                        <div class="space-y-4">
-                            ${webinars.map(w => `
-                                <div class="glass rounded-xl p-6">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <h3 class="text-xl font-semibold">${w.title}</h3>
-                                            <p class="text-slate-400">${w.scheduled_at ? formatDate(w.scheduled_at) : ''}</p>
-                                        </div>
-                                        <button onclick="registerWebinar(${w.id})" class="btn-primary px-4 py-2 rounded-lg">Register</button>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;
-            } catch (error) {
-                container.innerHTML = `<div class="text-red-400 text-center py-20">${error.message}</div>`;
-            }
-        }
-
-        async function registerWebinar(webinarId) {
-            try {
-                const response = await apiCall(`/webinars/${webinarId}/register`, { method: 'POST' });
-                if (response.ok) { 
-                    showToast('Registered for webinar!', 'success'); 
-                    renderWebinars(); 
-                }
-            } catch (error) { 
-                showToast(error.message, 'error'); 
-            }
-        }
-
-        async function renderSubscription() {
-            const container = document.getElementById('page-content');
-            container.innerHTML = '<div class="flex justify-center py-20"><div class="loading-spinner w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full"></div></div>';
-            
-            try {
-                const response = await apiCall('/subscription/status');
-                const subData = await response.json();
-                
-                container.innerHTML = `
-                    <div class="animate-fade-in">
-                        <h1 class="text-2xl font-bold mb-6">Subscription</h1>
-                        
-                        ${subData.status !== 'active' ? `
-                        <div class="glass rounded-xl p-4 mb-6 border border-yellow-500/30 bg-yellow-500/10">
-                            <div class="flex items-center gap-3">
-                                <i data-lucide="info" class="w-5 h-5 text-yellow-400"></i>
-                                <span class="text-yellow-200">Current Status: <strong>${subData.status}</strong></span>
-                            </div>
-                        </div>
-                        ` : ''}
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-                            <div class="glass rounded-xl p-6">
-                                <div class="text-center mb-6">
-                                    <h2 class="text-xl font-semibold mb-2">Free Trial</h2>
-                                    <div class="text-4xl font-bold mb-2">$0</div>
-                                    <p class="text-slate-400">3 days access</p>
-                                </div>
-                                <ul class="space-y-3 mb-6">
-                                    <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>5 trade logs</span></li>
-                                    <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>1 chart analysis</span></li>
-                                    <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>Basic analytics</span></li>
-                                </ul>
-                                <button disabled class="w-full py-3 bg-slate-700 text-slate-500 rounded-lg cursor-not-allowed">
-                                    ${subData.status === 'trial' ? 'Current Plan' : 'Expired'}
-                                </button>
-                            </div>
-                            <div class="glass rounded-xl p-6 border-2 border-blue-500 relative">
-                                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-xs px-3 py-1 rounded-full">RECOMMENDED</div>
-                                <div class="text-center mb-6">
-                                    <h2 class="text-xl font-semibold mb-2">Pro Trader</h2>
-                                    <div class="text-4xl font-bold mb-2">$15<span class="text-lg text-slate-400">/month</span></div>
-                                </div>
-                                <ul class="space-y-3 mb-6">
-                                    <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>Unlimited trades</span></li>
-                                    <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>All courses</span></li>
-                                    <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>AI chart analysis</span></li>
-                                    <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>Priority support</span></li>
-                                </ul>
-                                <button onclick="initiatePayment()" class="w-full btn-primary py-3 rounded-lg font-medium">
-                                    ${subData.status === 'active' ? 'Renew Subscription' : 'Subscribe Now'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            } catch (error) {
-                container.innerHTML = `
-                    <div class="animate-fade-in">
-                        <h1 class="text-2xl font-bold mb-6">Subscription</h1>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-                            <div class="glass rounded-xl p-6">
-                                <div class="text-center mb-6">
-                                    <h2 class="text-xl font-semibold mb-2">Free Trial</h2>
-                                    <div class="text-4xl font-bold mb-2">$0</div>
-                                    <p class="text-slate-400">3 days access</p>
-                                </div>
-                                <ul class="space-y-3 mb-6">
-                                    <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>5 trade logs</span></li>
-                                    <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>1 chart analysis</span></li>
-                                </ul>
-                                <button disabled class="w-full py-3 bg-slate-700 text-slate-500 rounded-lg cursor-not-allowed">Current Plan</button>
-                            </div>
-                            <div class="glass rounded-xl p-6 border-2 border-blue-500">
-                                <div class="text-center mb-6">
-                                    <h2 class="text-xl font-semibold mb-2">Pro Trader</h2>
-                                    <div class="text-4xl font-bold mb-2">$15<span class="text-lg text-slate-400">/month</span></div>
-                                </div>
-                                <ul class="space-y-3 mb-6">
-                                    <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>Unlimited trades</span></li>
-                                    <li class="flex items-center gap-2"><i data-lucide="check" class="w-5 h-5 text-green-400"></i><span>All courses</span></li>
-                                </ul>
-                                <button onclick="initiatePayment()" class="w-full btn-primary py-3 rounded-lg font-medium">Subscribe Now</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-
-        async function initiatePayment() {
-            try {
-                const response = await apiCall('/subscription/initiate', { method: 'POST' });
-                const data = await response.json();
-                if (data.authorization_url) {
-                    window.open(data.authorization_url, '_blank');
-                    showToast('Payment window opened. Complete payment to activate subscription.', 'info');
-                } else {
-                    showToast('Payment initiation failed', 'error');
-                }
-            } catch (error) {
-                showToast(error.message, 'error');
-            }
-        }
-
-        async function renderNotifications() {
-            const container = document.getElementById('page-content');
-            container.innerHTML = '<div class="flex justify-center py-20"><div class="loading-spinner w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full"></div></div>';
-            
-            try {
-                const response = await apiCall('/notifications');
-                const notifications = await response.json();
-                
-                container.innerHTML = `
-                    <div class="animate-fade-in">
-                        <div class="flex justify-between items-center mb-6">
-                            <h1 class="text-2xl font-bold">Notifications</h1>
-                            ${notifications.some(n => !n.is_read) ? `
-                            <button onclick="markAllNotificationsRead()" class="text-blue-400 hover:text-blue-300 text-sm">Mark all as read</button>
-                            ` : ''}
-                        </div>
-                        <div class="space-y-3">
-                            ${notifications.length > 0 ? notifications.map(n => `
-                                <div class="glass rounded-xl p-4 ${n.is_read ? 'opacity-60' : 'border-l-4 border-blue-500'}">
-                                    <div class="flex items-start justify-between">
-                                        <div class="flex items-start gap-3">
-                                            <div class="w-10 h-10 rounded-full ${getNotificationIconBg(n.type)} flex items-center justify-center flex-shrink-0">
-                                                <i data-lucide="${getNotificationIcon(n.type)}" class="w-5 h-5 text-white"></i>
-                                            </div>
-                                            <div>
-                                                <p class="font-medium">${n.title}</p>
-                                                <p class="text-slate-400 text-sm">${n.message}</p>
-                                                <p class="text-slate-500 text-xs mt-1">${formatDate(n.created_at)}</p>
-                                            </div>
-                                        </div>
-                                        ${!n.is_read ? `
-                                        <button onclick="markNotificationRead(${n.id})" class="text-blue-400 hover:text-blue-300 text-sm">Mark read</button>
-                                        ` : ''}
-                                    </div>
-                                </div>
-                            `).join('') : '<div class="text-center py-12 text-slate-400">No notifications yet</div>'}
-                        </div>
-                    </div>
-                `;
-                lucide.createIcons();
-            } catch (error) {
-                container.innerHTML = `<div class="text-red-400 text-center py-20">${error.message}</div>`;
-            }
-        }
-
-        function getNotificationIcon(type) {
-            const icons = {
-                'trade': 'trending-up',
-                'subscription': 'credit-card',
-                'webinar': 'video',
-                'course': 'graduation-cap',
-                'system': 'info',
-                'mentor': 'message-circle'
-            };
-            return icons[type] || 'bell';
-        }
-
-        function getNotificationIconBg(type) {
-            const colors = {
-                'trade': 'bg-green-500',
-                'subscription': 'bg-blue-500',
-                'webinar': 'bg-purple-500',
-                'course': 'bg-yellow-500',
-                'system': 'bg-slate-500',
-                'mentor': 'bg-violet-500'
-            };
-            return colors[type] || 'bg-blue-500';
-        }
-
-        async function markNotificationRead(notificationId) {
-            try {
-                await apiCall(`/notifications/${notificationId}/read`, { method: 'POST' });
-                renderNotifications();
-                fetchNotifications();
-            } catch (error) {
-                showToast(error.message, 'error');
-            }
-        }
-
-        async function markAllNotificationsRead() {
-            try {
-                await apiCall('/notifications/read-all', { method: 'POST' });
-                renderNotifications();
-                fetchNotifications();
-                showToast('All notifications marked as read', 'success');
-            } catch (error) {
-                showToast(error.message, 'error');
-            }
-        }
-
-        async function renderBlog() {
-            const container = document.getElementById('page-content');
-            container.innerHTML = '<div class="flex justify-center py-20"><div class="loading-spinner w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full"></div></div>';
-            
-            try {
-                const response = await apiCall('/blog/posts');
-                const posts = await response.json();
-                
-                container.innerHTML = `
-                    <div class="animate-fade-in">
-                        <div class="flex items-center justify-between mb-8">
-                            <div>
-                                <h1 class="text-3xl font-bold gradient-text mb-2">Trading Blog</h1>
-                                <p class="text-slate-400">Insights, strategies, and market analysis</p>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            ${posts.map(post => `
-                                <div class="glass rounded-xl overflow-hidden cursor-pointer hover:scale-[1.02] hover:shadow-xl transition-all duration-300 group" onclick="showBlogPost('${post.slug}')">
-                                    <div class="h-48 overflow-hidden relative">
-                                        ${post.featured_image ? `
-                                            <img src="${post.featured_image}" alt="${post.title}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
-                                        ` : `
-                                            <div class="w-full h-full bg-gradient-to-br from-blue-600 via-violet-600 to-purple-600 flex items-center justify-center">
-                                                <i data-lucide="newspaper" class="w-16 h-16 text-white/40"></i>
-                                            </div>
-                                        `}
-                                        <div class="absolute top-3 left-3">
-                                            <span class="px-3 py-1 rounded-full text-xs font-medium bg-black/50 backdrop-blur-sm text-white border border-white/10">${post.category || 'General'}</span>
-                                        </div>
-                                    </div>
-                                    <div class="p-5">
-                                        <h3 class="text-lg font-semibold mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">${post.title}</h3>
-                                        <p class="text-slate-400 text-sm mb-4 line-clamp-2">${post.excerpt || post.content.substring(0, 100) + '...'}</p>
-                                        <div class="flex items-center justify-between text-xs text-slate-500">
-                                            <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i> ${formatDate(post.created_at)}</span>
-                                            <span class="flex items-center gap-1 text-blue-400 group-hover:translate-x-1 transition-transform">Read <i data-lucide="arrow-right" class="w-3 h-3"></i></span>
-                                        </div>
-                                    </div>
-                                </div>
-                            `).join('') || '<div class="col-span-full text-center py-16"><i data-lucide="newspaper" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i><p class="text-slate-400 text-lg">No blog posts yet</p><p class="text-slate-500 text-sm">Check back soon for new content!</p></div>'}
-                        </div>
-                    </div>
-                `;
-                lucide.createIcons();
-            } catch (error) {
-                container.innerHTML = `<div class="text-red-400 text-center py-20">${error.message}</div>`;
-            }
-        }
-
-        async function showBlogPost(slug) {
-            const container = document.getElementById('page-content');
-            container.innerHTML = '<div class="flex justify-center py-20"><div class="loading-spinner w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full"></div></div>';
-            
-            try {
-                const response = await apiCall(`/blog/posts/${slug}`);
-                const post = await response.json();
-                
-                container.innerHTML = `
-                    <div class="animate-fade-in">
-                        <button onclick="navigateTo('blog')" class="mb-6 text-slate-400 hover:text-white flex items-center gap-2 transition-colors">
-                            <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center">
-                                <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                            </div>
-                            <span>Back to Blog</span>
-                        </button>
-                        
-                        <article class="max-w-4xl mx-auto">
-                            ${post.featured_image ? `
-                                <div class="rounded-2xl overflow-hidden mb-8 h-64 md:h-80">
-                                    <img src="${post.featured_image}" alt="${post.title}" class="w-full h-full object-cover">
-                                </div>
-                            ` : ''}
-                            
-                            <div class="glass rounded-2xl p-6 md:p-10">
-                                <div class="flex items-center gap-3 mb-6">
-                                    <span class="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">${post.category || 'General'}</span>
-                                    <span class="text-slate-500 text-sm flex items-center gap-1">
-                                        <i data-lucide="calendar" class="w-4 h-4"></i> ${formatDate(post.created_at)}
-                                    </span>
-                                    ${post.view_count ? `
-                                        <span class="text-slate-500 text-sm flex items-center gap-1">
-                                            <i data-lucide="eye" class="w-4 h-4"></i> ${post.view_count} views
-                                        </span>
-                                    ` : ''}
-                                </div>
-                                
-                                <h1 class="text-3xl md:text-4xl font-bold mb-8 leading-tight">${post.title}</h1>
-                                
-                                <div class="prose prose-invert prose-lg max-w-none">
-                                    ${post.content.split('\n\n').map(para => `<p class="mb-4 text-slate-300 leading-relaxed">${para}</p>`).join('')}
-                                </div>
-                                
-                                ${post.tags && post.tags.length > 0 ? `
-                                    <div class="mt-8 pt-6 border-t border-white/10">
-                                        <div class="flex flex-wrap gap-2">
-                                            ${post.tags.map(tag => `<span class="px-3 py-1 rounded-full text-xs bg-slate-800 text-slate-400">#${tag}</span>`).join('')}
-                                        </div>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        </article>
-                    </div>
-                `;
-                lucide.createIcons();
-            } catch (error) {
-                container.innerHTML = `<div class="text-red-400 text-center py-20">${error.message}</div>`;
-            }
-        }
-
-        async function renderAdmin() {
-            const container = document.getElementById('page-content');
-            container.innerHTML = `
-                <div class="flex justify-center py-20">
-                    <div class="loading-spinner w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-                </div>
-            `;
-            
-            try {
-                console.log('Fetching admin stats...');
-                const response = await apiCall('/admin/stats');
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || `Admin access failed (${response.status})`);
-                }
-                
-                const stats = await response.json();
-                console.log('Admin stats:', stats);
-                
-                container.innerHTML = `
-                    <div class="animate-fade-in">
-                        <div class="flex items-center justify-between mb-8">
-                            <div>
-                                <h1 class="text-3xl font-bold gradient-text mb-2">Admin Dashboard</h1>
-                                <p class="text-slate-400">Platform overview and management</p>
-                            </div>
-                            <div class="flex items-center gap-2 px-4 py-2 bg-orange-500/20 rounded-lg">
-                                <i data-lucide="shield" class="w-5 h-5 text-orange-400"></i>
-                                <span class="text-orange-400 text-sm font-medium">Admin Access</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Stats Grid -->
-                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                            <div class="glass rounded-xl p-5 hover:bg-white/5 transition-colors">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                                        <i data-lucide="users" class="w-5 h-5 text-blue-400"></i>
-                                    </div>
-                                    <div class="text-slate-400 text-sm">Total Users</div>
-                                </div>
-                                <div class="text-3xl font-bold">${stats.total_users || 0}</div>
-                                <div class="text-xs text-slate-500 mt-1">+${stats.new_users_7d || 0} this week</div>
-                            </div>
-                            <div class="glass rounded-xl p-5 hover:bg-white/5 transition-colors">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                                        <i data-lucide="credit-card" class="w-5 h-5 text-green-400"></i>
-                                    </div>
-                                    <div class="text-slate-400 text-sm">Active Subs</div>
-                                </div>
-                                <div class="text-3xl font-bold text-green-400">${stats.active_subscriptions || 0}</div>
-                            </div>
-                            <div class="glass rounded-xl p-5 hover:bg-white/5 transition-colors">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <div class="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
-                                        <i data-lucide="clock" class="w-5 h-5 text-yellow-400"></i>
-                                    </div>
-                                    <div class="text-slate-400 text-sm">Trial Users</div>
-                                </div>
-                                <div class="text-3xl font-bold text-yellow-400">${stats.trial_users || 0}</div>
-                            </div>
-                            <div class="glass rounded-xl p-5 hover:bg-white/5 transition-colors">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                                        <i data-lucide="dollar-sign" class="w-5 h-5 text-purple-400"></i>
-                                    </div>
-                                    <div class="text-slate-400 text-sm">Revenue</div>
-                                </div>
-                                <div class="text-3xl font-bold text-purple-400">$${stats.total_revenue || 0}</div>
-                                <div class="text-xs text-slate-500 mt-1">+$${stats.revenue_30d || 0} this month</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Content Stats -->
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                            <div class="glass rounded-xl p-4 text-center">
-                                <div class="text-slate-400 text-sm mb-1">Courses</div>
-                                <div class="text-xl font-bold">${stats.total_courses || 0}</div>
-                            </div>
-                            <div class="glass rounded-xl p-4 text-center">
-                                <div class="text-slate-400 text-sm mb-1">Webinars</div>
-                                <div class="text-xl font-bold">${stats.total_webinars || 0}</div>
-                            </div>
-                            <div class="glass rounded-xl p-4 text-center">
-                                <div class="text-slate-400 text-sm mb-1">Blog Posts</div>
-                                <div class="text-xl font-bold">${stats.published_blog_posts || 0}/${stats.total_blog_posts || 0}</div>
-                            </div>
-                            <div class="glass rounded-xl p-4 text-center">
-                                <div class="text-slate-400 text-sm mb-1">Total Trades</div>
-                                <div class="text-xl font-bold">${stats.total_trades || 0}</div>
-                            </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div class="glass rounded-xl p-6">
-                                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
-                                    <i data-lucide="users" class="w-5 h-5 text-blue-400"></i>
-                                    Recent Users
-                                </h2>
-                                <div class="space-y-3 max-h-80 overflow-y-auto">
-                                    ${stats.recent_users && stats.recent_users.length > 0 ? stats.recent_users.map(u => `
-                                        <div class="flex items-center justify-between py-3 border-b border-white/5">
-                                            <div>
-                                                <p class="font-medium">${u.name || 'Unknown'}</p>
-                                                <p class="text-slate-400 text-sm">${u.email || ''}</p>
-                                            </div>
-                                            <span class="px-2 py-1 rounded text-xs ${u.subscription_status === 'active' ? 'bg-green-500/20 text-green-400' : u.subscription_status === 'trial' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-500/20 text-slate-400'}">${u.subscription_status || 'free'}</span>
-                                        </div>
-                                    `).join('') : '<p class="text-slate-500 text-center py-4">No users yet</p>'}
-                                </div>
-                            </div>
-                            <div class="glass rounded-xl p-6">
-                                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
-                                    <i data-lucide="zap" class="w-5 h-5 text-yellow-400"></i>
-                                    Quick Actions
-                                </h2>
-                                <div class="space-y-3">
-                                    <button onclick="sendAdminEmail()" class="w-full py-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-3 px-4">
-                                        <i data-lucide="mail" class="w-5 h-5 text-blue-400"></i>
-                                        <span>Send Email to Users</span>
-                                    </button>
-                                    <button onclick="createWebinar()" class="w-full py-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-3 px-4">
-                                        <i data-lucide="video" class="w-5 h-5 text-red-400"></i>
-                                        <span>Create Webinar</span>
-                                    </button>
-                                    <button onclick="createCourse()" class="w-full py-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-3 px-4">
-                                        <i data-lucide="book-open" class="w-5 h-5 text-green-400"></i>
-                                        <span>Create Course</span>
-                                    </button>
-                                    <button onclick="createBlogPost()" class="w-full py-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-3 px-4">
-                                        <i data-lucide="newspaper" class="w-5 h-5 text-cyan-400"></i>
-                                        <span>Create Blog Post</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                lucide.createIcons();
-            } catch (error) {
-                console.error('Admin dashboard error:', error);
-                container.innerHTML = `
-                    <div class="animate-fade-in">
-                        <div class="text-center py-20">
-                            <i data-lucide="shield-alert" class="w-16 h-16 mx-auto mb-4 text-red-400"></i>
-                            <h2 class="text-xl font-bold text-red-400 mb-2">Admin Access Error</h2>
-                            <p class="text-slate-400 mb-4">${error.message}</p>
-                            <button onclick="checkAdminStatus()" class="btn-primary px-6 py-2 rounded-lg">Check Admin Status</button>
-                        </div>
-                    </div>
-                `;
-                lucide.createIcons();
-            }
-        }
+        logger.info(f"Making admin@pipways.com (ID: {user['id']}) an admin. Current is_admin: {user['is_admin']}")
         
-        async function createBlogPost() {
-            const title = prompt('Enter blog post title:');
-            if (!title) return;
-            const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-            const content = prompt('Enter blog post content:');
-            if (!content) return;
-            const category = prompt('Enter category (optional):') || 'General';
-            
-            try {
-                const response = await apiCall('/admin/blog/posts', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ title, slug, content, category, published: 'true' })
-                });
-                if (response.ok) {
-                    showToast('Blog post created!', 'success');
-                    renderAdmin();
-                }
-            } catch (error) {
-                showToast(error.message, 'error');
-            }
+        await conn.execute("UPDATE users SET is_admin = TRUE WHERE id = $1", user["id"])
+        
+        # Verify the update
+        updated = await conn.fetchrow("SELECT is_admin FROM users WHERE id = $1", user["id"])
+        logger.info(f"admin@pipways.com is_admin updated to: {updated['is_admin']}")
+        
+        return {
+            "message": "admin@pipways.com is now an admin. Please log out and log back in for changes to take effect.", 
+            "user_id": user["id"],
+            "is_admin": updated["is_admin"]
         }
 
-        async function sendAdminEmail() {
-            const recipient = prompt('Enter recipient email (or "all" for all users):');
-            if (!recipient) return;
-            const subject = prompt('Enter email subject:');
-            if (!subject) return;
-            const content = prompt('Enter email content:');
-            if (!content) return;
-            
-            try {
-                const response = await apiCall('/admin/send-email', {
-                    method: 'POST',
-                    body: JSON.stringify({ recipient, subject, content })
-                });
-                if (response.ok) {
-                    showToast('Email sent successfully!', 'success');
-                }
-            } catch (error) {
-                showToast(error.message, 'error');
-            }
-        }
+@app.post("/admin/webinars")
+async def create_webinar(
+    title: str = Form(...),
+    description: str = Form(...),
+    scheduled_at: datetime = Form(...),
+    zoom_join_url: Optional[str] = Form(None),
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Create a new webinar (admin only)"""
+    async with db_pool.acquire() as conn:
+        webinar_id = await conn.fetchval(
+            "INSERT INTO webinars (title, description, scheduled_at, zoom_join_url) VALUES ($1, $2, $3, $4) RETURNING id",
+            title, description, scheduled_at, zoom_join_url
+        )
+        cache_delete("webinars:all")
+        return {"id": webinar_id, "message": "Webinar created"}
 
-        async function createWebinar() {
-            const title = prompt('Enter webinar title:');
-            if (!title) return;
-            const scheduledAt = prompt('Enter scheduled date (YYYY-MM-DD HH:MM):');
-            if (!scheduledAt) return;
-            
-            try {
-                const response = await apiCall('/webinars', {
-                    method: 'POST',
-                    body: JSON.stringify({ title, scheduled_at: scheduledAt })
-                });
-                if (response.ok) {
-                    showToast('Webinar created!', 'success');
-                }
-            } catch (error) {
-                showToast(error.message, 'error');
-            }
-        }
+def cache_delete_pattern(pattern: str):
+    """Delete cache keys matching pattern"""
+    keys_to_delete = [k for k in cache_store.keys() if pattern in k]
+    for key in keys_to_delete:
+        cache_delete(key)
 
-        async function createCourse() {
-            const title = prompt('Enter course title:');
-            if (!title) return;
-            const level = prompt('Enter level (beginner/intermediate/advanced):');
-            if (!level) return;
-            
-            try {
-                const response = await apiCall('/courses', {
-                    method: 'POST',
-                    body: JSON.stringify({ title, level })
-                });
-                if (response.ok) {
-                    showToast('Course created!', 'success');
-                }
-            } catch (error) {
-                showToast(error.message, 'error');
-            }
-        }
-
-        // Health check function to verify backend connectivity
-        async function checkBackendHealth() {
-            try {
-                const response = await fetch(`${API_URL}/health`, { method: 'GET' });
-                if (response.ok) {
-                    console.log('Backend is healthy');
-                    return true;
-                }
-            } catch (error) {
-                console.error('Backend health check failed:', error);
-            }
-            return false;
-        }
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Check backend health first
-            const isHealthy = await checkBackendHealth();
-            if (!isHealthy) {
-                console.warn('Backend may not be accessible. API URL:', API_URL);
-            }
-            
-            if (authToken) { 
-                showApp(); 
-            } else { 
-                document.getElementById('auth-screen').classList.remove('hidden'); 
-            }
-            lucide.createIcons();
-        });
-    </script>
-</body>
-</html>
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
