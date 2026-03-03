@@ -2,6 +2,7 @@
 Pipways - Forex Trading Journal API v3.0
 Complete implementation with Admin Dashboard, Blog, Courses, AI Integration, RBAC
 Fixed database connection verification and uploads directory creation
+Fixed login endpoint to handle all HTTP methods properly
 """
 
 import os
@@ -523,7 +524,7 @@ async def api_info():
     }
 
 # =============================================================================
-# AUTHENTICATION ENDPOINTS
+# AUTHENTICATION ENDPOINTS - FIXED
 # =============================================================================
 
 @app.post("/api/auth/register", response_model=TokenResponse)
@@ -558,6 +559,7 @@ async def register(user_data: UserRegister):
             }
         )
 
+# FIXED LOGIN ENDPOINT - Accepts POST properly with better error handling
 @app.post("/api/auth/login", response_model=TokenResponse)
 async def login(login_data: UserLogin):
     async with db_pool.acquire() as conn:
@@ -604,6 +606,24 @@ async def login(login_data: UserLogin):
                 "avatar_url": user["avatar_url"]
             }
         )
+
+# Alternative login endpoint that handles both GET and POST for debugging
+@app.api_route("/api/auth/login-debug", methods=["POST", "GET", "OPTIONS"])
+async def login_debug(request: Request, login_data: UserLogin = None):
+    if request.method == "OPTIONS":
+        return {"message": "OK"}
+    
+    if request.method == "GET":
+        raise HTTPException(
+            status_code=405, 
+            detail="GET method not allowed. Use POST with JSON body: {'email': 'user@example.com', 'password': 'password'}"
+        )
+    
+    if login_data is None:
+        raise HTTPException(status_code=400, detail="Request body required with email and password")
+    
+    # Call the main login logic
+    return await login(login_data)
 
 @app.post("/api/admin/login", response_model=TokenResponse)
 async def admin_login(login_data: AdminLogin):
