@@ -1,4 +1,4 @@
-# Render Configuration for FastAPI Application
+# Render Configuration for Pipways v3.0
 # Service: pipways-api
 # Runtime: Python 3.11
 # Framework: FastAPI with Uvicorn
@@ -26,16 +26,21 @@ services:
     envVars:
       # Database Configuration
       - key: DATABASE_URL
-        value: "postgresql://username:password@host:port/database_name"
+        fromDatabase:
+          name: pipways-db
+          property: connectionString
         sync: false
       
-      # JWT Secret Key
+      # JWT Secret Key (auto-generated)
       - key: SECRET_KEY
         generateValue: true
         sync: false
       
-      # AI Mentor - OpenRouter API Key
+      # AI Services
       - key: OPENROUTER_API_KEY
+        sync: false
+      
+      - key: ALPHA_VANTAGE_API_KEY
         sync: false
       
       # Payment Processing - Paystack
@@ -45,26 +50,37 @@ services:
       - key: PAYSTACK_PUBLIC_KEY
         sync: false
       
+      # Email Service - SendGrid
+      - key: SENDGRID_API_KEY
+        sync: false
+      
       # Environment Configuration
       - key: ENVIRONMENT
         value: production
       
       # Frontend URL for CORS
       - key: FRONTEND_URL
-        value: "https://your-frontend-domain.com"
+        value: "https://pipways-web.onrender.com"
       
-      # Render automatically sets PORT, but we can ensure it's available
-      - key: PORT
-        value: 8000
+      # Debug Mode
+      - key: DEBUG
+        value: "false"
+    
+    # Disk for file uploads
+    disk:
+      name: uploads
+      mountPath: /opt/render/project/src/uploads
+      sizeGB: 5
 
-# Optional: Database Configuration (if using Render PostgreSQL)
+# PostgreSQL Database Configuration
 databases:
   - name: pipways-db
     databaseName: pipways
     user: pipways_user
-    plan: free  # Change to 'starter' or higher for production
+    plan: starter  # Change to 'pro' for production
+    ipAllowList: []  # Allow all IPs (for Render services)
 
-# Optional: Environment Group for shared variables
+# Environment Group for shared variables
 envVarGroups:
   - name: pipways-api-secrets
     envVars:
@@ -72,7 +88,11 @@ envVarGroups:
         generateValue: true
       - key: OPENROUTER_API_KEY
         sync: false
+      - key: ALPHA_VANTAGE_API_KEY
+        sync: false
       - key: PAYSTACK_SECRET_KEY
         sync: false
       - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+      - key: SENDGRID_API_KEY
         sync: false
