@@ -2,7 +2,7 @@
 Pipways - Forex Trading Journal API v3.0
 Complete implementation with Admin Dashboard, Blog, Courses, AI Integration, RBAC
 Fixed database connection verification and uploads directory creation
-Fixed login endpoint to handle all HTTP methods properly
+Fixed CORS and login issues for Render deployment
 """
 
 import os
@@ -10,25 +10,20 @@ import re
 import json
 import base64
 import logging
-import hashlib
 import io
-import csv
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Union
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
-from functools import wraps
-from enum import Enum
 
 import asyncpg
 import httpx
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Header, status, Request, BackgroundTasks, Query
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse, FileResponse
+from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from PIL import Image
@@ -245,7 +240,7 @@ class ChartAnalysisRequest(BaseModel):
     timeframe: Optional[str] = None
 
 # =============================================================================
-# DATABASE CONNECTION - FIXED
+# DATABASE CONNECTION
 # =============================================================================
 
 async def init_db_pool():
@@ -264,8 +259,7 @@ async def init_db_pool():
             }
         )
         
-        # CRITICAL FIX: Verify the pool actually works by executing a test query
-        # asyncpg.create_pool() is lazy and doesn't connect until first use
+        # Verify the pool actually works
         async with db_pool.acquire() as conn:
             result = await conn.fetchval("SELECT 1")
             if result == 1:
@@ -429,9 +423,8 @@ def rate_limit(key: str, max_requests: int = 100, window_seconds: int = 60) -> b
     rate_limit_store[key].append(now)
     return True
 
-
 # =============================================================================
-# FASTAPI APPLICATION
+# FASTAPI APPLICATION - CORS FIXED
 # =============================================================================
 
 @asynccontextmanager
@@ -452,30 +445,31 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware
+# =============================================================================
+# CORS MIDDLEWARE - CRITICAL FIX FOR RENDER
+# =============================================================================
+
+# IMPORTANT: CORS middleware must be added BEFORE any routes
+# and must explicitly allow OPTIONS for preflight requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:8000",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:8000",
-        FRONTEND_URL
-    ] if FRONTEND_URL else ["*"],
+    allow_origins=["*"],  # Allow all origins temporarily for debugging
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],  # Explicitly include OPTIONS
+    allow_headers=["*"],  # Allow all headers
+    expose_headers=["*"],
+    max_age=3600,  # Cache preflight for 1 hour
 )
 
-# CRITICAL FIX: Create uploads directory BEFORE mounting StaticFiles
+# Create uploads directory BEFORE mounting StaticFiles
 os.makedirs("uploads", exist_ok=True)
 os.makedirs("uploads/blog", exist_ok=True)
 
-# Now mount static files after ensuring directory exists
+# Mount static files
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # =============================================================================
-# HEALTH & INFO ENDPOINTS - FIXED
+# HEALTH & INFO ENDPOINTS
 # =============================================================================
 
 @app.get("/health")
@@ -485,7 +479,6 @@ async def health_check():
     
     try:
         if db_pool is not None:
-            # Test actual connectivity
             async with db_pool.acquire() as conn:
                 result = await conn.fetchval("SELECT 1")
                 if result == 1:
@@ -524,7 +517,7 @@ async def api_info():
     }
 
 # =============================================================================
-# AUTHENTICATION ENDPOINTS - FIXED
+# AUTHENTICATION ENDPOINTS - FIXED FOR CORS/REDIRECT ISSUES
 # =============================================================================
 
 @app.post("/api/auth/register", response_model=TokenResponse)
@@ -559,9 +552,13 @@ async def register(user_data: UserRegister):
             }
         )
 
-# FIXED LOGIN ENDPOINT - Accepts POST properly with better error handling
+# FIXED LOGIN - Explicit POST handler with OPTIONS support
 @app.post("/api/auth/login", response_model=TokenResponse)
 async def login(login_data: UserLogin):
+    """
+    Login endpoint - requires POST with JSON body:
+    {"email": "user@example.com", "password": "password"}
+    """
     async with db_pool.acquire() as conn:
         user = await conn.fetchrow(
             "SELECT * FROM users WHERE email = $1",
@@ -607,23 +604,16 @@ async def login(login_data: UserLogin):
             }
         )
 
-# Alternative login endpoint that handles both GET and POST for debugging
-@app.api_route("/api/auth/login-debug", methods=["POST", "GET", "OPTIONS"])
-async def login_debug(request: Request, login_data: UserLogin = None):
-    if request.method == "OPTIONS":
-        return {"message": "OK"}
-    
-    if request.method == "GET":
-        raise HTTPException(
-            status_code=405, 
-            detail="GET method not allowed. Use POST with JSON body: {'email': 'user@example.com', 'password': 'password'}"
-        )
-    
-    if login_data is None:
-        raise HTTPException(status_code=400, detail="Request body required with email and password")
-    
-    # Call the main login logic
-    return await login(login_data)
+# Debug endpoint to check what method is being received
+@app.api_route("/api/auth/login-test", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"])
+async def login_test(request: Request):
+    """Debug endpoint to see what method is being received"""
+    return {
+        "method_received": request.method,
+        "url": str(request.url),
+        "headers": dict(request.headers),
+        "message": f"Received {request.method} request"
+    }
 
 @app.post("/api/admin/login", response_model=TokenResponse)
 async def admin_login(login_data: AdminLogin):
@@ -902,7 +892,6 @@ async def get_dashboard_analytics(current_user: dict = Depends(get_current_user)
             "monthly_performance": [dict(m) for m in monthly_data],
             "strategy_performance": [dict(s) for s in strategy_performance]
         }
-
 
 # =============================================================================
 # AI ANALYSIS ENDPOINTS
@@ -1280,7 +1269,6 @@ async def update_lesson_progress(
         """, progress_percent, current_user["id"], course_id)
         
         return {"progress_percent": progress_percent, "completed_lessons": completed_lessons}
-
 
 # =============================================================================
 # BLOG ENDPOINTS
@@ -1668,7 +1656,6 @@ async def admin_create_lesson(
             lesson.video_url, lesson.video_duration, lesson.is_preview, lesson.sort_order)
         
         return {"id": lesson_id, "message": "Lesson created"}
-
 
 # =============================================================================
 # ADMIN ENDPOINTS - USER MANAGEMENT
