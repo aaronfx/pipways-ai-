@@ -1,6 +1,7 @@
 # Core Framework
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
+python-multipart==0.0.6
 
 # Database
 asyncpg==0.29.0
@@ -9,7 +10,6 @@ asyncpg==0.29.0
 python-jose[cryptography]==3.3.0
 bcrypt==4.0.1
 passlib==1.7.4
-python-multipart==0.0.6
 
 # Data Validation
 pydantic[email]==2.5.0
@@ -26,7 +26,13 @@ python-magic==0.4.27
 # PDF Generation
 reportlab==4.0.4
 
+# File Handling
+aiofiles==23.2.1
+
 # Utilities
 python-dotenv==1.0.0
 python-dateutil==2.8.2
-aiofiles==23.2.1
+
+# Background Tasks (for future Celery integration)
+celery==5.3.4
+redis==5.0.1
