@@ -1294,8 +1294,6 @@ async def send_password_reset_email(user_id: int, email: str, name: str, reset_u
     return await send_email(user_id, "password_reset", email, "Password Reset Request", content)
 
 # =============================================================================
-// ... [rest of the file continues with trades, analytics, courses, blog, AI endpoints]
-
 # NOTIFICATION SERVICE
 # =============================================================================
 
@@ -2108,8 +2106,6 @@ async def get_enrolled_courses(current_user: dict = Depends(get_current_user)):
         return [dict(e) for e in enrollments]
 
 # =============================================================================
-// ... [continuing with more endpoints]
-
 # WEBINARS ENDPOINTS
 # =============================================================================
 
@@ -2847,8 +2843,6 @@ Provide analysis in JSON format:
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 # =============================================================================
-// ... [Admin endpoints would continue here]
-
 # ADMIN ENDPOINTS - BLOG MANAGEMENT
 # =============================================================================
 
