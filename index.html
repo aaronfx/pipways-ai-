@@ -28,6 +28,8 @@
         @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .notification-badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; font-size: 10px; padding: 2px 5px; border-radius: 10px; }
         .admin-badge { background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px; }
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
         @media (max-width: 1024px) { .hide-mobile { display: none !important; } }
         @media (min-width: 1025px) { .hide-desktop { display: none !important; } }
     </style>
@@ -171,12 +173,15 @@
             // For Render deployments, try to infer the API URL from frontend URL
             if (hostname.includes('render.com')) {
                 // Replace web with api in the URL
-                return `https://${hostname.replace('web', 'api')}`;
+                const apiHostname = hostname.replace('web', 'api');
+                return `https://${apiHostname}`;
             }
+            // Fallback to hardcoded API URL
             return 'https://pipways-api.onrender.com';
         })();
         
-        console.log('API URL:', API_URL); // Debug log
+        console.log('API URL:', API_URL);
+        console.log('Hostname:', window.location.hostname);
         
         let authToken = localStorage.getItem('pipways_token');
         let currentUser = null;
@@ -210,12 +215,18 @@
             };
             try {
                 const response = await fetch(url, config);
-                if (response.status === 401) { logout(); throw new Error('Session expired'); }
+                if (response.status === 401) { 
+                    logout(); 
+                    throw new Error('Session expired. Please log in again.'); 
+                }
                 return response;
             } catch (error) {
                 console.error('API Call Error:', error);
-                if (error.message.includes('fetch') || error.message.includes('NetworkError') || error.name === 'TypeError') {
-                    throw new Error('Cannot connect to server. Please check your internet connection or try again later.');
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    throw new Error('Cannot connect to server. The backend may be down or the API URL is incorrect.');
+                }
+                if (error.message.includes('Failed to fetch')) {
+                    throw new Error('Network error. Please check your internet connection.');
                 }
                 throw error;
             }
@@ -326,10 +337,17 @@
             try {
                 const response = await apiCall('/users/me');
                 currentUser = await response.json();
+                console.log('Current user:', currentUser);
                 
-                // Show admin menu if user is admin
-                if (currentUser.is_admin) {
+                // Show admin menu if user is admin (handle both boolean and string)
+                const isAdmin = currentUser.is_admin === true || currentUser.is_admin === 'true' || currentUser.is_admin === 1;
+                if (isAdmin) {
+                    console.log('User is admin, showing admin menu');
                     document.getElementById('admin-menu-item').classList.remove('hidden');
+                    // Also add admin to mobile menu
+                    addAdminToMobileMenu();
+                } else {
+                    console.log('User is not admin, is_admin value:', currentUser.is_admin, 'type:', typeof currentUser.is_admin);
                 }
             } catch (error) {
                 console.error('Failed to fetch user info:', error);
@@ -337,6 +355,42 @@
             
             navigateTo('dashboard');
             startNotificationPolling();
+        }
+        
+        function addAdminToMobileMenu() {
+            const moreMenuGrid = document.querySelector('#more-menu .grid');
+            if (moreMenuGrid && !document.getElementById('mobile-admin-btn')) {
+                const adminBtn = document.createElement('button');
+                adminBtn.id = 'mobile-admin-btn';
+                adminBtn.onclick = () => { hideMoreMenu(); navigateTo('admin'); };
+                adminBtn.className = 'flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5';
+                adminBtn.innerHTML = '<i data-lucide="shield" class="w-6 h-6 text-orange-400"></i><span class="text-xs">Admin</span>';
+                moreMenuGrid.appendChild(adminBtn);
+            }
+        }
+        
+        // Debug function to check admin status
+        async function checkAdminStatus() {
+            try {
+                const response = await apiCall('/users/me');
+                const user = await response.json();
+                console.log('Admin check - User data:', user);
+                console.log('is_admin value:', user.is_admin);
+                console.log('is_admin type:', typeof user.is_admin);
+                const isAdmin = user.is_admin === true || user.is_admin === 'true' || user.is_admin === 1;
+                alert(`Admin status: ${user.is_admin}\nIs Admin (evaluated): ${isAdmin}\nEmail: ${user.email}\n\nIf not admin, run: fetch('/setup/make-admin-default',{method:'POST'}).then(r=>r.json()).then(console.log)`);
+            } catch (error) {
+                console.error('Admin check failed:', error);
+                alert('Failed to check admin status');
+            }
+        }
+        
+        // Force show admin menu (for debugging)
+        function showAdminMenu() {
+            document.getElementById('admin-menu-item').classList.remove('hidden');
+            addAdminToMobileMenu();
+            lucide.createIcons();
+            console.log('Admin menu force-shown');
         }
 
         function startNotificationPolling() {
@@ -659,31 +713,76 @@
                 const formData = new FormData();
                 formData.append('file', file);
                 const response = await apiCall('/performance/analyze', { method: 'POST', body: formData });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Analysis failed (${response.status})`);
+                }
+                
                 const data = await response.json();
+                console.log('Performance analysis response:', data);
+                
+                if (!data.analysis) {
+                    throw new Error('No analysis data received from server');
+                }
+                
                 const analysis = data.analysis;
+                const score = analysis.performance_score || 0;
+                const traderType = analysis.trader_type || 'Unknown';
+                const strengths = analysis.strengths || [];
+                const weaknesses = analysis.weaknesses || [];
+                
                 resultContainer.innerHTML = `
                     <div class="glass rounded-xl p-6">
-                        <h2 class="text-xl font-bold mb-4">Performance Score: ${analysis.performance_score}/100</h2>
-                        <p class="text-slate-400 mb-4">Trader Type: ${analysis.trader_type}</p>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-center justify-between mb-6">
                             <div>
-                                <h3 class="font-semibold mb-2 text-green-400">Strengths</h3>
-                                <ul class="list-disc list-inside text-slate-300">
-                                    ${analysis.strengths.map(s => `<li>${s}</li>`).join('')}
-                                </ul>
+                                <h2 class="text-2xl font-bold mb-2">Performance Score</h2>
+                                <div class="text-5xl font-bold ${score >= 70 ? 'text-green-400' : score >= 50 ? 'text-yellow-400' : 'text-red-400'}">${score}<span class="text-2xl text-slate-400">/100</span></div>
                             </div>
-                            <div>
-                                <h3 class="font-semibold mb-2 text-red-400">Areas to Improve</h3>
-                                <ul class="list-disc list-inside text-slate-300">
-                                    ${analysis.weaknesses.map(w => `<li>${w}</li>`).join('')}
-                                </ul>
+                            <div class="text-right">
+                                <div class="text-slate-400 text-sm mb-1">Trader Type</div>
+                                <div class="text-xl font-semibold">${traderType}</div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-slate-800/30 rounded-lg p-4">
+                                <h3 class="font-semibold mb-3 text-green-400 flex items-center gap-2">
+                                    <i data-lucide="trending-up" class="w-5 h-5"></i> Strengths
+                                </h3>
+                                ${strengths.length > 0 ? `
+                                    <ul class="space-y-2">
+                                        ${strengths.map(s => `<li class="flex items-start gap-2 text-slate-300"><i data-lucide="check-circle" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i><span>${s}</span></li>`).join('')}
+                                    </ul>
+                                ` : '<p class="text-slate-500">No strengths identified yet.</p>'}
+                            </div>
+                            <div class="bg-slate-800/30 rounded-lg p-4">
+                                <h3 class="font-semibold mb-3 text-red-400 flex items-center gap-2">
+                                    <i data-lucide="trending-down" class="w-5 h-5"></i> Areas to Improve
+                                </h3>
+                                ${weaknesses.length > 0 ? `
+                                    <ul class="space-y-2">
+                                        ${weaknesses.map(w => `<li class="flex items-start gap-2 text-slate-300"><i data-lucide="alert-circle" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i><span>${w}</span></li>`).join('')}
+                                    </ul>
+                                ` : '<p class="text-slate-500">No areas to improve identified.</p>'}
                             </div>
                         </div>
                     </div>
                 `;
+                lucide.createIcons();
                 showToast('Analysis complete!', 'success');
             } catch (error) {
-                resultContainer.innerHTML = `<div class="text-red-400">${error.message}</div>`;
+                console.error('Performance analysis error:', error);
+                resultContainer.innerHTML = `
+                    <div class="glass rounded-xl p-6 border border-red-500/30 bg-red-500/10">
+                        <div class="flex items-center gap-3 mb-2">
+                            <i data-lucide="alert-circle" class="w-6 h-6 text-red-400"></i>
+                            <h3 class="text-lg font-semibold text-red-400">Analysis Error</h3>
+                        </div>
+                        <p class="text-slate-300">${error.message}</p>
+                        <p class="text-slate-500 text-sm mt-2">Please try again with a valid trading history file.</p>
+                    </div>
+                `;
+                lucide.createIcons();
             }
         }
 
@@ -710,38 +809,73 @@
                 const formData = new FormData();
                 formData.append('file', file);
                 const response = await apiCall('/analyze-chart', { method: 'POST', body: formData });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Analysis failed (${response.status})`);
+                }
+                
                 const data = await response.json();
+                console.log('Chart analysis response:', data);
+                
+                // Check if analysis exists
+                if (!data.analysis) {
+                    throw new Error('No analysis data received from server');
+                }
+                
                 const analysis = data.analysis;
+                
+                // Handle missing fields gracefully
+                const setupQuality = analysis.setup_quality || 'N/A';
+                const pair = analysis.pair || 'Unknown';
+                const direction = analysis.direction || 'Unknown';
+                const entryPrice = analysis.entry_price || 'N/A';
+                const riskReward = analysis.risk_reward || 'N/A';
+                const analysisText = analysis.analysis || 'No detailed analysis available.';
+                
                 resultContainer.innerHTML = `
                     <div class="glass rounded-xl p-6">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-xl font-bold">Setup Analysis</h2>
-                            <span class="px-3 py-1 rounded-full text-sm font-semibold ${analysis.setup_quality === 'A' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'}">Grade ${analysis.setup_quality}</span>
+                            <span class="px-3 py-1 rounded-full text-sm font-semibold ${setupQuality === 'A' ? 'bg-green-500/20 text-green-400' : setupQuality === 'B' ? 'bg-blue-500/20 text-blue-400' : 'bg-yellow-500/20 text-yellow-400'}">Grade ${setupQuality}</span>
                         </div>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                             <div class="bg-slate-800/50 rounded-lg p-3">
                                 <div class="text-slate-400 text-sm">Pair</div>
-                                <div class="font-semibold">${analysis.pair}</div>
+                                <div class="font-semibold">${pair}</div>
                             </div>
                             <div class="bg-slate-800/50 rounded-lg p-3">
                                 <div class="text-slate-400 text-sm">Direction</div>
-                                <div class="font-semibold ${analysis.direction === 'LONG' ? 'text-green-400' : 'text-red-400'}">${analysis.direction}</div>
+                                <div class="font-semibold ${direction === 'LONG' ? 'text-green-400' : direction === 'SHORT' ? 'text-red-400' : ''}">${direction}</div>
                             </div>
                             <div class="bg-slate-800/50 rounded-lg p-3">
                                 <div class="text-slate-400 text-sm">Entry</div>
-                                <div class="font-mono">${analysis.entry_price}</div>
+                                <div class="font-mono">${entryPrice}</div>
                             </div>
                             <div class="bg-slate-800/50 rounded-lg p-3">
                                 <div class="text-slate-400 text-sm">R:R</div>
-                                <div class="font-mono text-blue-400">${analysis.risk_reward}</div>
+                                <div class="font-mono text-blue-400">${riskReward}</div>
                             </div>
                         </div>
-                        <p class="text-slate-300">${analysis.analysis}</p>
+                        <div class="bg-slate-800/30 rounded-lg p-4">
+                            <p class="text-slate-300 leading-relaxed">${analysisText.replace(/\n/g, '<br>')}</p>
+                        </div>
                     </div>
                 `;
                 showToast('Chart analysis complete!', 'success');
             } catch (error) {
-                resultContainer.innerHTML = `<div class="text-red-400">${error.message}</div>`;
+                console.error('Chart analysis error:', error);
+                resultContainer.innerHTML = `
+                    <div class="glass rounded-xl p-6 border border-red-500/30 bg-red-500/10">
+                        <div class="flex items-center gap-3 mb-2">
+                            <i data-lucide="alert-circle" class="w-6 h-6 text-red-400"></i>
+                            <h3 class="text-lg font-semibold text-red-400">Analysis Error</h3>
+                        </div>
+                        <p class="text-slate-300">${error.message}</p>
+                        <p class="text-slate-500 text-sm mt-2">Please try again with a clearer chart image.</p>
+                    </div>
+                `;
+                lucide.createIcons();
             }
         }
 
@@ -1125,24 +1259,37 @@
                 
                 container.innerHTML = `
                     <div class="animate-fade-in">
-                        <h1 class="text-2xl font-bold mb-6">Trading Blog</h1>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="flex items-center justify-between mb-8">
+                            <div>
+                                <h1 class="text-3xl font-bold gradient-text mb-2">Trading Blog</h1>
+                                <p class="text-slate-400">Insights, strategies, and market analysis</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             ${posts.map(post => `
-                                <div class="glass rounded-xl overflow-hidden cursor-pointer hover:bg-white/5 transition-colors" onclick="showBlogPost('${post.slug}')">
-                                    <div class="h-40 bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center">
-                                        <i data-lucide="newspaper" class="w-16 h-16 text-white/50"></i>
+                                <div class="glass rounded-xl overflow-hidden cursor-pointer hover:scale-[1.02] hover:shadow-xl transition-all duration-300 group" onclick="showBlogPost('${post.slug}')">
+                                    <div class="h-48 overflow-hidden relative">
+                                        ${post.featured_image ? `
+                                            <img src="${post.featured_image}" alt="${post.title}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                                        ` : `
+                                            <div class="w-full h-full bg-gradient-to-br from-blue-600 via-violet-600 to-purple-600 flex items-center justify-center">
+                                                <i data-lucide="newspaper" class="w-16 h-16 text-white/40"></i>
+                                            </div>
+                                        `}
+                                        <div class="absolute top-3 left-3">
+                                            <span class="px-3 py-1 rounded-full text-xs font-medium bg-black/50 backdrop-blur-sm text-white border border-white/10">${post.category || 'General'}</span>
+                                        </div>
                                     </div>
-                                    <div class="p-6">
-                                        <span class="px-2 py-1 rounded text-xs bg-blue-500/20 text-blue-400">${post.category || 'General'}</span>
-                                        <h3 class="text-lg font-semibold mt-2 mb-2">${post.title}</h3>
-                                        <p class="text-slate-400 text-sm mb-4">${post.excerpt || ''}</p>
-                                        <div class="flex items-center justify-between text-sm text-slate-500">
-                                            <span>${formatDate(post.created_at)}</span>
-                                            <span class="text-blue-400">Read more →</span>
+                                    <div class="p-5">
+                                        <h3 class="text-lg font-semibold mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">${post.title}</h3>
+                                        <p class="text-slate-400 text-sm mb-4 line-clamp-2">${post.excerpt || post.content.substring(0, 100) + '...'}</p>
+                                        <div class="flex items-center justify-between text-xs text-slate-500">
+                                            <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i> ${formatDate(post.created_at)}</span>
+                                            <span class="flex items-center gap-1 text-blue-400 group-hover:translate-x-1 transition-transform">Read <i data-lucide="arrow-right" class="w-3 h-3"></i></span>
                                         </div>
                                     </div>
                                 </div>
-                            `).join('') || '<div class="text-center py-12 text-slate-400">No blog posts yet</div>'}
+                            `).join('') || '<div class="col-span-full text-center py-16"><i data-lucide="newspaper" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i><p class="text-slate-400 text-lg">No blog posts yet</p><p class="text-slate-500 text-sm">Check back soon for new content!</p></div>'}
                         </div>
                     </div>
                 `;
@@ -1161,18 +1308,49 @@
                 const post = await response.json();
                 
                 container.innerHTML = `
-                    <div class="animate-fade-in max-w-3xl mx-auto">
-                        <button onclick="navigateTo('blog')" class="mb-4 text-blue-400 hover:text-blue-300 flex items-center gap-2">
-                            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Blog
-                        </button>
-                        <div class="glass rounded-xl p-8">
-                            <span class="px-2 py-1 rounded text-xs bg-blue-500/20 text-blue-400">${post.category || 'General'}</span>
-                            <h1 class="text-3xl font-bold mt-4 mb-4">${post.title}</h1>
-                            <div class="text-slate-400 text-sm mb-6">${formatDate(post.created_at)}</div>
-                            <div class="prose prose-invert max-w-none">
-                                ${post.content.replace(/\n/g, '<br>')}
+                    <div class="animate-fade-in">
+                        <button onclick="navigateTo('blog')" class="mb-6 text-slate-400 hover:text-white flex items-center gap-2 transition-colors">
+                            <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center">
+                                <i data-lucide="arrow-left" class="w-4 h-4"></i>
                             </div>
-                        </div>
+                            <span>Back to Blog</span>
+                        </button>
+                        
+                        <article class="max-w-4xl mx-auto">
+                            ${post.featured_image ? `
+                                <div class="rounded-2xl overflow-hidden mb-8 h-64 md:h-80">
+                                    <img src="${post.featured_image}" alt="${post.title}" class="w-full h-full object-cover">
+                                </div>
+                            ` : ''}
+                            
+                            <div class="glass rounded-2xl p-6 md:p-10">
+                                <div class="flex items-center gap-3 mb-6">
+                                    <span class="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">${post.category || 'General'}</span>
+                                    <span class="text-slate-500 text-sm flex items-center gap-1">
+                                        <i data-lucide="calendar" class="w-4 h-4"></i> ${formatDate(post.created_at)}
+                                    </span>
+                                    ${post.view_count ? `
+                                        <span class="text-slate-500 text-sm flex items-center gap-1">
+                                            <i data-lucide="eye" class="w-4 h-4"></i> ${post.view_count} views
+                                        </span>
+                                    ` : ''}
+                                </div>
+                                
+                                <h1 class="text-3xl md:text-4xl font-bold mb-8 leading-tight">${post.title}</h1>
+                                
+                                <div class="prose prose-invert prose-lg max-w-none">
+                                    ${post.content.split('\n\n').map(para => `<p class="mb-4 text-slate-300 leading-relaxed">${para}</p>`).join('')}
+                                </div>
+                                
+                                ${post.tags && post.tags.length > 0 ? `
+                                    <div class="mt-8 pt-6 border-t border-white/10">
+                                        <div class="flex flex-wrap gap-2">
+                                            ${post.tags.map(tag => `<span class="px-3 py-1 rounded-full text-xs bg-slate-800 text-slate-400">#${tag}</span>`).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </article>
                     </div>
                 `;
                 lucide.createIcons();
@@ -1183,64 +1361,138 @@
 
         async function renderAdmin() {
             const container = document.getElementById('page-content');
-            container.innerHTML = '<div class="flex justify-center py-20"><div class="loading-spinner w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full"></div></div>';
+            container.innerHTML = `
+                <div class="flex justify-center py-20">
+                    <div class="loading-spinner w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                </div>
+            `;
             
             try {
+                console.log('Fetching admin stats...');
                 const response = await apiCall('/admin/stats');
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Admin access failed (${response.status})`);
+                }
+                
                 const stats = await response.json();
+                console.log('Admin stats:', stats);
                 
                 container.innerHTML = `
                     <div class="animate-fade-in">
-                        <h1 class="text-2xl font-bold mb-6">Admin Dashboard</h1>
-                        
-                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                            <div class="glass rounded-xl p-4">
-                                <div class="text-slate-400 text-sm mb-1">Total Users</div>
-                                <div class="text-2xl font-bold">${stats.total_users}</div>
+                        <div class="flex items-center justify-between mb-8">
+                            <div>
+                                <h1 class="text-3xl font-bold gradient-text mb-2">Admin Dashboard</h1>
+                                <p class="text-slate-400">Platform overview and management</p>
                             </div>
-                            <div class="glass rounded-xl p-4">
-                                <div class="text-slate-400 text-sm mb-1">Active Subs</div>
-                                <div class="text-2xl font-bold text-green-400">${stats.active_subscriptions}</div>
-                            </div>
-                            <div class="glass rounded-xl p-4">
-                                <div class="text-slate-400 text-sm mb-1">Trial Users</div>
-                                <div class="text-2xl font-bold text-yellow-400">${stats.trial_users}</div>
-                            </div>
-                            <div class="glass rounded-xl p-4">
-                                <div class="text-slate-400 text-sm mb-1">Total Revenue</div>
-                                <div class="text-2xl font-bold text-blue-400">$${stats.total_revenue}</div>
+                            <div class="flex items-center gap-2 px-4 py-2 bg-orange-500/20 rounded-lg">
+                                <i data-lucide="shield" class="w-5 h-5 text-orange-400"></i>
+                                <span class="text-orange-400 text-sm font-medium">Admin Access</span>
                             </div>
                         </div>
                         
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <!-- Stats Grid -->
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                            <div class="glass rounded-xl p-5 hover:bg-white/5 transition-colors">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                                        <i data-lucide="users" class="w-5 h-5 text-blue-400"></i>
+                                    </div>
+                                    <div class="text-slate-400 text-sm">Total Users</div>
+                                </div>
+                                <div class="text-3xl font-bold">${stats.total_users || 0}</div>
+                                <div class="text-xs text-slate-500 mt-1">+${stats.new_users_7d || 0} this week</div>
+                            </div>
+                            <div class="glass rounded-xl p-5 hover:bg-white/5 transition-colors">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                                        <i data-lucide="credit-card" class="w-5 h-5 text-green-400"></i>
+                                    </div>
+                                    <div class="text-slate-400 text-sm">Active Subs</div>
+                                </div>
+                                <div class="text-3xl font-bold text-green-400">${stats.active_subscriptions || 0}</div>
+                            </div>
+                            <div class="glass rounded-xl p-5 hover:bg-white/5 transition-colors">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+                                        <i data-lucide="clock" class="w-5 h-5 text-yellow-400"></i>
+                                    </div>
+                                    <div class="text-slate-400 text-sm">Trial Users</div>
+                                </div>
+                                <div class="text-3xl font-bold text-yellow-400">${stats.trial_users || 0}</div>
+                            </div>
+                            <div class="glass rounded-xl p-5 hover:bg-white/5 transition-colors">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                                        <i data-lucide="dollar-sign" class="w-5 h-5 text-purple-400"></i>
+                                    </div>
+                                    <div class="text-slate-400 text-sm">Revenue</div>
+                                </div>
+                                <div class="text-3xl font-bold text-purple-400">$${stats.total_revenue || 0}</div>
+                                <div class="text-xs text-slate-500 mt-1">+$${stats.revenue_30d || 0} this month</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Content Stats -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                            <div class="glass rounded-xl p-4 text-center">
+                                <div class="text-slate-400 text-sm mb-1">Courses</div>
+                                <div class="text-xl font-bold">${stats.total_courses || 0}</div>
+                            </div>
+                            <div class="glass rounded-xl p-4 text-center">
+                                <div class="text-slate-400 text-sm mb-1">Webinars</div>
+                                <div class="text-xl font-bold">${stats.total_webinars || 0}</div>
+                            </div>
+                            <div class="glass rounded-xl p-4 text-center">
+                                <div class="text-slate-400 text-sm mb-1">Blog Posts</div>
+                                <div class="text-xl font-bold">${stats.published_blog_posts || 0}/${stats.total_blog_posts || 0}</div>
+                            </div>
+                            <div class="glass rounded-xl p-4 text-center">
+                                <div class="text-slate-400 text-sm mb-1">Total Trades</div>
+                                <div class="text-xl font-bold">${stats.total_trades || 0}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div class="glass rounded-xl p-6">
-                                <h2 class="text-lg font-semibold mb-4">Recent Users</h2>
-                                <div class="space-y-3">
-                                    ${stats.recent_users.map(u => `
-                                        <div class="flex items-center justify-between py-2 border-b border-white/5">
+                                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                                    <i data-lucide="users" class="w-5 h-5 text-blue-400"></i>
+                                    Recent Users
+                                </h2>
+                                <div class="space-y-3 max-h-80 overflow-y-auto">
+                                    ${stats.recent_users && stats.recent_users.length > 0 ? stats.recent_users.map(u => `
+                                        <div class="flex items-center justify-between py-3 border-b border-white/5">
                                             <div>
-                                                <p class="font-medium">${u.name}</p>
-                                                <p class="text-slate-400 text-sm">${u.email}</p>
+                                                <p class="font-medium">${u.name || 'Unknown'}</p>
+                                                <p class="text-slate-400 text-sm">${u.email || ''}</p>
                                             </div>
-                                            <span class="px-2 py-1 rounded text-xs ${u.subscription_status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}">${u.subscription_status}</span>
+                                            <span class="px-2 py-1 rounded text-xs ${u.subscription_status === 'active' ? 'bg-green-500/20 text-green-400' : u.subscription_status === 'trial' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-500/20 text-slate-400'}">${u.subscription_status || 'free'}</span>
                                         </div>
-                                    `).join('')}
+                                    `).join('') : '<p class="text-slate-500 text-center py-4">No users yet</p>'}
                                 </div>
                             </div>
                             <div class="glass rounded-xl p-6">
-                                <h2 class="text-lg font-semibold mb-4">Quick Actions</h2>
+                                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                                    <i data-lucide="zap" class="w-5 h-5 text-yellow-400"></i>
+                                    Quick Actions
+                                </h2>
                                 <div class="space-y-3">
                                     <button onclick="sendAdminEmail()" class="w-full py-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-3 px-4">
-                                        <i data-lucide="mail" class="w-5 h-5"></i>
+                                        <i data-lucide="mail" class="w-5 h-5 text-blue-400"></i>
                                         <span>Send Email to Users</span>
                                     </button>
                                     <button onclick="createWebinar()" class="w-full py-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-3 px-4">
-                                        <i data-lucide="video" class="w-5 h-5"></i>
+                                        <i data-lucide="video" class="w-5 h-5 text-red-400"></i>
                                         <span>Create Webinar</span>
                                     </button>
                                     <button onclick="createCourse()" class="w-full py-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-3 px-4">
-                                        <i data-lucide="book-open" class="w-5 h-5"></i>
+                                        <i data-lucide="book-open" class="w-5 h-5 text-green-400"></i>
                                         <span>Create Course</span>
+                                    </button>
+                                    <button onclick="createBlogPost()" class="w-full py-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-3 px-4">
+                                        <i data-lucide="newspaper" class="w-5 h-5 text-cyan-400"></i>
+                                        <span>Create Blog Post</span>
                                     </button>
                                 </div>
                             </div>
@@ -1249,7 +1501,41 @@
                 `;
                 lucide.createIcons();
             } catch (error) {
-                container.innerHTML = `<div class="text-red-400 text-center py-20">${error.message}</div>`;
+                console.error('Admin dashboard error:', error);
+                container.innerHTML = `
+                    <div class="animate-fade-in">
+                        <div class="text-center py-20">
+                            <i data-lucide="shield-alert" class="w-16 h-16 mx-auto mb-4 text-red-400"></i>
+                            <h2 class="text-xl font-bold text-red-400 mb-2">Admin Access Error</h2>
+                            <p class="text-slate-400 mb-4">${error.message}</p>
+                            <button onclick="checkAdminStatus()" class="btn-primary px-6 py-2 rounded-lg">Check Admin Status</button>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+            }
+        }
+        
+        async function createBlogPost() {
+            const title = prompt('Enter blog post title:');
+            if (!title) return;
+            const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+            const content = prompt('Enter blog post content:');
+            if (!content) return;
+            const category = prompt('Enter category (optional):') || 'General';
+            
+            try {
+                const response = await apiCall('/admin/blog/posts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ title, slug, content, category, published: 'true' })
+                });
+                if (response.ok) {
+                    showToast('Blog post created!', 'success');
+                    renderAdmin();
+                }
+            } catch (error) {
+                showToast(error.message, 'error');
             }
         }
 
