@@ -1,8 +1,6 @@
 """
 Pipways - Forex Trading Journal API v3.0
-Complete implementation with Admin Dashboard, Blog, Courses, AI Integration, RBAC
-Fixed database connection verification and uploads directory creation
-Fixed CORS and login issues for Render deployment
+CRITICAL FIX: React SPA + FastAPI 405 errors on Render
 """
 
 import os
@@ -21,7 +19,7 @@ import httpx
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse
+from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr, Field
 from passlib.context import CryptContext
@@ -259,7 +257,6 @@ async def init_db_pool():
             }
         )
         
-        # Verify the pool actually works
         async with db_pool.acquire() as conn:
             result = await conn.fetchval("SELECT 1")
             if result == 1:
@@ -424,7 +421,7 @@ def rate_limit(key: str, max_requests: int = 100, window_seconds: int = 60) -> b
     return True
 
 # =============================================================================
-# FASTAPI APPLICATION - CORS FIXED
+# FASTAPI APPLICATION
 # =============================================================================
 
 @asynccontextmanager
@@ -446,19 +443,17 @@ app = FastAPI(
 )
 
 # =============================================================================
-# CORS MIDDLEWARE - CRITICAL FIX FOR RENDER
+# CRITICAL FIX #1: CORS MIDDLEWARE FIRST
 # =============================================================================
 
-# IMPORTANT: CORS middleware must be added BEFORE any routes
-# and must explicitly allow OPTIONS for preflight requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins temporarily for debugging
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],  # Explicitly include OPTIONS
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
+    allow_headers=["*"],
     expose_headers=["*"],
-    max_age=3600,  # Cache preflight for 1 hour
+    max_age=86400,
 )
 
 # Create uploads directory BEFORE mounting StaticFiles
@@ -467,6 +462,15 @@ os.makedirs("uploads/blog", exist_ok=True)
 
 # Mount static files
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+# =============================================================================
+# CRITICAL FIX #2: API ROUTES MUST COME BEFORE SPA CATCH-ALL
+# =============================================================================
+
+# Root endpoint
+@app.get("/")
+async def root():
+    return {"status": "ok", "message": "Pipways API v3.0 - Use /api/auth/login"}
 
 # =============================================================================
 # HEALTH & INFO ENDPOINTS
@@ -517,7 +521,7 @@ async def api_info():
     }
 
 # =============================================================================
-# AUTHENTICATION ENDPOINTS - FIXED FOR CORS/REDIRECT ISSUES
+# CRITICAL FIX #3: AUTH ENDPOINTS WITH EXPLICIT METHOD HANDLING
 # =============================================================================
 
 @app.post("/api/auth/register", response_model=TokenResponse)
@@ -552,13 +556,34 @@ async def register(user_data: UserRegister):
             }
         )
 
-# FIXED LOGIN - Explicit POST handler with OPTIONS support
+# CRITICAL: Handle both with and without trailing slash
 @app.post("/api/auth/login", response_model=TokenResponse)
 async def login(login_data: UserLogin):
-    """
-    Login endpoint - requires POST with JSON body:
-    {"email": "user@example.com", "password": "password"}
-    """
+    """Login endpoint"""
+    return await _handle_login(login_data)
+
+@app.post("/api/auth/login/", response_model=TokenResponse)
+async def login_slash(login_data: UserLogin):
+    """Login endpoint with trailing slash"""
+    return await _handle_login(login_data)
+
+# Handle GET requests to login endpoint gracefully
+@app.get("/api/auth/login")
+async def login_get():
+    raise HTTPException(
+        status_code=405,
+        detail="Method Not Allowed. Use POST with JSON body: {'email': 'user@example.com', 'password': 'password'}"
+    )
+
+@app.get("/api/auth/login/")
+async def login_get_slash():
+    raise HTTPException(
+        status_code=405,
+        detail="Method Not Allowed. Use POST with JSON body: {'email': 'user@example.com', 'password': 'password'}"
+    )
+
+async def _handle_login(login_data: UserLogin):
+    """Shared login logic"""
     async with db_pool.acquire() as conn:
         user = await conn.fetchrow(
             "SELECT * FROM users WHERE email = $1",
@@ -603,17 +628,6 @@ async def login(login_data: UserLogin):
                 "avatar_url": user["avatar_url"]
             }
         )
-
-# Debug endpoint to check what method is being received
-@app.api_route("/api/auth/login-test", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"])
-async def login_test(request: Request):
-    """Debug endpoint to see what method is being received"""
-    return {
-        "method_received": request.method,
-        "url": str(request.url),
-        "headers": dict(request.headers),
-        "message": f"Received {request.method} request"
-    }
 
 @app.post("/api/admin/login", response_model=TokenResponse)
 async def admin_login(login_data: AdminLogin):
@@ -1779,24 +1793,27 @@ async def admin_dashboard_stats(current_user: dict = Depends(get_admin_user)):
         }
 
 # =============================================================================
-# STATIC FILES & SPA
+# CRITICAL FIX #4: SPA CATCH-ALL MUST BE LAST AND HANDLE ALL METHODS
 # =============================================================================
 
-@app.get("/", response_class=HTMLResponse)
-async def serve_spa():
-    try:
-        with open("index.html", "r") as f:
-            return f.read()
-    except FileNotFoundError:
-        return HTMLResponse(content="<h1>Pipways API v3.0</h1><p>Frontend not built yet.</p>")
+# This is the problem - the SPA catch-all route was catching API requests!
+# We need to ensure API routes are registered BEFORE this
 
 @app.get("/{path:path}", response_class=HTMLResponse)
 async def serve_spa_routes(path: str):
+    """
+    Serve React SPA for all non-API routes.
+    This MUST be defined AFTER all API routes.
+    """
+    # Don't catch API routes
+    if path.startswith("api/") or path.startswith("health") or path.startswith("uploads/"):
+        raise HTTPException(status_code=404, detail="API endpoint not found")
+    
     try:
         with open("index.html", "r") as f:
             return f.read()
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Page not found")
+        return HTMLResponse(content="<h1>Pipways API v3.0</h1><p>Frontend not built yet. API is running.</p>")
 
 # =============================================================================
 # MAIN ENTRY POINT
