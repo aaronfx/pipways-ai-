@@ -1,7 +1,7 @@
 """
 Pipways - Forex Trading Journal API v3.0
 Complete implementation with Admin Dashboard, Blog, Courses, AI Integration, RBAC
-Fixed database connection verification
+Fixed database connection verification and uploads directory creation
 """
 
 import os
@@ -435,6 +435,11 @@ def rate_limit(key: str, max_requests: int = 100, window_seconds: int = 60) -> b
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Create uploads directory on startup
+    os.makedirs("uploads", exist_ok=True)
+    os.makedirs("uploads/blog", exist_ok=True)
+    logger.info("Uploads directories created/verified")
+    
     await init_db_pool()
     yield
     await close_db_pool()
@@ -460,6 +465,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# CRITICAL FIX: Create uploads directory BEFORE mounting StaticFiles
+os.makedirs("uploads", exist_ok=True)
+os.makedirs("uploads/blog", exist_ok=True)
+
+# Now mount static files after ensuring directory exists
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # =============================================================================
 # HEALTH & INFO ENDPOINTS - FIXED
@@ -1762,8 +1774,6 @@ async def admin_dashboard_stats(current_user: dict = Depends(get_admin_user)):
 # =============================================================================
 # STATIC FILES & SPA
 # =============================================================================
-
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_spa():
