@@ -373,13 +373,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Pipways API", description="Forex Trading Journal and Educational Platform", version="2.0.0", lifespan=lifespan)
 
-# CORS Configuration
-origins = ["http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:3000", "http://127.0.0.1:8000",
-           "https://pipways-web.onrender.com", "https://pipways-web-nhem.onrender.com", "https://www.pipways.com", "https://pipways.com"]
-if FRONTEND_URL:
-    origins.append(FRONTEND_URL)
+# CORS Configuration - Allow all origins for debugging
+origins = ["*"]
+if FRONTEND_URL and FRONTEND_URL != "*":
+    origins = ["http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:3000", "http://127.0.0.1:8000",
+               "https://pipways-web.onrender.com", "https://pipways-web-nhem.onrender.com", 
+               "https://www.pipways.com", "https://pipways.com", FRONTEND_URL]
 
-app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"], expose_headers=["*"])
 
 # Security headers middleware
 @app.middleware("http")
