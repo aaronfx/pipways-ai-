@@ -356,6 +356,25 @@ async def insert_sample_data(conn):
              'Risk management is crucial for trading success...', 'Essential risk management tips', 'risk', TRUE)
         """)
 
+    # Create default admin user if not exists
+    admin_exists = await conn.fetchval("SELECT id FROM users WHERE email = 'admin@pipways.com'")
+    if not admin_exists:
+        from passlib.context import CryptContext
+        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        hashed_password = pwd_context.hash("admin123")
+        
+        admin_id = await conn.fetchval(
+            """INSERT INTO users (name, email, password_hash, is_admin, subscription_status, trial_ends_at) 
+               VALUES ($1, $2, $3, $4, $5, $6) RETURNING id""",
+            "Admin", "admin@pipways.com", hashed_password, True, "active", 
+            datetime.utcnow() + timedelta(days=365*10)  # 10 year trial for admin
+        )
+        logger.info(f"Default admin user created with ID: {admin_id}")
+    else:
+        # Ensure admin user has admin privileges
+        await conn.execute("UPDATE users SET is_admin = TRUE WHERE email = 'admin@pipways.com'")
+        logger.info("Default admin user already exists, ensured admin privileges")
+
 # =============================================================================
 # LIFESPAN CONTEXT
 # =============================================================================
