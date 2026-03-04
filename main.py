@@ -1,6 +1,6 @@
 """
 Pipways - Forex Trading Journal API v3.0
-SQLite Backend (No PostgreSQL needed) - Complete Working Version
+Complete implementation with Admin Dashboard, Blog, Courses, AI Integration, RBAC
 """
 
 import os
@@ -8,24 +8,29 @@ import re
 import json
 import base64
 import logging
-import io
-import uuid
-import sqlite3
 import hashlib
+import io
+import csv
+import uuid
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Union
-from contextlib import asynccontextmanager, contextmanager
-from pathlib import Path
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from functools import wraps
+from enum import Enum
 
+import asyncpg
 import httpx
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Request, status
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Header, status, Request, BackgroundTasks, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse, Response
+from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, validator
+from passlib.context import CryptContext
 from jose import JWTError, jwt
 from PIL import Image
+import aiofiles
 
 # =============================================================================
 # CONFIGURATION & LOGGING
@@ -38,6 +43,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Environment variables
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/pipways")
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "")
@@ -45,15 +51,18 @@ PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "")
 PAYSTACK_PUBLIC_KEY = os.getenv("PAYSTACK_PUBLIC_KEY", "")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "")
-SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
+DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
 # JWT Configuration
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30
 ADMIN_TOKEN_EXPIRE_HOURS = 24
 
-# Database path
-DATABASE_PATH = os.getenv("DATABASE_PATH", "pipways.db")
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Database pool
+db_pool: Optional[asyncpg.Pool] = None
 
 # In-memory cache
 cache_store: Dict[str, Any] = {}
@@ -64,250 +73,6 @@ rate_limit_store: Dict[str, List[datetime]] = {}
 
 # Token blacklist (for logout)
 token_blacklist: set = set()
-
-# =============================================================================
-# SQLITE DATABASE SETUP (From your Tkinter code, adapted for FastAPI)
-# =============================================================================
-
-def get_db_connection():
-    """Get SQLite database connection"""
-    conn = sqlite3.connect(DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-@contextmanager
-def get_db():
-    """Context manager for database connections"""
-    conn = get_db_connection()
-    try:
-        yield conn
-    finally:
-        conn.close()
-
-def init_db():
-    """Initialize SQLite database with all tables"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # Users table (from your Tkinter code, enhanced)
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        full_name TEXT,
-        phone TEXT,
-        country TEXT,
-        role TEXT DEFAULT 'user',
-        is_active BOOLEAN DEFAULT 1,
-        avatar_url TEXT,
-        login_attempts INTEGER DEFAULT 0,
-        locked_until TIMESTAMP,
-        last_login_at TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
-
-    # User settings table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS user_settings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        settings_json TEXT DEFAULT '{}',
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    )
-    """)
-
-    # Trades table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS trades (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        account_id INTEGER DEFAULT 1,
-        symbol TEXT NOT NULL,
-        trade_type TEXT NOT NULL,
-        entry_price REAL NOT NULL,
-        exit_price REAL,
-        stop_loss REAL,
-        take_profit REAL,
-        position_size REAL,
-        lot_size REAL,
-        strategy TEXT,
-        timeframe TEXT,
-        setup_type TEXT,
-        entry_date TIMESTAMP NOT NULL,
-        exit_date TIMESTAMP,
-        emotions TEXT,
-        notes TEXT,
-        lessons_learned TEXT,
-        tags TEXT DEFAULT '[]',
-        status TEXT DEFAULT 'open',
-        profit_loss REAL,
-        ai_analysis TEXT,
-        screenshots TEXT DEFAULT '[]',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    )
-    """)
-
-    # Accounts table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS accounts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        name TEXT DEFAULT 'Main Account',
-        balance REAL DEFAULT 0,
-        currency TEXT DEFAULT 'USD',
-        is_active BOOLEAN DEFAULT 1,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    )
-    """)
-
-    # Courses table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS courses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        instructor_id INTEGER,
-        title TEXT NOT NULL,
-        slug TEXT UNIQUE NOT NULL,
-        description TEXT NOT NULL,
-        short_description TEXT,
-        thumbnail_url TEXT,
-        preview_video_url TEXT,
-        category TEXT,
-        level TEXT DEFAULT 'beginner',
-        price REAL DEFAULT 0,
-        duration_hours INTEGER DEFAULT 0,
-        is_published BOOLEAN DEFAULT 0,
-        is_featured BOOLEAN DEFAULT 0,
-        seo_title TEXT,
-        seo_description TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (instructor_id) REFERENCES users(id) ON DELETE SET NULL
-    )
-    """)
-
-    # Course modules table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS course_modules (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        course_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        description TEXT,
-        sort_order INTEGER DEFAULT 0,
-        is_published BOOLEAN DEFAULT 1,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
-    )
-    """)
-
-    # Course lessons table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS course_lessons (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        module_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        description TEXT,
-        content TEXT,
-        video_url TEXT,
-        video_duration INTEGER DEFAULT 0,
-        is_preview BOOLEAN DEFAULT 0,
-        sort_order INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (module_id) REFERENCES course_modules(id) ON DELETE CASCADE
-    )
-    """)
-
-    # User enrollments table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS user_enrollments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        course_id INTEGER NOT NULL,
-        payment_status TEXT DEFAULT 'pending',
-        progress_percent INTEGER DEFAULT 0,
-        enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
-        UNIQUE(user_id, course_id)
-    )
-    """)
-
-    # Lesson progress table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS lesson_progress (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        lesson_id INTEGER NOT NULL,
-        is_completed BOOLEAN DEFAULT 0,
-        watch_time_seconds INTEGER DEFAULT 0,
-        completed_at TIMESTAMP,
-        last_watched_at TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (lesson_id) REFERENCES course_lessons(id) ON DELETE CASCADE,
-        UNIQUE(user_id, lesson_id)
-    )
-    """)
-
-    # Blog posts table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS blog_posts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        author_id INTEGER,
-        title TEXT NOT NULL,
-        slug TEXT UNIQUE NOT NULL,
-        excerpt TEXT,
-        content TEXT NOT NULL,
-        featured_image TEXT,
-        category TEXT,
-        tags TEXT DEFAULT '[]',
-        seo_title TEXT,
-        seo_description TEXT,
-        seo_keywords TEXT,
-        status TEXT DEFAULT 'draft',
-        view_count INTEGER DEFAULT 0,
-        published_at TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
-    )
-    """)
-
-    # Blog media table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS blog_media (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uploaded_by INTEGER,
-        filename TEXT NOT NULL,
-        original_name TEXT,
-        file_path TEXT NOT NULL,
-        file_size INTEGER,
-        mime_type TEXT,
-        alt_text TEXT,
-        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
-    )
-    """)
-
-    conn.commit()
-
-    # Create default admin user if none exists
-    cursor.execute("SELECT id FROM users WHERE role = 'admin' LIMIT 1")
-    if not cursor.fetchone():
-        admin_hash = hashlib.sha256("admin123".encode()).hexdigest()
-        cursor.execute("""
-            INSERT INTO users (email, password_hash, full_name, role, is_active)
-            VALUES (?, ?, ?, ?, ?)
-        """, ("admin@pipways.com", admin_hash, "Administrator", "admin", 1))
-        conn.commit()
-        logger.info("Created default admin user: admin@pipways.com / admin123")
-
-    conn.close()
-    logger.info("SQLite database initialized successfully")
 
 # =============================================================================
 # ROLES & PERMISSIONS
@@ -368,7 +133,7 @@ class TokenResponse(BaseModel):
     user: Dict[str, Any]
 
 class TradeCreate(BaseModel):
-    account_id: int = 1
+    account_id: int
     symbol: str
     trade_type: str = Field(..., pattern="^(BUY|SELL)$")
     entry_price: float = Field(..., gt=0)
@@ -478,16 +243,69 @@ class ChartAnalysisRequest(BaseModel):
     timeframe: Optional[str] = None
 
 # =============================================================================
-# AUTHENTICATION HELPERS (From your Tkinter code, adapted)
+# DATABASE CONNECTION
+# =============================================================================
+
+async def init_db_pool():
+    """Initialize database connection pool"""
+    global db_pool
+    try:
+        db_pool = await asyncpg.create_pool(
+            DATABASE_URL,
+            min_size=5,
+            max_size=20,
+            command_timeout=60
+        )
+        logger.info("Database pool initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database pool: {e}")
+        raise
+
+async def close_db_pool():
+    """Close database connection pool"""
+    global db_pool
+    if db_pool:
+        await db_pool.close()
+        logger.info("Database pool closed")
+
+async def create_default_admin():
+    """Create default admin user on startup if not exists"""
+    global db_pool
+    if db_pool is None:
+        logger.warning("Cannot create admin: database pool not initialized")
+        return
+    
+    try:
+        async with db_pool.acquire() as conn:
+            existing = await conn.fetchval("SELECT id FROM users WHERE email = 'admin@pipways.com'")
+            if not existing:
+                password_hash = pwd_context.hash("admin123")
+                await conn.execute("""
+                    INSERT INTO users (email, password_hash, full_name, role, is_active, email_verified)
+                    VALUES ('admin@pipways.com', $1, 'Admin User', 'admin', TRUE, TRUE)
+                """, password_hash)
+                logger.info("Default admin user created: admin@pipways.com / admin123")
+            else:
+                logger.info("Admin user already exists")
+    except Exception as e:
+        logger.error(f"Failed to create admin user: {e}")
+
+async def get_db():
+    """Get database connection from pool"""
+    if db_pool is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    async with db_pool.acquire() as conn:
+        yield conn
+
+# =============================================================================
+# AUTHENTICATION HELPERS
 # =============================================================================
 
 def hash_password(password: str) -> str:
-    """Simple SHA256 hash (from your Tkinter code)"""
-    return hashlib.sha256(password.encode()).hexdigest()
+    return pwd_context.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify password against hash"""
-    return hash_password(plain_password) == hashed_password
+    return pwd_context.verify(plain_password, hashed_password)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
@@ -508,31 +326,33 @@ def create_admin_token(data: dict) -> str:
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
     token = credentials.credentials
-
+    
     if token in token_blacklist:
         raise HTTPException(status_code=401, detail="Token has been revoked")
-
+    
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        # FIXED: Added explicit expiration verification
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": True})
         user_id = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-
-        with get_db() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT id, email, full_name, role, avatar_url, is_active FROM users WHERE id = ?",
-                (int(user_id),)
+        
+        async with db_pool.acquire() as conn:
+            user = await conn.fetchrow(
+                "SELECT id, email, full_name, role, avatar_url, is_active FROM users WHERE id = $1",
+                int(user_id)
             )
-            user = cursor.fetchone()
-
             if user is None:
                 raise HTTPException(status_code=401, detail="User not found")
             if not user["is_active"]:
                 raise HTTPException(status_code=401, detail="User account is deactivated")
             return dict(user)
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError as e:
+        logger.warning(f"JWT decode error: {e}")
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    except ValueError as e:
+        logger.warning(f"Token value error: {e}")
+        raise HTTPException(status_code=401, detail="Invalid token format")
 
 async def get_admin_user(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
     user = await get_current_user(credentials)
@@ -557,31 +377,32 @@ def generate_slug(text: str) -> str:
 def format_datetime(dt: Optional[datetime]) -> Optional[str]:
     return dt.isoformat() if dt else None
 
-def save_upload_file_sync(upload_file: UploadFile, folder: str) -> str:
-    """Save uploaded file synchronously (SQLite is sync)"""
-    upload_dir = f"uploads/{folder}"
+async def save_upload_file(upload_file: UploadFile, folder: str) -> str:
+    """Save uploaded file and return the file path"""
+    # FIXED: Use absolute path based on current working directory
+    base_upload_dir = os.path.join(os.getcwd(), "uploads")
+    upload_dir = os.path.join(base_upload_dir, folder)
     os.makedirs(upload_dir, exist_ok=True)
-
+    
     file_ext = os.path.splitext(upload_file.filename)[1]
     unique_filename = f"{uuid.uuid4()}{file_ext}"
     file_path = os.path.join(upload_dir, unique_filename)
-
-    # Read and write file
-    content = upload_file.file.read()
-    with open(file_path, 'wb') as f:
-        f.write(content)
-
+    
+    content = await upload_file.read()
+    async with aiofiles.open(file_path, 'wb') as f:
+        await f.write(content)
+    
     return file_path
 
 def process_image(image_data: bytes, max_size: tuple = (1920, 1080), quality: int = 85) -> bytes:
     """Process and optimize image"""
     img = Image.open(io.BytesIO(image_data))
-
+    
     if img.mode in ('RGBA', 'P'):
         img = img.convert('RGB')
-
+    
     img.thumbnail(max_size, Image.Resampling.LANCZOS)
-
+    
     output = io.BytesIO()
     img.save(output, format='JPEG', quality=quality, optimize=True)
     return output.getvalue()
@@ -607,17 +428,18 @@ def rate_limit(key: str, max_requests: int = 100, window_seconds: int = 60) -> b
     now = datetime.utcnow()
     if key not in rate_limit_store:
         rate_limit_store[key] = []
-
+    
     rate_limit_store[key] = [
         t for t in rate_limit_store[key]
         if (now - t).seconds < window_seconds
     ]
-
+    
     if len(rate_limit_store[key]) >= max_requests:
         return False
-
+    
     rate_limit_store[key].append(now)
     return True
+
 
 # =============================================================================
 # FASTAPI APPLICATION
@@ -625,17 +447,10 @@ def rate_limit(key: str, max_requests: int = 100, window_seconds: int = 60) -> b
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create uploads directory on startup
-    os.makedirs("uploads", exist_ok=True)
-    os.makedirs("uploads/blog", exist_ok=True)
-
-    # Initialize SQLite database
-    init_db()
-
-    logger.info("Application startup complete")
+    await init_db_pool()
+    await create_default_admin()  # FIXED: Create admin on startup
     yield
-
-    logger.info("Application shutdown")
+    await close_db_pool()
 
 app = FastAPI(
     title="Pipways API",
@@ -644,71 +459,37 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# =============================================================================
-# CORS MIDDLEWARE - MUST BE FIRST
-# =============================================================================
+# FIXED: CORS middleware with proper origin validation
+allow_origins = ["http://localhost:3000", "http://localhost:8000", 
+                 "http://127.0.0.1:3000", "http://127.0.0.1:8000"]
+if FRONTEND_URL and FRONTEND_URL.strip():
+    allow_origins.append(FRONTEND_URL.strip())
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allow_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
+    allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=86400,
 )
 
-# Create uploads directory BEFORE mounting StaticFiles
-os.makedirs("uploads", exist_ok=True)
-os.makedirs("uploads/blog", exist_ok=True)
-
-# Mount static files
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
-
 # =============================================================================
-# GLOBAL OPTIONS HANDLER FOR PREFLIGHT
+# HEALTH & INFO ENDPOINTS
 # =============================================================================
-
-@app.options("/{rest_of_path:path}")
-async def global_preflight_handler(request: Request, rest_of_path: str = ""):
-    """
-    Handle ALL OPTIONS preflight requests globally. This ensures CORS preflight never fails with 405.
-    """
-    origin = request.headers.get("origin", "*")
-    requested_method = request.headers.get("access-control-request-method", "*")
-    requested_headers = request.headers.get("access-control-request-headers", "*")
-
-    response = Response(status_code=204)  # No Content
-    response.headers["Access-Control-Allow-Origin"] = origin
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD"
-    response.headers["Access-Control-Allow-Headers"] = requested_headers if requested_headers != "*" else "*"
-    response.headers["Access-Control-Allow-Credentials"] = "true"
-    response.headers["Access-Control-Max-Age"] = "86400"
-
-    logger.info(f"Preflight request for: {request.url.path} | Method: {requested_method}")
-    return response
-
-# =============================================================================
-# ROOT & HEALTH ENDPOINTS
-# =============================================================================
-
-@app.get("/")
-async def root():
-    return {"status": "ok", "message": "Pipways API v3.0 - Use POST /api/auth/login"}
 
 @app.get("/health")
 async def health_check():
+    db_status = "not_connected"
     try:
-        with get_db() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1")
-            result = cursor.fetchone()
-            db_status = "connected" if result else "error"
+        if db_pool is not None:
+            async with db_pool.acquire() as conn:
+                result = await conn.fetchval("SELECT 1")
+                db_status = "connected" if result == 1 else "error"
     except Exception as e:
-        db_status = f"error: {str(e)[:100]}"
-
+        db_status = f"error: {str(e)[:50]}"
+    
     return {
-        "status": "healthy" if db_status == "connected" else "unhealthy",
+        "status": "healthy",
         "version": "3.0.0",
         "database": db_status,
         "timestamp": datetime.utcnow().isoformat()
@@ -720,55 +501,38 @@ async def api_info():
         "name": "Pipways API",
         "version": "3.0.0",
         "features": [
-            "trading_journal", "analytics", "ai_analysis", "courses", "blog", "admin_dashboard", "rbac"
+            "trading_journal", "analytics", "ai_analysis",
+            "courses", "blog", "admin_dashboard", "rbac"
         ]
     }
 
 # =============================================================================
-# AUTHENTICATION ENDPOINTS (From your Tkinter code, adapted for FastAPI)
+# AUTHENTICATION ENDPOINTS
 # =============================================================================
 
 @app.post("/api/auth/register", response_model=TokenResponse)
-@app.post("/api/auth/register/", response_model=TokenResponse)
 async def register(user_data: UserRegister):
-    """
-    Register endpoint - adapted from your Tkinter register() function.
-    Handles both /register and /register/ to avoid trailing slash issues.
-    """
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        # Check if email exists (like your username check)
-        cursor.execute("SELECT id FROM users WHERE email = ?", (user_data.email,))
-        if cursor.fetchone():
+    async with db_pool.acquire() as conn:
+        existing = await conn.fetchval("SELECT id FROM users WHERE email = $1", user_data.email)
+        if existing:
             raise HTTPException(status_code=400, detail="Email already registered")
-
-        # Hash password (from your Tkinter code)
+        
         password_hash = hash_password(user_data.password)
-
-        # Insert user (like your INSERT INTO user)
-        cursor.execute("""
-            INSERT INTO users (email, password_hash, full_name, phone, country, role)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (user_data.email, password_hash, user_data.full_name,
-              user_data.phone, user_data.country, "user"))
-
-        user_id = cursor.lastrowid
-
-        # Create user settings
-        cursor.execute("INSERT INTO user_settings (user_id) VALUES (?)", (user_id,))
-
-        # Create default account for user
-        cursor.execute("""
-            INSERT INTO accounts (user_id, name, balance, currency)
-            VALUES (?, ?, ?, ?)
-        """, (user_id, "Main Account", 10000.0, "USD"))
-
-        conn.commit()
-
-        # Create access token
+        
+        user_id = await conn.fetchval("""
+            INSERT INTO users (email, password_hash, full_name, phone, country)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id
+        """, user_data.email, password_hash, user_data.full_name, user_data.phone, user_data.country)
+        
+        # FIXED: Added ON CONFLICT for user_settings
+        await conn.execute("""
+            INSERT INTO user_settings (user_id) VALUES ($1)
+            ON CONFLICT (user_id) DO NOTHING
+        """, user_id)
+        
         access_token = create_access_token({"sub": str(user_id), "role": "user"})
-
+        
         return TokenResponse(
             access_token=access_token,
             expires_in=ACCESS_TOKEN_EXPIRE_DAYS * 86400,
@@ -781,45 +545,40 @@ async def register(user_data: UserRegister):
         )
 
 @app.post("/api/auth/login", response_model=TokenResponse)
-@app.post("/api/auth/login/", response_model=TokenResponse)
 async def login(login_data: UserLogin):
-    """
-    Login endpoint - adapted from your Tkinter login() function.
-    Handles both /login and /login/ to avoid trailing slash redirect issues.
-    """
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        # Query user (like your SELECT * FROM user WHERE username=? AND password=?)
-        cursor.execute("""
-            SELECT * FROM users WHERE email = ?
-        """, (login_data.email,))
-
-        user = cursor.fetchone()
-
-        # Check if user exists and password matches
-        if not user or not verify_password(login_data.password, user["password_hash"]):
+    async with db_pool.acquire() as conn:
+        user = await conn.fetchrow(
+            "SELECT * FROM users WHERE email = $1",
+            login_data.email
+        )
+        
+        if not user:
             raise HTTPException(status_code=401, detail="Invalid credentials")
-
-        # Check if account is locked
-        if user["locked_until"]:
-            locked_until = datetime.fromisoformat(user["locked_until"]) if isinstance(user["locked_until"], str) else user["locked_until"]
-            if locked_until > datetime.utcnow():
-                remaining = (locked_until - datetime.utcnow()).seconds // 60
-                raise HTTPException(status_code=401, detail=f"Account locked. Try again in {remaining} minutes")
-
-        # Update login info
-        cursor.execute("""
-            UPDATE users
-            SET login_attempts = 0, locked_until = NULL, last_login_at = ?
-            WHERE id = ?
-        """, (datetime.utcnow().isoformat(), user["id"]))
-
-        conn.commit()
-
-        # Create access token
+        
+        if user["locked_until"] and user["locked_until"] > datetime.utcnow():
+            remaining = (user["locked_until"] - datetime.utcnow()).seconds // 60
+            raise HTTPException(status_code=401, detail=f"Account locked. Try again in {remaining} minutes")
+        
+        if not verify_password(login_data.password, user["password_hash"]):
+            new_attempts = (user["login_attempts"] or 0) + 1
+            locked_until = None
+            if new_attempts >= 5:
+                locked_until = datetime.utcnow() + timedelta(minutes=30)
+            
+            await conn.execute("""
+                UPDATE users SET login_attempts = $1, locked_until = $2 WHERE id = $3
+            """, new_attempts, locked_until, user["id"])
+            
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        await conn.execute("""
+            UPDATE users 
+            SET login_attempts = 0, locked_until = NULL, last_login_at = $1
+            WHERE id = $2
+        """, datetime.utcnow(), user["id"])
+        
         access_token = create_access_token({"sub": str(user["id"]), "role": user["role"]})
-
+        
         return TokenResponse(
             access_token=access_token,
             expires_in=ACCESS_TOKEN_EXPIRE_DAYS * 86400,
@@ -833,23 +592,18 @@ async def login(login_data: UserLogin):
         )
 
 @app.post("/api/admin/login", response_model=TokenResponse)
-@app.post("/api/admin/login/", response_model=TokenResponse)
 async def admin_login(login_data: AdminLogin):
-    """Admin login - handles both trailing slash variations"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            SELECT * FROM users WHERE email = ? AND role = 'admin'
-        """, (login_data.email,))
-
-        user = cursor.fetchone()
-
+    async with db_pool.acquire() as conn:
+        user = await conn.fetchrow(
+            "SELECT * FROM users WHERE email = $1 AND role = 'admin'",
+            login_data.email
+        )
+        
         if not user or not verify_password(login_data.password, user["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid admin credentials")
-
+        
         access_token = create_admin_token({"sub": str(user["id"]), "role": "admin"})
-
+        
         return TokenResponse(
             access_token=access_token,
             expires_in=ADMIN_TOKEN_EXPIRE_HOURS * 3600,
@@ -862,91 +616,49 @@ async def admin_login(login_data: AdminLogin):
         )
 
 @app.post("/api/auth/logout")
-@app.post("/api/auth/logout/")
 async def logout(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
-    """Logout - handles both trailing slash variations"""
     token = credentials.credentials
     token_blacklist.add(token)
     return {"message": "Logged out successfully"}
 
 @app.get("/api/auth/me")
-@app.get("/api/auth/me/")
 async def get_me(current_user: dict = Depends(get_current_user)):
-    """Get current user - handles both trailing slash variations"""
     return {"user": current_user}
-
-# Debug endpoint
-@app.api_route("/api/auth/login-debug", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"])
-async def login_debug(request: Request):
-    """Debug endpoint to diagnose request issues"""
-    body = None
-    if request.method in ["POST", "PUT", "PATCH"]:
-        try:
-            body = await request.json()
-        except:
-            body = await request.body()
-
-    return {
-        "method_received": request.method,
-        "url": str(request.url),
-        "headers": dict(request.headers),
-        "query_params": dict(request.query_params),
-        "body": body,
-        "client": request.client.host if request.client else None
-    }
 
 # =============================================================================
 # TRADING ENDPOINTS
 # =============================================================================
 
 @app.post("/api/trades")
-@app.post("/api/trades/")
 async def create_trade(trade: TradeCreate, current_user: dict = Depends(get_current_user)):
-    """Create trade - handles both trailing slash variations"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        # Verify account exists
-        cursor.execute(
-            "SELECT id FROM accounts WHERE id = ? AND user_id = ?",
-            (trade.account_id, current_user["id"])
+    async with db_pool.acquire() as conn:
+        account = await conn.fetchrow(
+            "SELECT id FROM accounts WHERE id = $1 AND user_id = $2",
+            trade.account_id, current_user["id"]
         )
-        if not cursor.fetchone():
+        if not account:
             raise HTTPException(status_code=404, detail="Account not found")
-
-        # Calculate profit/loss if trade is closed
-        profit_loss = None
-        if trade.exit_price:
-            if trade.trade_type == "BUY":
-                profit_loss = (trade.exit_price - trade.entry_price) * (trade.position_size or 1)
-            else:
-                profit_loss = (trade.entry_price - trade.exit_price) * (trade.position_size or 1)
-
-        cursor.execute("""
+        
+        trade_id = await conn.fetchval("""
             INSERT INTO trades (
                 user_id, account_id, symbol, trade_type, entry_price, exit_price,
                 stop_loss, take_profit, position_size, lot_size, strategy,
                 timeframe, setup_type, entry_date, exit_date, emotions, notes,
-                lessons_learned, tags, status, profit_loss
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
+                lessons_learned, tags, status
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+            RETURNING id
+        """,
             current_user["id"], trade.account_id, trade.symbol, trade.trade_type,
             trade.entry_price, trade.exit_price, trade.stop_loss, trade.take_profit,
             trade.position_size, trade.lot_size, trade.strategy, trade.timeframe,
-            trade.setup_type, trade.entry_date.isoformat(),
-            trade.exit_date.isoformat() if trade.exit_date else None,
-            trade.emotions, trade.notes, trade.lessons_learned,
-            json.dumps(trade.tags), "closed" if trade.exit_price else "open",
-            profit_loss
-        ))
-
-        trade_id = cursor.lastrowid
-        conn.commit()
-
+            trade.setup_type, trade.entry_date, trade.exit_date, trade.emotions,
+            trade.notes, trade.lessons_learned, json.dumps(trade.tags),
+            "closed" if trade.exit_price else "open"
+        )
+        
         return {"id": trade_id, "message": "Trade created successfully"}
 
 @app.get("/api/trades")
-@app.get("/api/trades/")
 async def list_trades(
     status: Optional[str] = None,
     symbol: Optional[str] = None,
@@ -955,39 +667,36 @@ async def list_trades(
     per_page: int = 20,
     current_user: dict = Depends(get_current_user)
 ):
-    """List trades - handles both trailing slash variations"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        where_clauses = ["user_id = ?"]
+    async with db_pool.acquire() as conn:
+        where_clauses = ["user_id = $1"]
         params = [current_user["id"]]
-
+        param_idx = 2
+        
         if status:
-            where_clauses.append("status = ?")
+            where_clauses.append(f"status = ${param_idx}")
             params.append(status)
+            param_idx += 1
         if symbol:
-            where_clauses.append("symbol LIKE ?")
+            where_clauses.append(f"symbol ILIKE ${param_idx}")
             params.append(f"%{symbol}%")
+            param_idx += 1
         if strategy:
-            where_clauses.append("strategy = ?")
+            where_clauses.append(f"strategy = ${param_idx}")
             params.append(strategy)
-
+            param_idx += 1
+        
         where_sql = " AND ".join(where_clauses)
-
-        # Get total count
-        cursor.execute(f"SELECT COUNT(*) as total FROM trades WHERE {where_sql}", params)
-        total = cursor.fetchone()["total"]
-
-        # Get trades with pagination
-        offset = (page - 1) * per_page
-        cursor.execute(f"""
+        
+        trades = await conn.fetch(f"""
             SELECT * FROM trades WHERE {where_sql}
             ORDER BY entry_date DESC
-            LIMIT ? OFFSET ?
-        """, params + [per_page, offset])
-
-        trades = cursor.fetchall()
-
+            LIMIT ${param_idx} OFFSET ${param_idx + 1}
+        """, *params, per_page, (page - 1) * per_page)
+        
+        total = await conn.fetchval(f"""
+            SELECT COUNT(*) FROM trades WHERE {where_sql}
+        """, *params[:-2])
+        
         return {
             "trades": [dict(t) for t in trades],
             "total": total,
@@ -998,15 +707,11 @@ async def list_trades(
 
 @app.get("/api/trades/{trade_id}")
 async def get_trade(trade_id: int, current_user: dict = Depends(get_current_user)):
-    """Get specific trade"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT * FROM trades WHERE id = ? AND user_id = ?",
-            (trade_id, current_user["id"])
+    async with db_pool.acquire() as conn:
+        trade = await conn.fetchrow(
+            "SELECT * FROM trades WHERE id = $1 AND user_id = $2",
+            trade_id, current_user["id"]
         )
-        trade = cursor.fetchone()
-
         if not trade:
             raise HTTPException(status_code=404, detail="Trade not found")
         return dict(trade)
@@ -1017,68 +722,71 @@ async def update_trade(
     trade_update: TradeUpdate,
     current_user: dict = Depends(get_current_user)
 ):
-    """Update trade"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        cursor.execute(
-            "SELECT id FROM trades WHERE id = ? AND user_id = ?",
-            (trade_id, current_user["id"])
+    async with db_pool.acquire() as conn:
+        existing = await conn.fetchrow(
+            "SELECT id FROM trades WHERE id = $1 AND user_id = $2",
+            trade_id, current_user["id"]
         )
-        if not cursor.fetchone():
+        if not existing:
             raise HTTPException(status_code=404, detail="Trade not found")
-
+        
         update_fields = []
         params = []
-
+        param_idx = 1
+        
         if trade_update.exit_price is not None:
-            update_fields.append("exit_price = ?")
+            update_fields.append(f"exit_price = ${param_idx}")
             params.append(trade_update.exit_price)
+            param_idx += 1
         if trade_update.exit_date is not None:
-            update_fields.append("exit_date = ?")
-            params.append(trade_update.exit_date.isoformat())
+            update_fields.append(f"exit_date = ${param_idx}")
+            params.append(trade_update.exit_date)
+            param_idx += 1
         if trade_update.status is not None:
-            update_fields.append("status = ?")
+            update_fields.append(f"status = ${param_idx}")
             params.append(trade_update.status)
+            param_idx += 1
         if trade_update.emotions is not None:
-            update_fields.append("emotions = ?")
+            update_fields.append(f"emotions = ${param_idx}")
             params.append(trade_update.emotions)
+            param_idx += 1
         if trade_update.notes is not None:
-            update_fields.append("notes = ?")
+            update_fields.append(f"notes = ${param_idx}")
             params.append(trade_update.notes)
+            param_idx += 1
         if trade_update.lessons_learned is not None:
-            update_fields.append("lessons_learned = ?")
+            update_fields.append(f"lessons_learned = ${param_idx}")
             params.append(trade_update.lessons_learned)
+            param_idx += 1
         if trade_update.tags is not None:
-            update_fields.append("tags = ?")
+            update_fields.append(f"tags = ${param_idx}")
             params.append(json.dumps(trade_update.tags))
-
+            param_idx += 1
+        
         if not update_fields:
             raise HTTPException(status_code=400, detail="No fields to update")
-
-        update_fields.append("updated_at = CURRENT_TIMESTAMP")
+        
+        update_fields.append(f"updated_at = ${param_idx}")
+        params.append(datetime.utcnow())
+        param_idx += 1
+        
         params.extend([trade_id, current_user["id"]])
-
-        cursor.execute(f"""
+        
+        await conn.execute(f"""
             UPDATE trades SET {', '.join(update_fields)}
-            WHERE id = ? AND user_id = ?
-        """, params)
-
-        conn.commit()
+            WHERE id = ${param_idx} AND user_id = ${param_idx + 1}
+        """, *params)
+        
         return {"message": "Trade updated successfully"}
 
 @app.delete("/api/trades/{trade_id}")
 async def delete_trade(trade_id: int, current_user: dict = Depends(get_current_user)):
-    """Delete trade"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "DELETE FROM trades WHERE id = ? AND user_id = ?",
-            (trade_id, current_user["id"])
+    async with db_pool.acquire() as conn:
+        result = await conn.execute(
+            "DELETE FROM trades WHERE id = $1 AND user_id = $2",
+            trade_id, current_user["id"]
         )
-        conn.commit()
-
-        if cursor.rowcount == 0:
+        if result == "DELETE 0":
             raise HTTPException(status_code=404, detail="Trade not found")
         return {"message": "Trade deleted successfully"}
 
@@ -1087,15 +795,10 @@ async def delete_trade(trade_id: int, current_user: dict = Depends(get_current_u
 # =============================================================================
 
 @app.get("/api/analytics/dashboard")
-@app.get("/api/analytics/dashboard/")
 async def get_dashboard_analytics(current_user: dict = Depends(get_current_user)):
-    """Dashboard analytics - handles both trailing slash variations"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        # Overall stats
-        cursor.execute("""
-            SELECT
+    async with db_pool.acquire() as conn:
+        overall = await conn.fetchrow("""
+            SELECT 
                 COUNT(*) as total_trades,
                 SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) as winning_trades,
                 SUM(CASE WHEN profit_loss < 0 THEN 1 ELSE 0 END) as losing_trades,
@@ -1106,53 +809,47 @@ async def get_dashboard_analytics(current_user: dict = Depends(get_current_user)
                 MAX(profit_loss) as max_win,
                 MIN(profit_loss) as max_loss
             FROM trades
-            WHERE user_id = ? AND status = 'closed'
-        """, (current_user["id"],))
-
-        overall = cursor.fetchone()
-
+            WHERE user_id = $1 AND status = 'closed'
+        """, current_user["id"])
+        
         total_trades = overall["total_trades"] or 0
         winning_trades = overall["winning_trades"] or 0
         losing_trades = overall["losing_trades"] or 0
-
+        
         win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
+        
         avg_win = overall["avg_win"] or 0
         avg_loss = abs(overall["avg_loss"] or 0)
         profit_factor = (avg_win * winning_trades) / (avg_loss * losing_trades) if (avg_loss * losing_trades) > 0 else 0
+        
         expectancy = ((win_rate / 100) * avg_win) - ((1 - win_rate / 100) * avg_loss) if total_trades > 0 else 0
-
-        # Monthly performance
-        cursor.execute("""
-            SELECT
-                strftime('%Y-%m', entry_date) as month,
+        
+        monthly_data = await conn.fetch("""
+            SELECT 
+                DATE_TRUNC('month', entry_date) as month,
                 COUNT(*) as trades,
                 SUM(profit_loss) as pnl,
                 SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) as wins
             FROM trades
-            WHERE user_id = ? AND status = 'closed'
-            GROUP BY strftime('%Y-%m', entry_date)
+            WHERE user_id = $1 AND status = 'closed'
+            GROUP BY DATE_TRUNC('month', entry_date)
             ORDER BY month DESC
             LIMIT 12
-        """, (current_user["id"],))
-
-        monthly_data = cursor.fetchall()
-
-        # Strategy performance
-        cursor.execute("""
-            SELECT
+        """, current_user["id"])
+        
+        strategy_performance = await conn.fetch("""
+            SELECT 
                 strategy,
                 COUNT(*) as trades,
                 SUM(profit_loss) as total_pnl,
                 AVG(profit_loss) as avg_pnl,
                 SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as win_rate
             FROM trades
-            WHERE user_id = ? AND status = 'closed' AND strategy IS NOT NULL
+            WHERE user_id = $1 AND status = 'closed' AND strategy IS NOT NULL
             GROUP BY strategy
             ORDER BY total_pnl DESC
-        """, (current_user["id"],))
-
-        strategy_performance = cursor.fetchall()
-
+        """, current_user["id"])
+        
         return {
             "overall": {
                 "total_trades": total_trades,
@@ -1172,36 +869,32 @@ async def get_dashboard_analytics(current_user: dict = Depends(get_current_user)
             "strategy_performance": [dict(s) for s in strategy_performance]
         }
 
+
 # =============================================================================
 # AI ANALYSIS ENDPOINTS
 # =============================================================================
 
 @app.post("/api/ai/analyze-trade")
-@app.post("/api/ai/analyze-trade/")
 async def analyze_trade_with_ai(
     request: AIAnalysisRequest,
     current_user: dict = Depends(get_current_user)
 ):
-    """AI trade analysis - handles both trailing slash variations"""
     if not OPENROUTER_API_KEY:
         raise HTTPException(status_code=503, detail="AI service not configured")
-
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT * FROM trades WHERE id = ? AND user_id = ?
-        """, (request.trade_id, current_user["id"]))
-
-        trade = cursor.fetchone()
-
+    
+    async with db_pool.acquire() as conn:
+        trade = await conn.fetchrow("""
+            SELECT * FROM trades WHERE id = $1 AND user_id = $2
+        """, request.trade_id, current_user["id"])
+        
         if not trade:
             raise HTTPException(status_code=404, detail="Trade not found")
-
+        
         screenshots = json.loads(trade["screenshots"]) if trade["screenshots"] else []
-
+        
         prompt = f"""
         Analyze this forex trade and provide detailed feedback:
-
+        
         Symbol: {trade['symbol']}
         Type: {trade['trade_type']}
         Entry Price: {trade['entry_price']}
@@ -1211,9 +904,9 @@ async def analyze_trade_with_ai(
         Position Size: {trade['position_size'] or 'N/A'}
         Strategy: {trade['strategy'] or 'N/A'}
         Timeframe: {trade['timeframe'] or 'N/A'}
-
+        
         User question: {request.prompt}
-
+        
         Provide analysis covering:
         1. Entry quality and timing
         2. Stop loss placement and risk management
@@ -1222,7 +915,7 @@ async def analyze_trade_with_ai(
         5. Risk-reward ratio evaluation
         6. Areas for improvement
         """
-
+        
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -1240,27 +933,26 @@ async def analyze_trade_with_ai(
                     },
                     timeout=60.0
                 )
-
+                
                 if response.status_code != 200:
                     logger.error(f"OpenRouter error: {response.text}")
                     raise HTTPException(status_code=502, detail="AI service error")
-
+                
                 result = response.json()
                 analysis_text = result["choices"][0]["message"]["content"]
-
+                
                 analysis_data = {
                     "analysis": analysis_text,
                     "model_used": request.model,
                     "analyzed_at": datetime.utcnow().isoformat()
                 }
-
-                cursor.execute("""
-                    UPDATE trades SET ai_analysis = ? WHERE id = ?
-                """, (json.dumps(analysis_data), request.trade_id))
-                conn.commit()
-
+                
+                await conn.execute("""
+                    UPDATE trades SET ai_analysis = $1 WHERE id = $2
+                """, json.dumps(analysis_data), request.trade_id)
+                
                 return analysis_data
-
+                
         except httpx.TimeoutException:
             raise HTTPException(status_code=504, detail="AI service timeout")
         except Exception as e:
@@ -1268,32 +960,30 @@ async def analyze_trade_with_ai(
             raise HTTPException(status_code=500, detail="Failed to analyze trade")
 
 @app.post("/api/ai/analyze-chart")
-@app.post("/api/ai/analyze-chart/")
 async def analyze_chart_with_ai(
     request: ChartAnalysisRequest,
     current_user: dict = Depends(get_current_user)
 ):
-    """AI chart analysis - handles both trailing slash variations"""
     if not OPENROUTER_API_KEY:
         raise HTTPException(status_code=503, detail="AI service not configured")
-
+    
     try:
         image_data = base64.b64decode(request.image_base64.split(",")[-1])
-
+        
         if len(image_data) > 5 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="Image too large (max 5MB)")
-
+        
         processed_image = process_image(image_data, max_size=(1024, 1024), quality=80)
         image_base64 = base64.b64encode(processed_image).decode()
-
+        
         prompt = f"""
         Analyze this forex chart image and provide detailed technical analysis.
-
+        
         Symbol: {request.symbol or 'Unknown'}
         Timeframe: {request.timeframe or 'Unknown'}
-
+        
         {request.prompt}
-
+        
         Please provide:
         1. Key support and resistance levels
         2. Visible chart patterns
@@ -1301,7 +991,7 @@ async def analyze_chart_with_ai(
         4. Potential entry/exit points
         5. Risk management considerations
         """
-
+        
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 "https://openrouter.ai/api/v1/chat/completions",
@@ -1327,20 +1017,20 @@ async def analyze_chart_with_ai(
                 },
                 timeout=60.0
             )
-
+            
             if response.status_code != 200:
                 logger.error(f"OpenRouter error: {response.text}")
                 raise HTTPException(status_code=502, detail="AI service error")
-
+            
             result = response.json()
             analysis_text = result["choices"][0]["message"]["content"]
-
+            
             return {
                 "analysis": analysis_text,
                 "model_used": "anthropic/claude-3.5-sonnet",
                 "analyzed_at": datetime.utcnow().isoformat()
             }
-
+            
     except base64.binascii.Error:
         raise HTTPException(status_code=400, detail="Invalid image data")
     except Exception as e:
@@ -1352,7 +1042,6 @@ async def analyze_chart_with_ai(
 # =============================================================================
 
 @app.get("/api/courses")
-@app.get("/api/courses/")
 async def list_courses(
     category: Optional[str] = None,
     level: Optional[str] = None,
@@ -1360,45 +1049,42 @@ async def list_courses(
     page: int = 1,
     per_page: int = 12
 ):
-    """List courses - handles both trailing slash variations"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        where_clauses = ["is_published = 1"]
+    async with db_pool.acquire() as conn:
+        where_clauses = ["is_published = TRUE"]
         params = []
-
+        param_idx = 1
+        
         if category:
-            where_clauses.append("category = ?")
+            where_clauses.append(f"category = ${param_idx}")
             params.append(category)
+            param_idx += 1
         if level:
-            where_clauses.append("level = ?")
+            where_clauses.append(f"level = ${param_idx}")
             params.append(level)
+            param_idx += 1
         if search:
-            where_clauses.append("(title LIKE ? OR description LIKE ?)")
-            params.extend([f"%{search}%", f"%{search}%"])
-
+            where_clauses.append(f"(title ILIKE ${param_idx} OR description ILIKE ${param_idx})")
+            params.append(f"%{search}%")
+            param_idx += 1
+        
         where_sql = " AND ".join(where_clauses)
-
-        # Get total count
-        cursor.execute(f"SELECT COUNT(*) as total FROM courses WHERE {where_sql}", params)
-        total = cursor.fetchone()["total"]
-
-        # Get courses with pagination
-        offset = (page - 1) * per_page
-        cursor.execute(f"""
+        
+        courses = await conn.fetch(f"""
             SELECT c.*, u.full_name as instructor_name,
                    (SELECT COUNT(*) FROM course_modules WHERE course_id = c.id) as module_count,
-                   (SELECT COUNT(*) FROM course_lessons l
+                   (SELECT COUNT(*) FROM course_lessons l 
                     JOIN course_modules m ON l.module_id = m.id WHERE m.course_id = c.id) as lesson_count
             FROM courses c
             LEFT JOIN users u ON c.instructor_id = u.id
             WHERE {where_sql}
             ORDER BY c.is_featured DESC, c.created_at DESC
-            LIMIT ? OFFSET ?
-        """, params + [per_page, offset])
-
-        courses = cursor.fetchall()
-
+            LIMIT ${param_idx} OFFSET ${param_idx + 1}
+        """, *params, per_page, (page - 1) * per_page)
+        
+        total = await conn.fetchval(f"""
+            SELECT COUNT(*) FROM courses WHERE {where_sql}
+        """, *params[:-2])
+        
         return {
             "courses": [dict(c) for c in courses],
             "total": total,
@@ -1409,51 +1095,41 @@ async def list_courses(
 
 @app.get("/api/courses/{course_id}")
 async def get_course(course_id: int, current_user: dict = Depends(get_current_user)):
-    """Get specific course"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        cursor.execute("""
+    async with db_pool.acquire() as conn:
+        course = await conn.fetchrow("""
             SELECT c.*, u.full_name as instructor_name
             FROM courses c
             LEFT JOIN users u ON c.instructor_id = u.id
-            WHERE c.id = ?
-        """, (course_id,))
-
-        course = cursor.fetchone()
-
+            WHERE c.id = $1
+        """, course_id)
+        
         if not course:
             raise HTTPException(status_code=404, detail="Course not found")
-
-        cursor.execute("""
+        
+        modules = await conn.fetch("""
             SELECT * FROM course_modules
-            WHERE course_id = ? AND is_published = 1
+            WHERE course_id = $1 AND is_published = TRUE
             ORDER BY sort_order
-        """, (course_id,))
-
-        modules = cursor.fetchall()
-
+        """, course_id)
+        
         modules_with_lessons = []
         for module in modules:
-            cursor.execute("""
+            lessons = await conn.fetch("""
                 SELECT id, title, description, video_duration, is_preview, sort_order
                 FROM course_lessons
-                WHERE module_id = ?
+                WHERE module_id = $1
                 ORDER BY sort_order
-            """, (module["id"],))
-
-            lessons = cursor.fetchall()
+            """, module["id"])
+            
             module_dict = dict(module)
             module_dict["lessons"] = [dict(l) for l in lessons]
             modules_with_lessons.append(module_dict)
-
-        cursor.execute("""
+        
+        enrollment = await conn.fetchrow("""
             SELECT * FROM user_enrollments
-            WHERE user_id = ? AND course_id = ?
-        """, (current_user["id"], course_id))
-
-        enrollment = cursor.fetchone()
-
+            WHERE user_id = $1 AND course_id = $2
+        """, current_user["id"], course_id)
+        
         return {
             "course": dict(course),
             "modules": modules_with_lessons,
@@ -1462,34 +1138,27 @@ async def get_course(course_id: int, current_user: dict = Depends(get_current_us
         }
 
 @app.post("/api/courses/{course_id}/enroll")
-@app.post("/api/courses/{course_id}/enroll/")
 async def enroll_in_course(course_id: int, current_user: dict = Depends(get_current_user)):
-    """Enroll in course - handles both trailing slash variations"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        cursor.execute(
-            "SELECT id, price FROM courses WHERE id = ? AND is_published = 1",
-            (course_id,)
+    async with db_pool.acquire() as conn:
+        course = await conn.fetchrow(
+            "SELECT id, price FROM courses WHERE id = $1 AND is_published = TRUE",
+            course_id
         )
-        course = cursor.fetchone()
-
         if not course:
             raise HTTPException(status_code=404, detail="Course not found")
-
-        cursor.execute(
-            "SELECT id FROM user_enrollments WHERE user_id = ? AND course_id = ?",
-            (current_user["id"], course_id)
+        
+        existing = await conn.fetchrow(
+            "SELECT id FROM user_enrollments WHERE user_id = $1 AND course_id = $2",
+            current_user["id"], course_id
         )
-        if cursor.fetchone():
+        if existing:
             raise HTTPException(status_code=400, detail="Already enrolled")
-
-        cursor.execute("""
+        
+        await conn.execute("""
             INSERT INTO user_enrollments (user_id, course_id, payment_status)
-            VALUES (?, ?, ?)
-        """, (current_user["id"], course_id, "completed" if course["price"] == 0 else "pending"))
-
-        conn.commit()
+            VALUES ($1, $2, $3)
+        """, current_user["id"], course_id, "completed" if course["price"] == 0 else "pending")
+        
         return {"message": "Enrolled successfully"}
 
 @app.get("/api/courses/{course_id}/lessons/{lesson_id}")
@@ -1498,46 +1167,36 @@ async def get_lesson(
     lesson_id: int,
     current_user: dict = Depends(get_current_user)
 ):
-    """Get specific lesson"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        cursor.execute("""
+    async with db_pool.acquire() as conn:
+        enrollment = await conn.fetchrow("""
             SELECT * FROM user_enrollments
-            WHERE user_id = ? AND course_id = ?
-        """, (current_user["id"], course_id))
-
-        enrollment = cursor.fetchone()
-
-        cursor.execute("""
+            WHERE user_id = $1 AND course_id = $2
+        """, current_user["id"], course_id)
+        
+        lesson = await conn.fetchrow("""
             SELECT l.*, m.course_id
             FROM course_lessons l
             JOIN course_modules m ON l.module_id = m.id
-            WHERE l.id = ? AND m.course_id = ?
-        """, (lesson_id, course_id))
-
-        lesson = cursor.fetchone()
-
+            WHERE l.id = $1 AND m.course_id = $2
+        """, lesson_id, course_id)
+        
         if not lesson:
             raise HTTPException(status_code=404, detail="Lesson not found")
-
+        
         if not lesson["is_preview"] and not enrollment:
             raise HTTPException(status_code=403, detail="Enroll to access this lesson")
-
-        cursor.execute("""
+        
+        progress = await conn.fetchrow("""
             SELECT * FROM lesson_progress
-            WHERE user_id = ? AND lesson_id = ?
-        """, (current_user["id"], lesson_id))
-
-        progress = cursor.fetchone()
-
+            WHERE user_id = $1 AND lesson_id = $2
+        """, current_user["id"], lesson_id)
+        
         return {
             "lesson": dict(lesson),
             "progress": dict(progress) if progress else None
         }
 
 @app.post("/api/courses/{course_id}/lessons/{lesson_id}/progress")
-@app.post("/api/courses/{course_id}/lessons/{lesson_id}/progress/")
 async def update_lesson_progress(
     course_id: int,
     lesson_id: int,
@@ -1545,66 +1204,55 @@ async def update_lesson_progress(
     watch_time: int = Form(0),
     current_user: dict = Depends(get_current_user)
 ):
-    """Update lesson progress - handles both trailing slash variations"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        cursor.execute("""
+    async with db_pool.acquire() as conn:
+        enrollment = await conn.fetchrow("""
             SELECT * FROM user_enrollments
-            WHERE user_id = ? AND course_id = ?
-        """, (current_user["id"], course_id))
-
-        if not cursor.fetchone():
+            WHERE user_id = $1 AND course_id = $2
+        """, current_user["id"], course_id)
+        
+        if not enrollment:
             raise HTTPException(status_code=403, detail="Not enrolled in this course")
-
-        completed_at = datetime.utcnow().isoformat() if is_completed else None
-
-        cursor.execute("""
+        
+        await conn.execute("""
             INSERT INTO lesson_progress (user_id, lesson_id, is_completed, watch_time_seconds, completed_at, last_watched_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(user_id, lesson_id) DO UPDATE SET
-                is_completed = excluded.is_completed,
-                watch_time_seconds = watch_time_seconds + excluded.watch_time_seconds,
-                completed_at = COALESCE(completed_at, excluded.completed_at),
-                last_watched_at = excluded.last_watched_at
-        """, (current_user["id"], lesson_id, is_completed, watch_time, completed_at, datetime.utcnow().isoformat()))
-
-        # Update enrollment progress
-        cursor.execute("""
+            VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (user_id, lesson_id) DO UPDATE SET
+                is_completed = EXCLUDED.is_completed,
+                watch_time_seconds = lesson_progress.watch_time_seconds + EXCLUDED.watch_time_seconds,
+                completed_at = COALESCE(lesson_progress.completed_at, EXCLUDED.completed_at),
+                last_watched_at = EXCLUDED.last_watched_at
+        """, current_user["id"], lesson_id, is_completed, watch_time,
+            datetime.utcnow() if is_completed else None, datetime.utcnow())
+        
+        total_lessons = await conn.fetchval("""
             SELECT COUNT(*) FROM course_lessons l
             JOIN course_modules m ON l.module_id = m.id
-            WHERE m.course_id = ?
-        """, (course_id,))
-
-        total_lessons = cursor.fetchone()[0]
-
-        cursor.execute("""
+            WHERE m.course_id = $1
+        """, course_id)
+        
+        completed_lessons = await conn.fetchval("""
             SELECT COUNT(*) FROM lesson_progress lp
             JOIN course_lessons l ON lp.lesson_id = l.id
             JOIN course_modules m ON l.module_id = m.id
-            WHERE m.course_id = ? AND lp.user_id = ? AND lp.is_completed = 1
-        """, (course_id, current_user["id"]))
-
-        completed_lessons = cursor.fetchone()[0]
-
+            WHERE m.course_id = $1 AND lp.user_id = $2 AND lp.is_completed = TRUE
+        """, course_id, current_user["id"])
+        
         progress_percent = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
-
-        cursor.execute("""
+        
+        await conn.execute("""
             UPDATE user_enrollments
-            SET progress_percent = ?
-            WHERE user_id = ? AND course_id = ?
-        """, (progress_percent, current_user["id"], course_id))
-
-        conn.commit()
-
+            SET progress_percent = $1
+            WHERE user_id = $2 AND course_id = $3
+        """, progress_percent, current_user["id"], course_id)
+        
         return {"progress_percent": progress_percent, "completed_lessons": completed_lessons}
+
 
 # =============================================================================
 # BLOG ENDPOINTS
 # =============================================================================
 
 @app.get("/api/blog/posts")
-@app.get("/api/blog/posts/")
 async def list_blog_posts(
     category: Optional[str] = None,
     tag: Optional[str] = None,
@@ -1612,42 +1260,39 @@ async def list_blog_posts(
     page: int = 1,
     per_page: int = 10
 ):
-    """List blog posts - handles both trailing slash variations"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-
+    async with db_pool.acquire() as conn:
         where_clauses = ["status = 'published'"]
         params = []
-
+        param_idx = 1
+        
         if category:
-            where_clauses.append("category = ?")
+            where_clauses.append(f"category = ${param_idx}")
             params.append(category)
+            param_idx += 1
         if tag:
-            where_clauses.append("tags LIKE ?")
-            params.append(f'%{tag}%')
+            where_clauses.append(f"tags @> ${param_idx}::jsonb")
+            params.append(json.dumps([tag]))
+            param_idx += 1
         if search:
-            where_clauses.append("(title LIKE ? OR content LIKE ?)")
-            params.extend([f"%{search}%", f"%{search}%"])
-
+            where_clauses.append(f"(title ILIKE ${param_idx} OR content ILIKE ${param_idx})")
+            params.append(f"%{search}%")
+            param_idx += 1
+        
         where_sql = " AND ".join(where_clauses)
-
-        # Get total count
-        cursor.execute(f"SELECT COUNT(*) as total FROM blog_posts WHERE {where_sql}", params)
-        total = cursor.fetchone()["total"]
-
-        # Get posts with pagination
-        offset = (page - 1) * per_page
-        cursor.execute(f"""
+        
+        posts = await conn.fetch(f"""
             SELECT p.*, u.full_name as author_name
             FROM blog_posts p
             LEFT JOIN users u ON p.author_id = u.id
             WHERE {where_sql}
             ORDER BY p.published_at DESC NULLS LAST, p.created_at DESC
-            LIMIT ? OFFSET ?
-        """, params + [per_page, offset])
-
-        posts = cursor.fetchall()
-
+            LIMIT ${param_idx} OFFSET ${param_idx + 1}
+        """, *params, per_page, (page - 1) * per_page)
+        
+        total = await conn.fetchval(f"""
+            SELECT COUNT(*) FROM blog_posts WHERE {where_sql}
+        """, *params[:-2])
+        
         return {
             "posts": [dict(p) for p in posts],
             "total": total,
@@ -1658,37 +1303,27 @@ async def list_blog_posts(
 
 @app.get("/api/blog/posts/{slug}")
 async def get_blog_post(slug: str):
-    """Get specific blog post"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
+    async with db_pool.acquire() as conn:
+        post = await conn.fetchrow("""
             SELECT p.*, u.full_name as author_name
             FROM blog_posts p
             LEFT JOIN users u ON p.author_id = u.id
-            WHERE p.slug = ? AND p.status = 'published'
-        """, (slug,))
-
-        post = cursor.fetchone()
-
+            WHERE p.slug = $1 AND p.status = 'published'
+        """, slug)
+        
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
-
-        # Increment view count
-        cursor.execute("""
-            UPDATE blog_posts SET view_count = view_count + 1 WHERE id = ?
-        """, (post["id"],))
-
-        # Get related posts
-        cursor.execute("""
+        
+        await conn.execute("""
+            UPDATE blog_posts SET view_count = view_count + 1 WHERE id = $1
+        """, post["id"])
+        
+        related = await conn.fetch("""
             SELECT slug, title, excerpt, featured_image FROM blog_posts
-            WHERE status = 'published' AND category = ? AND id != ?
+            WHERE status = 'published' AND category = $1 AND id != $2
             ORDER BY published_at DESC LIMIT 3
-        """, (post["category"], post["id"]))
-
-        related = cursor.fetchall()
-
-        conn.commit()
-
+        """, post["category"], post["id"])
+        
         return {
             "post": dict(post),
             "related_posts": [dict(r) for r in related]
@@ -1699,35 +1334,30 @@ async def get_blog_post(slug: str):
 # =============================================================================
 
 @app.post("/api/admin/blog/posts")
-@app.post("/api/admin/blog/posts/")
 async def admin_create_post(
     post: BlogPostCreate,
     current_user: dict = Depends(get_admin_user)
 ):
-    """Create blog post - handles both trailing slash variations"""
-    with get_db() as conn:
-        cursor = conn.cursor()
+    async with db_pool.acquire() as conn:
         slug = post.slug or generate_slug(post.title)
-
-        cursor.execute("SELECT id FROM blog_posts WHERE slug = ?", (slug,))
-        if cursor.fetchone():
+        
+        existing = await conn.fetchval("SELECT id FROM blog_posts WHERE slug = $1", slug)
+        if existing:
             slug = f"{slug}-{uuid.uuid4().hex[:8]}"
-
-        cursor.execute("""
+        
+        post_id = await conn.fetchval("""
             INSERT INTO blog_posts (
                 author_id, title, slug, excerpt, content, featured_image,
                 category, tags, seo_title, seo_description, seo_keywords, status, published_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            RETURNING id
+        """,
             current_user["id"], post.title, slug, post.excerpt, post.content,
             post.featured_image, post.category, json.dumps(post.tags),
             post.seo_title, post.seo_description, post.seo_keywords,
             post.status, datetime.utcnow() if post.status == "published" else None
-        ))
-
-        post_id = cursor.lastrowid
-        conn.commit()
-
+        )
+        
         return {"id": post_id, "slug": slug, "message": "Post created"}
 
 @app.put("/api/admin/blog/posts/{post_id}")
@@ -1736,113 +1366,112 @@ async def admin_update_post(
     post: BlogPostUpdate,
     current_user: dict = Depends(get_admin_user)
 ):
-    """Update blog post"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM blog_posts WHERE id = ?", (post_id,))
-        existing = cursor.fetchone()
-
+    async with db_pool.acquire() as conn:
+        existing = await conn.fetchrow("SELECT * FROM blog_posts WHERE id = $1", post_id)
         if not existing:
             raise HTTPException(status_code=404, detail="Post not found")
-
+        
         update_fields = []
         params = []
-
+        param_idx = 1
+        
         if post.title is not None:
-            update_fields.append("title = ?")
+            update_fields.append(f"title = ${param_idx}")
             params.append(post.title)
+            param_idx += 1
         if post.excerpt is not None:
-            update_fields.append("excerpt = ?")
+            update_fields.append(f"excerpt = ${param_idx}")
             params.append(post.excerpt)
+            param_idx += 1
         if post.content is not None:
-            update_fields.append("content = ?")
+            update_fields.append(f"content = ${param_idx}")
             params.append(post.content)
+            param_idx += 1
         if post.featured_image is not None:
-            update_fields.append("featured_image = ?")
+            update_fields.append(f"featured_image = ${param_idx}")
             params.append(post.featured_image)
+            param_idx += 1
         if post.category is not None:
-            update_fields.append("category = ?")
+            update_fields.append(f"category = ${param_idx}")
             params.append(post.category)
+            param_idx += 1
         if post.tags is not None:
-            update_fields.append("tags = ?")
+            update_fields.append(f"tags = ${param_idx}")
             params.append(json.dumps(post.tags))
+            param_idx += 1
         if post.seo_title is not None:
-            update_fields.append("seo_title = ?")
+            update_fields.append(f"seo_title = ${param_idx}")
             params.append(post.seo_title)
+            param_idx += 1
         if post.seo_description is not None:
-            update_fields.append("seo_description = ?")
+            update_fields.append(f"seo_description = ${param_idx}")
             params.append(post.seo_description)
+            param_idx += 1
         if post.seo_keywords is not None:
-            update_fields.append("seo_keywords = ?")
+            update_fields.append(f"seo_keywords = ${param_idx}")
             params.append(post.seo_keywords)
+            param_idx += 1
         if post.status is not None:
-            update_fields.append("status = ?")
+            update_fields.append(f"status = ${param_idx}")
             params.append(post.status)
+            param_idx += 1
             if post.status == "published" and existing["status"] != "published":
-                update_fields.append("published_at = ?")
-                params.append(datetime.utcnow().isoformat())
-
+                update_fields.append(f"published_at = ${param_idx}")
+                params.append(datetime.utcnow())
+                param_idx += 1
+        
         if not update_fields:
             raise HTTPException(status_code=400, detail="No fields to update")
-
-        update_fields.append("updated_at = CURRENT_TIMESTAMP")
+        
+        update_fields.append(f"updated_at = ${param_idx}")
+        params.append(datetime.utcnow())
+        param_idx += 1
         params.append(post_id)
-
-        cursor.execute(f"""
-            UPDATE blog_posts SET {', '.join(update_fields)} WHERE id = ?
-        """, params)
-
-        conn.commit()
+        
+        await conn.execute(f"""
+            UPDATE blog_posts SET {', '.join(update_fields)} WHERE id = ${param_idx}
+        """, *params)
+        
         return {"message": "Post updated"}
 
 @app.delete("/api/admin/blog/posts/{post_id}")
 async def admin_delete_post(post_id: int, current_user: dict = Depends(get_admin_user)):
-    """Delete blog post"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM blog_posts WHERE id = ?", (post_id,))
-        if cursor.rowcount == 0:
+    async with db_pool.acquire() as conn:
+        result = await conn.execute("DELETE FROM blog_posts WHERE id = $1", post_id)
+        if result == "DELETE 0":
             raise HTTPException(status_code=404, detail="Post not found")
-        conn.commit()
         return {"message": "Post deleted"}
 
 @app.get("/api/admin/blog/posts")
-@app.get("/api/admin/blog/posts/")
 async def admin_list_posts(
     status: Optional[str] = None,
     page: int = 1,
     per_page: int = 20,
     current_user: dict = Depends(get_admin_user)
 ):
-    """List admin blog posts - handles both trailing slash variations"""
-    with get_db() as conn:
-        cursor = conn.cursor()
+    async with db_pool.acquire() as conn:
         where_clauses = []
         params = []
-
+        param_idx = 1
+        
         if status:
-            where_clauses.append("status = ?")
+            where_clauses.append(f"status = ${param_idx}")
             params.append(status)
-
+            param_idx += 1
+        
         where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
-
-        # Get total count
-        cursor.execute(f"SELECT COUNT(*) as total FROM blog_posts WHERE {where_sql}", params)
-        total = cursor.fetchone()["total"]
-
-        # Get posts with pagination
-        offset = (page - 1) * per_page
-        cursor.execute(f"""
+        
+        posts = await conn.fetch(f"""
             SELECT p.*, u.full_name as author_name
             FROM blog_posts p
             LEFT JOIN users u ON p.author_id = u.id
             WHERE {where_sql}
             ORDER BY p.created_at DESC
-            LIMIT ? OFFSET ?
-        """, params + [per_page, offset])
-
-        posts = cursor.fetchall()
-
+            LIMIT ${param_idx} OFFSET ${param_idx + 1}
+        """, *params, per_page, (page - 1) * per_page)
+        
+        total = await conn.fetchval(f"SELECT COUNT(*) FROM blog_posts WHERE {where_sql}", *params[:-2])
+        
         return {
             "posts": [dict(p) for p in posts],
             "total": total,
@@ -1851,33 +1480,28 @@ async def admin_list_posts(
         }
 
 @app.post("/api/admin/blog/media")
-@app.post("/api/admin/blog/media/")
 async def admin_upload_media(
     file: UploadFile = File(...),
     alt_text: Optional[str] = Form(None),
     current_user: dict = Depends(get_admin_user)
 ):
-    """Upload media - handles both trailing slash variations"""
     allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
     if file.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Invalid file type")
-
-    file_path = save_upload_file_sync(file, "blog")
+    
+    file_path = await save_upload_file(file, "blog")
     file_size = os.path.getsize(file_path)
-
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
+    
+    async with db_pool.acquire() as conn:
+        media_id = await conn.fetchval("""
             INSERT INTO blog_media (uploaded_by, filename, original_name, file_path, file_size, mime_type, alt_text)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (current_user["id"], os.path.basename(file_path), file.filename, file_path, file_size, file.content_type, alt_text))
-
-        media_id = cursor.lastrowid
-        conn.commit()
-
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING id
+        """, current_user["id"], os.path.basename(file_path), file.filename, file_path, file_size, file.content_type, alt_text)
+        
         return {
             "id": media_id,
-            "url": f"/uploads/{os.path.basename(file_path)}",
+            "url": f"/uploads/blog/{os.path.basename(file_path)}",
             "filename": os.path.basename(file_path)
         }
 
@@ -1886,36 +1510,31 @@ async def admin_upload_media(
 # =============================================================================
 
 @app.post("/api/admin/courses")
-@app.post("/api/admin/courses/")
 async def admin_create_course(
     course: CourseCreate,
     current_user: dict = Depends(get_admin_user)
 ):
-    """Create course - handles both trailing slash variations"""
-    with get_db() as conn:
-        cursor = conn.cursor()
+    async with db_pool.acquire() as conn:
         slug = course.slug or generate_slug(course.title)
-
-        cursor.execute("SELECT id FROM courses WHERE slug = ?", (slug,))
-        if cursor.fetchone():
+        
+        existing = await conn.fetchval("SELECT id FROM courses WHERE slug = $1", slug)
+        if existing:
             slug = f"{slug}-{uuid.uuid4().hex[:8]}"
-
-        cursor.execute("""
+        
+        course_id = await conn.fetchval("""
             INSERT INTO courses (
                 instructor_id, title, slug, description, short_description,
                 thumbnail_url, preview_video_url, category, level, price,
                 duration_hours, seo_title, seo_description
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            RETURNING id
+        """,
             current_user["id"], course.title, slug, course.description,
             course.short_description, course.thumbnail_url, course.preview_video_url,
             course.category, course.level, course.price, course.duration_hours,
             course.seo_title, course.seo_description
-        ))
-
-        course_id = cursor.lastrowid
-        conn.commit()
-
+        )
+        
         return {"id": course_id, "slug": slug, "message": "Course created"}
 
 @app.put("/api/admin/courses/{course_id}")
@@ -1924,18 +1543,15 @@ async def admin_update_course(
     course: CourseUpdate,
     current_user: dict = Depends(get_admin_user)
 ):
-    """Update course"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM courses WHERE id = ?", (course_id,))
-        existing = cursor.fetchone()
-
+    async with db_pool.acquire() as conn:
+        existing = await conn.fetchrow("SELECT * FROM courses WHERE id = $1", course_id)
         if not existing:
             raise HTTPException(status_code=404, detail="Course not found")
-
+        
         update_fields = []
         params = []
-
+        param_idx = 1
+        
         fields = [
             ("title", course.title),
             ("description", course.description),
@@ -1951,89 +1567,80 @@ async def admin_update_course(
             ("seo_title", course.seo_title),
             ("seo_description", course.seo_description),
         ]
-
+        
         for field, value in fields:
             if value is not None:
-                update_fields.append(f"{field} = ?")
+                update_fields.append(f"{field} = ${param_idx}")
                 params.append(value)
-
+                param_idx += 1
+        
         if not update_fields:
             raise HTTPException(status_code=400, detail="No fields to update")
-
-        update_fields.append("updated_at = CURRENT_TIMESTAMP")
+        
+        update_fields.append(f"updated_at = ${param_idx}")
+        params.append(datetime.utcnow())
+        param_idx += 1
         params.append(course_id)
-
-        cursor.execute(f"""
-            UPDATE courses SET {', '.join(update_fields)} WHERE id = ?
-        """, params)
-
-        conn.commit()
+        
+        await conn.execute(f"""
+            UPDATE courses SET {', '.join(update_fields)} WHERE id = ${param_idx}
+        """, *params)
+        
         return {"message": "Course updated"}
 
 @app.delete("/api/admin/courses/{course_id}")
 async def admin_delete_course(course_id: int, current_user: dict = Depends(get_admin_user)):
-    """Delete course"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM courses WHERE id = ?", (course_id,))
-        if cursor.rowcount == 0:
+    async with db_pool.acquire() as conn:
+        result = await conn.execute("DELETE FROM courses WHERE id = $1", course_id)
+        if result == "DELETE 0":
             raise HTTPException(status_code=404, detail="Course not found")
-        conn.commit()
         return {"message": "Course deleted"}
 
 @app.post("/api/admin/courses/{course_id}/modules")
-@app.post("/api/admin/courses/{course_id}/modules/")
 async def admin_create_module(
     course_id: int,
     module: ModuleCreate,
     current_user: dict = Depends(get_admin_user)
 ):
-    """Create module - handles both trailing slash variations"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT id FROM courses WHERE id = ?", (course_id,))
-        if not cursor.fetchone():
+    async with db_pool.acquire() as conn:
+        course = await conn.fetchval("SELECT id FROM courses WHERE id = $1", course_id)
+        if not course:
             raise HTTPException(status_code=404, detail="Course not found")
-
-        cursor.execute("""
+        
+        module_id = await conn.fetchval("""
             INSERT INTO course_modules (course_id, title, description, sort_order)
-            VALUES (?, ?, ?, ?)
-        """, (course_id, module.title, module.description, module.sort_order))
-
-        module_id = cursor.lastrowid
-        conn.commit()
+            VALUES ($1, $2, $3, $4)
+            RETURNING id
+        """, course_id, module.title, module.description, module.sort_order)
+        
         return {"id": module_id, "message": "Module created"}
 
 @app.post("/api/admin/modules/{module_id}/lessons")
-@app.post("/api/admin/modules/{module_id}/lessons/")
 async def admin_create_lesson(
     module_id: int,
     lesson: LessonCreate,
     current_user: dict = Depends(get_admin_user)
 ):
-    """Create lesson - handles both trailing slash variations"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT id FROM course_modules WHERE id = ?", (module_id,))
-        if not cursor.fetchone():
+    async with db_pool.acquire() as conn:
+        module = await conn.fetchval("SELECT id FROM course_modules WHERE id = $1", module_id)
+        if not module:
             raise HTTPException(status_code=404, detail="Module not found")
-
-        cursor.execute("""
+        
+        lesson_id = await conn.fetchval("""
             INSERT INTO course_lessons (module_id, title, description, content, video_url, video_duration, is_preview, sort_order)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (module_id, lesson.title, lesson.description, lesson.content,
-              lesson.video_url, lesson.video_duration, lesson.is_preview, lesson.sort_order))
-
-        lesson_id = cursor.lastrowid
-        conn.commit()
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING id
+        """, module_id, lesson.title, lesson.description, lesson.content,
+            lesson.video_url, lesson.video_duration, lesson.is_preview, lesson.sort_order)
+        
         return {"id": lesson_id, "message": "Lesson created"}
+
 
 # =============================================================================
 # ADMIN ENDPOINTS - USER MANAGEMENT
 # =============================================================================
 
 @app.get("/api/admin/users")
-@app.get("/api/admin/users/")
 async def admin_list_users(
     role: Optional[str] = None,
     search: Optional[str] = None,
@@ -2041,37 +1648,32 @@ async def admin_list_users(
     per_page: int = 20,
     current_user: dict = Depends(get_admin_user)
 ):
-    """List users - handles both trailing slash variations"""
-    with get_db() as conn:
-        cursor = conn.cursor()
+    async with db_pool.acquire() as conn:
         where_clauses = []
         params = []
-
+        param_idx = 1
+        
         if role:
-            where_clauses.append("role = ?")
+            where_clauses.append(f"role = ${param_idx}")
             params.append(role)
+            param_idx += 1
         if search:
-            where_clauses.append("(email LIKE ? OR full_name LIKE ?)")
-            params.extend([f"%{search}%", f"%{search}%"])
-
+            where_clauses.append(f"(email ILIKE ${param_idx} OR full_name ILIKE ${param_idx})")
+            params.append(f"%{search}%")
+            param_idx += 1
+        
         where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
-
-        # Get total count
-        cursor.execute(f"SELECT COUNT(*) as total FROM users WHERE {where_sql}", params)
-        total = cursor.fetchone()["total"]
-
-        # Get users with pagination
-        offset = (page - 1) * per_page
-        cursor.execute(f"""
+        
+        users = await conn.fetch(f"""
             SELECT id, email, full_name, role, is_active, created_at, last_login_at
             FROM users
             WHERE {where_sql}
             ORDER BY created_at DESC
-            LIMIT ? OFFSET ?
-        """, params + [per_page, offset])
-
-        users = cursor.fetchall()
-
+            LIMIT ${param_idx} OFFSET ${param_idx + 1}
+        """, *params, per_page, (page - 1) * per_page)
+        
+        total = await conn.fetchval(f"SELECT COUNT(*) FROM users WHERE {where_sql}", *params[:-2])
+        
         return {
             "users": [dict(u) for u in users],
             "total": total,
@@ -2086,33 +1688,32 @@ async def admin_update_user(
     is_active: Optional[bool] = Form(None),
     current_user: dict = Depends(get_admin_user)
 ):
-    """Update user"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-
+    async with db_pool.acquire() as conn:
         if user_id == current_user["id"] and role and role != "admin":
             raise HTTPException(status_code=400, detail="Cannot remove your own admin role")
-
+        
         update_fields = []
         params = []
-
+        param_idx = 1
+        
         if role is not None:
-            update_fields.append("role = ?")
+            update_fields.append(f"role = ${param_idx}")
             params.append(role)
+            param_idx += 1
         if is_active is not None:
-            update_fields.append("is_active = ?")
+            update_fields.append(f"is_active = ${param_idx}")
             params.append(is_active)
-
+            param_idx += 1
+        
         if not update_fields:
             raise HTTPException(status_code=400, detail="No fields to update")
-
+        
         params.append(user_id)
-
-        cursor.execute(f"""
-            UPDATE users SET {', '.join(update_fields)} WHERE id = ?
-        """, params)
-
-        conn.commit()
+        
+        await conn.execute(f"""
+            UPDATE users SET {', '.join(update_fields)} WHERE id = ${param_idx}
+        """, *params)
+        
         return {"message": "User updated"}
 
 # =============================================================================
@@ -2120,40 +1721,29 @@ async def admin_update_user(
 # =============================================================================
 
 @app.get("/api/admin/dashboard/stats")
-@app.get("/api/admin/dashboard/stats/")
 async def admin_dashboard_stats(current_user: dict = Depends(get_admin_user)):
-    """Dashboard stats - handles both trailing slash variations"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT COUNT(*) as total FROM users")
-        total_users = cursor.fetchone()["total"]
-
-        cursor.execute("SELECT COUNT(*) as total FROM trades")
-        total_trades = cursor.fetchone()["total"]
-
-        cursor.execute("SELECT COUNT(*) as total FROM courses")
-        total_courses = cursor.fetchone()["total"]
-
-        cursor.execute("SELECT COUNT(*) as total FROM blog_posts")
-        total_posts = cursor.fetchone()["total"]
-
-        cursor.execute("SELECT COUNT(*) as total FROM users WHERE DATE(created_at) = DATE('now')")
-        new_users_today = cursor.fetchone()["total"]
-
-        cursor.execute("SELECT COUNT(*) as total FROM trades WHERE DATE(created_at) = DATE('now')")
-        new_trades_today = cursor.fetchone()["total"]
-
-        cursor.execute("SELECT COUNT(*) as total FROM user_enrollments")
-        enrollments = cursor.fetchone()["total"]
-
-        cursor.execute("""
+    async with db_pool.acquire() as conn:
+        total_users = await conn.fetchval("SELECT COUNT(*) FROM users")
+        total_trades = await conn.fetchval("SELECT COUNT(*) FROM trades")
+        total_courses = await conn.fetchval("SELECT COUNT(*) FROM courses")
+        total_posts = await conn.fetchval("SELECT COUNT(*) FROM blog_posts")
+        
+        new_users_today = await conn.fetchval("""
+            SELECT COUNT(*) FROM users WHERE created_at >= CURRENT_DATE
+        """)
+        
+        new_trades_today = await conn.fetchval("""
+            SELECT COUNT(*) FROM trades WHERE created_at >= CURRENT_DATE
+        """)
+        
+        enrollments = await conn.fetchval("SELECT COUNT(*) FROM user_enrollments")
+        
+        recent_users = await conn.fetch("""
             SELECT id, email, full_name, role, created_at
             FROM users
             ORDER BY created_at DESC LIMIT 5
         """)
-        recent_users = cursor.fetchall()
-
+        
         return {
             "overview": {
                 "total_users": total_users,
@@ -2168,26 +1758,30 @@ async def admin_dashboard_stats(current_user: dict = Depends(get_admin_user)):
         }
 
 # =============================================================================
-# SPA CATCH-ALL MUST BE LAST
+# STATIC FILES & SPA
 # =============================================================================
 
-@app.get("/{path:path}")
-async def serve_spa_routes(path: str):
-    """
-    Serve SPA for all non-API routes. This MUST be defined AFTER all API routes.
-    """
-    # Skip API routes - they should have been caught above
-    if path.startswith("api/") or path.startswith("health") or path.startswith("uploads/"):
-        raise HTTPException(status_code=404, detail="API endpoint not found")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+@app.get("/", response_class=HTMLResponse)
+async def serve_spa():
     try:
         with open("index.html", "r") as f:
-            return HTMLResponse(content=f.read())
+            return f.read()
     except FileNotFoundError:
-        return HTMLResponse(content="""<h1>Pipways API v3.0</h1>
-<p>Frontend not built yet. API is running correctly.</p>
-<p>Default admin credentials: admin@pipways.com / admin123</p>
-""")
+        return HTMLResponse(content="<h1>Pipways API v3.0</h1><p>Frontend not built yet.</p>")
+
+@app.get("/{path:path}", response_class=HTMLResponse)
+async def serve_spa_routes(path: str):
+    # Skip API routes
+    if path.startswith("api/") or path.startswith("uploads/") or path == "health":
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    try:
+        with open("index.html", "r") as f:
+            return f.read()
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Page not found")
 
 # =============================================================================
 # MAIN ENTRY POINT
