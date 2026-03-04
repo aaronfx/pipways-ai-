@@ -2,7 +2,21 @@
 Pipways - Forex Trading Journal API v3.0
 CRITICAL FIX: React SPA + FastAPI 405 errors on Render
 """
+import sqlite3
 
+conn = sqlite3.connect("users.db")
+cursor = conn.cursor()
+
+# CREATE TABLE IF IT DOES NOT EXIST
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS user (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL
+)
+""")
+
+conn.commit()
 import os
 import re
 import json
