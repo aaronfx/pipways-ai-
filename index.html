@@ -63,10 +63,11 @@ const store = {
 };
 
 // ============================================
-// API CLIENT - FIXED: Proper baseUrl and error handling
+// API CLIENT - FIXED: Point to API service URL
 // ============================================
 const api = {
-    baseUrl: window.location.origin,
+    // FIXED: Explicit API URL since web and API are separate services on Render
+    baseUrl: 'https://pipways-api-nhem.onrender.com',
     
     async request(endpoint, options = {}) {
         const url = `${this.baseUrl}/api${endpoint}`;
@@ -85,12 +86,13 @@ const api = {
             const response = await fetch(url, { 
                 ...options, 
                 headers,
-                credentials: 'same-origin'
+                mode: 'cors',
+                credentials: 'omit' // Use 'omit' for cross-origin, 'include' for same-origin
             });
             
             console.log(`API Response: ${response.status} ${response.statusText}`);
             
-            // Handle 401/403 explicitly
+            // Handle specific status codes
             if (response.status === 401) {
                 store.logout();
                 renderApp();
@@ -105,18 +107,27 @@ const api = {
                 throw new Error('Method not allowed. Please check API configuration.');
             }
             
-            // Try to parse JSON, but handle empty responses
+            // Try to parse JSON
             let data = null;
             const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-                data = await response.json();
-            } else {
-                const text = await response.text();
-                console.log('Non-JSON response:', text);
-                if (!response.ok) {
-                    throw new Error(text || `HTTP ${response.status}: ${response.statusText}`);
+            
+            try {
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    const text = await response.text();
+                    console.log('Non-JSON response:', text.substring(0, 200));
+                    if (!response.ok) {
+                        throw new Error(text || `HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return { success: true, text };
                 }
-                return { success: true, text };
+            } catch (parseError) {
+                console.error('JSON parse error:', parseError);
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status} ${response.statusText}`);
+                }
+                return null;
             }
             
             if (!response.ok) {
@@ -124,7 +135,7 @@ const api = {
                 throw new Error(errorMsg);
             }
             
-            // FIXED: Validate response has expected data
+            // Validate response is not null
             if (!data) {
                 throw new Error('Empty response from server');
             }
@@ -203,14 +214,14 @@ const Views = {
                 
                 console.log('Login response:', response);
                 
-                // FIXED: Validate response structure
+                // FIXED: Validate response structure before accessing properties
                 if (!response) {
                     throw new Error('No response from server');
                 }
                 
                 if (!response.access_token) {
-                    console.error('Invalid response structure:', response);
-                    throw new Error('Invalid server response: missing access_token');
+                    console.error('Invalid response - no access_token:', response);
+                    throw new Error('Invalid server response: missing access_token. Please try again.');
                 }
                 
                 if (!response.user) {
@@ -296,7 +307,7 @@ const Views = {
                 }
                 
                 if (!response.access_token) {
-                    console.error('Invalid response structure:', response);
+                    console.error('Invalid response - no access_token:', response);
                     throw new Error('Invalid server response: missing access_token');
                 }
                 
