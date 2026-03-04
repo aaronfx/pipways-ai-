@@ -66,7 +66,6 @@ const store = {
 // API CLIENT - FIXED: Proper baseUrl and error handling
 // ============================================
 const api = {
-    // FIXED: Use current origin as base URL
     baseUrl: window.location.origin,
     
     async request(endpoint, options = {}) {
@@ -80,13 +79,16 @@ const api = {
             headers['Authorization'] = `Bearer ${store.token}`;
         }
         
+        console.log(`API Request: ${options.method || 'GET'} ${url}`);
+        
         try {
             const response = await fetch(url, { 
                 ...options, 
                 headers,
-                // Ensure credentials are included for CORS
                 credentials: 'same-origin'
             });
+            
+            console.log(`API Response: ${response.status} ${response.statusText}`);
             
             // Handle 401/403 explicitly
             if (response.status === 401) {
@@ -103,17 +105,33 @@ const api = {
                 throw new Error('Method not allowed. Please check API configuration.');
             }
             
-            const data = await response.json().catch(() => null);
+            // Try to parse JSON, but handle empty responses
+            let data = null;
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                const text = await response.text();
+                console.log('Non-JSON response:', text);
+                if (!response.ok) {
+                    throw new Error(text || `HTTP ${response.status}: ${response.statusText}`);
+                }
+                return { success: true, text };
+            }
             
             if (!response.ok) {
                 const errorMsg = data?.detail || data?.message || `HTTP ${response.status}: ${response.statusText}`;
                 throw new Error(errorMsg);
             }
             
+            // FIXED: Validate response has expected data
+            if (!data) {
+                throw new Error('Empty response from server');
+            }
+            
             return data;
         } catch (error) {
             console.error('API Error:', error);
-            // Distinguish network errors from HTTP errors
             if (error.message === 'Failed to fetch') {
                 throw new Error('Cannot connect to server. Please check your internet connection and try again.');
             }
@@ -163,7 +181,7 @@ const Views = {
     Login() {
         const handleSubmit = async (e) => {
             e.preventDefault();
-            e.stopPropagation(); // Prevent any bubbling
+            e.stopPropagation();
             
             const formData = new FormData(e.target);
             const data = {
@@ -171,7 +189,6 @@ const Views = {
                 password: formData.get('password')
             };
             
-            // Validation
             if (!data.email || !data.password) {
                 alert('Please enter both email and password');
                 return;
@@ -181,8 +198,24 @@ const Views = {
                 store.loading = true;
                 renderApp();
                 
-                console.log('Attempting login to:', `${api.baseUrl}/api/auth/login`);
+                console.log('Attempting login with:', data.email);
                 const response = await api.post('/auth/login', data);
+                
+                console.log('Login response:', response);
+                
+                // FIXED: Validate response structure
+                if (!response) {
+                    throw new Error('No response from server');
+                }
+                
+                if (!response.access_token) {
+                    console.error('Invalid response structure:', response);
+                    throw new Error('Invalid server response: missing access_token');
+                }
+                
+                if (!response.user) {
+                    throw new Error('Invalid server response: missing user data');
+                }
                 
                 store.setToken(response.access_token);
                 store.setUser(response.user);
@@ -196,7 +229,6 @@ const Views = {
             }
         };
         
-        // FIXED: Use proper event handler attachment
         window.handleLoginSubmit = handleSubmit;
         
         return `
@@ -253,8 +285,24 @@ const Views = {
                 store.loading = true;
                 renderApp();
                 
-                console.log('Attempting registration to:', `${api.baseUrl}/api/auth/register`);
+                console.log('Attempting registration with:', data.email);
                 const response = await api.post('/auth/register', data);
+                
+                console.log('Registration response:', response);
+                
+                // FIXED: Validate response structure
+                if (!response) {
+                    throw new Error('No response from server');
+                }
+                
+                if (!response.access_token) {
+                    console.error('Invalid response structure:', response);
+                    throw new Error('Invalid server response: missing access_token');
+                }
+                
+                if (!response.user) {
+                    throw new Error('Invalid server response: missing user data');
+                }
                 
                 store.setToken(response.access_token);
                 store.setUser(response.user);
@@ -300,12 +348,11 @@ const Views = {
                     api.get('/analytics/dashboard'),
                     api.get('/trades?per_page=5')
                 ]);
-                stats = analytics.overall;
-                recentTrades = trades.trades;
+                stats = analytics?.overall || null;
+                recentTrades = trades?.trades || [];
                 renderApp();
             } catch (error) { 
                 console.error('Failed to load dashboard:', error);
-                // FIXED: Handle auth errors
                 if (error.message?.includes('401') || error.message?.includes('403') || error.message?.includes('Session expired')) {
                     store.logout();
                     renderApp();
