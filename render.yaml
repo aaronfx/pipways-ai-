@@ -1,7 +1,37 @@
-
 services:
+  # Web Service (FastAPI)
   - type: web
-    name: trading-academy
-    env: python
+    name: pipways-api
+    runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pipways-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_URL
+        value: https://pipways-api-nhem.onrender.com
+      - key: DEFAULT_ADMIN_EMAIL
+        value: admin@pipways.com
+      - key: DEFAULT_ADMIN_PASSWORD
+        value: admin123
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+
+# PostgreSQL Database
+databases:
+  - name: pipways-db
+    databaseName: pipways
+    user: pipways
+    plan: free
