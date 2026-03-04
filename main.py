@@ -331,7 +331,6 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(H
         raise HTTPException(status_code=401, detail="Token has been revoked")
     
     try:
-        # FIXED: Added explicit expiration verification
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": True})
         user_id = payload.get("sub")
         if user_id is None:
@@ -379,7 +378,6 @@ def format_datetime(dt: Optional[datetime]) -> Optional[str]:
 
 async def save_upload_file(upload_file: UploadFile, folder: str) -> str:
     """Save uploaded file and return the file path"""
-    # FIXED: Use absolute path based on current working directory
     base_upload_dir = os.path.join(os.getcwd(), "uploads")
     upload_dir = os.path.join(base_upload_dir, folder)
     os.makedirs(upload_dir, exist_ok=True)
@@ -448,7 +446,7 @@ def rate_limit(key: str, max_requests: int = 100, window_seconds: int = 60) -> b
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db_pool()
-    await create_default_admin()  # FIXED: Create admin on startup
+    await create_default_admin()
     yield
     await close_db_pool()
 
@@ -459,18 +457,30 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# FIXED: CORS middleware with proper origin validation
-allow_origins = ["http://localhost:3000", "http://localhost:8000", 
-                 "http://127.0.0.1:3000", "http://127.0.0.1:8000"]
+# FIXED: CORS middleware with both web and API domains
+allow_origins = [
+    "http://localhost:3000",
+    "http://localhost:8000", 
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8000",
+    # Add your actual Render URLs
+    "https://pipways-web-nhem.onrender.com",  # Web frontend
+    "https://pipways-api-nhem.onrender.com",  # API (for self-reference)
+]
+
 if FRONTEND_URL and FRONTEND_URL.strip():
-    allow_origins.append(FRONTEND_URL.strip())
+    if FRONTEND_URL.strip() not in allow_origins:
+        allow_origins.append(FRONTEND_URL.strip())
+
+logger.info(f"CORS allowed origins: {allow_origins}")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # =============================================================================
@@ -525,7 +535,6 @@ async def register(user_data: UserRegister):
             RETURNING id
         """, user_data.email, password_hash, user_data.full_name, user_data.phone, user_data.country)
         
-        # FIXED: Added ON CONFLICT for user_settings
         await conn.execute("""
             INSERT INTO user_settings (user_id) VALUES ($1)
             ON CONFLICT (user_id) DO NOTHING
@@ -1762,7 +1771,6 @@ async def admin_dashboard_stats(current_user: dict = Depends(get_admin_user)):
 # =============================================================================
 
 # FIXED: Ensure uploads directories exist before mounting StaticFiles
-# This must happen before app.mount() is called
 uploads_base_dir = os.path.join(os.getcwd(), "uploads")
 os.makedirs(uploads_base_dir, exist_ok=True)
 os.makedirs(os.path.join(uploads_base_dir, "blog"), exist_ok=True)
@@ -1770,6 +1778,7 @@ os.makedirs(os.path.join(uploads_base_dir, "courses"), exist_ok=True)
 
 app.mount("/uploads", StaticFiles(directory=uploads_base_dir), name="uploads")
 
+@app.head("/")  # FIXED: Support HEAD for Render health checks
 @app.get("/", response_class=HTMLResponse)
 async def serve_spa():
     try:
@@ -1778,6 +1787,7 @@ async def serve_spa():
     except FileNotFoundError:
         return HTMLResponse(content="<h1>Pipways API v3.0</h1><p>Frontend not built yet.</p>")
 
+@app.head("/{path:path}")  # FIXED: Support HEAD for health checks
 @app.get("/{path:path}", response_class=HTMLResponse)
 async def serve_spa_routes(path: str):
     # Skip API routes
