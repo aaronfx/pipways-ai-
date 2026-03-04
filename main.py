@@ -1761,7 +1761,14 @@ async def admin_dashboard_stats(current_user: dict = Depends(get_admin_user)):
 # STATIC FILES & SPA
 # =============================================================================
 
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# FIXED: Ensure uploads directories exist before mounting StaticFiles
+# This must happen before app.mount() is called
+uploads_base_dir = os.path.join(os.getcwd(), "uploads")
+os.makedirs(uploads_base_dir, exist_ok=True)
+os.makedirs(os.path.join(uploads_base_dir, "blog"), exist_ok=True)
+os.makedirs(os.path.join(uploads_base_dir, "courses"), exist_ok=True)
+
+app.mount("/uploads", StaticFiles(directory=uploads_base_dir), name="uploads")
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_spa():
