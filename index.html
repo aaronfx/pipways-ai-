@@ -2,1888 +2,458 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0f172a">
-    <title>Pipways - Forex Trading Journal & Educational Platform</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipways - Forex Trading Journal</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { font-family: 'Inter', sans-serif; }
-        body { background: #0f172a; color: #e2e8f0; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
-        .glass-strong { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); }
-        .gradient-text { background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .btn-primary { background: linear-gradient(135deg, #3b82f6, #6366f1); transition: all 0.2s ease; }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4); }
-        .loading-spinner { animation: spin 1s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .sidebar-item.active { background: rgba(59, 130, 246, 0.2); border-right: 3px solid #3b82f6; }
-        .skeleton { background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; }
-        @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        .live-pulse { animation: pulse-red 2s infinite; }
-        @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .notification-badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; font-size: 10px; padding: 2px 5px; border-radius: 10px; }
-        .admin-badge { background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px; }
-        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-        @media (max-width: 1024px) { .hide-mobile { display: none !important; } }
-        @media (min-width: 1025px) { .hide-desktop { display: none !important; } }
-        
-        /* New Styles for v3.0 */
-        .password-strength { height: 4px; border-radius: 2px; transition: all 0.3s ease; }
-        .password-strength.weak { background: #ef4444; width: 33%; }
-        .password-strength.fair { background: #f59e0b; width: 66%; }
-        .password-strength.strong { background: #10b981; width: 100%; }
-        .shake { animation: shake 0.5s ease-in-out; }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-        .drag-over { border-color: #3b82f6 !important; background: rgba(59, 130, 246, 0.1) !important; }
-        .seo-score-excellent { color: #10b981; }
-        .seo-score-good { color: #f59e0b; }
-        .seo-score-poor { color: #ef4444; }
-        .rich-editor-toolbar { display: flex; gap: 4px; padding: 8px; background: #1e293b; border-radius: 8px 8px 0 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .rich-editor-btn { padding: 6px 10px; border-radius: 4px; background: transparent; color: #94a3b8; cursor: pointer; transition: all 0.2s; }
-        .rich-editor-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
-        .rich-editor-content { min-height: 300px; padding: 16px; background: #0f172a; border-radius: 0 0 8px 8px; outline: none; }
-        .module-item { border-left: 3px solid transparent; transition: all 0.2s; }
-        .module-item:hover { border-left-color: #3b82f6; background: rgba(59, 130, 246, 0.05); }
-        .lesson-item { padding-left: 24px; position: relative; }
-        .lesson-item::before { content: ''; position: absolute; left: 8px; top: 50%; width: 8px; height: 8px; background: #475569; border-radius: 50%; transform: translateY(-50%); }
-        .lesson-item.completed::before { background: #10b981; }
-        .lesson-item.active::before { background: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .slide-in { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+        .sidebar-link { transition: all 0.2s; }
+        .sidebar-link:hover, .sidebar-link.active { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
     </style>
-<base target="_blank">
-<base target="_blank">
 </head>
-<body class="min-h-screen">
-    <!-- Toast Container -->
-    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+<body class="bg-gray-50">
+    <div id="app"></div>
 
-    <!-- Auth Screen Container -->
-    <div id="auth-container"></div>
+<script>
+// ============================================
+// STATE MANAGEMENT
+// ============================================
+const store = {
+    token: localStorage.getItem('token'),
+    user: JSON.parse(localStorage.getItem('user') || 'null'),
+    isAdmin: false,
+    currentView: 'login',
+    loading: false,
+    
+    setToken(token) {
+        this.token = token || null;
+        if (token && token.trim()) {
+            localStorage.setItem('token', token);
+        } else {
+            localStorage.removeItem('token');
+        }
+    },
+    
+    setUser(user) {
+        this.user = user;
+        this.isAdmin = user?.role === 'admin';
+        if (user) {
+            localStorage.setItem('user', JSON.stringify(user));
+        } else {
+            localStorage.removeItem('user');
+        }
+    },
+    
+    logout() {
+        this.setToken(null);
+        this.setUser(null);
+        this.isAdmin = false;
+        this.currentView = 'login';
+    }
+};
 
-    <!-- Main App -->
-    <div id="main-app" class="hidden">
-        <!-- Desktop Sidebar -->
-        <aside class="hide-mobile w-64 glass-strong h-screen fixed left-0 top-0 z-40 flex flex-col">
-            <div class="p-6 border-b border-white/5">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
-                        <i data-lucide="trending-up" class="w-5 h-5 text-white"></i>
-                    </div>
-                    <span class="text-xl font-bold gradient-text">Pipways</span>
-                </div>
-            </div>
-            <nav class="p-4 space-y-1 flex-1 overflow-y-auto" id="sidebar-nav">
-                <button onclick="navigateTo('dashboard')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="layout-dashboard" class="w-5 h-5"></i><span>Dashboard</span></button>
-                <button onclick="navigateTo('journal')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="book-open" class="w-5 h-5"></i><span>Trade Journal</span></button>
-                <button onclick="navigateTo('analytics')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="bar-chart-3" class="w-5 h-5"></i><span>Analytics</span></button>
-                <button onclick="navigateTo('performance')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="target" class="w-5 h-5"></i><span>AI Performance</span></button>
-                <button onclick="navigateTo('chart-analysis')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="scan-eye" class="w-5 h-5"></i><span>Chart Analysis</span></button>
-                <button onclick="navigateTo('discipline')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="shield-check" class="w-5 h-5"></i><span>Discipline</span></button>
-                <button onclick="navigateTo('mentor')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="message-circle" class="w-5 h-5"></i><span>AI Mentor</span></button>
-                <button onclick="navigateTo('courses')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="graduation-cap" class="w-5 h-5"></i><span>Courses</span></button>
-                <button onclick="navigateTo('webinars')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="video" class="w-5 h-5"></i><span>Webinars</span></button>
-                <button onclick="navigateTo('subscription')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all"><i data-lucide="crown" class="w-5 h-5"></i><span>Subscription</span></button>
-                <button onclick="navigateTo('notifications')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all relative">
-                    <i data-lucide="bell" class="w-5 h-5"></i><span>Notifications</span>
-                    <span id="sidebar-notification-badge" class="notification-badge hidden">0</span>
-                </button>
-                <button onclick="navigateTo('blog')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all">
-                    <i data-lucide="newspaper" class="w-5 h-5"></i><span>Blog</span>
-                </button>
-                <button id="admin-menu-item" onclick="navigateTo('admin')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all hidden">
-                    <i data-lucide="shield" class="w-5 h-5"></i><span>Admin</span><span class="admin-badge">ADMIN</span>
-                </button>
-            </nav>
-            <div class="p-4 border-t border-white/5">
-                <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all"><i data-lucide="log-out" class="w-5 h-5"></i><span>Sign Out</span></button>
-            </div>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="lg:ml-64 min-h-screen pb-20 lg:pb-0">
-            <div id="page-content" class="p-4 lg:p-8"></div>
-        </main>
-
-        <!-- Mobile Bottom Navigation -->
-        <nav class="hide-desktop fixed bottom-0 left-0 right-0 glass z-50 border-t border-white/5">
-            <div class="flex justify-around py-2">
-                <button onclick="navigateTo('dashboard')" class="flex flex-col items-center gap-1 p-2 text-slate-400"><i data-lucide="home" class="w-5 h-5"></i><span class="text-xs">Home</span></button>
-                <button onclick="navigateTo('analytics')" class="flex flex-col items-center gap-1 p-2 text-slate-400"><i data-lucide="bar-chart-2" class="w-5 h-5"></i><span class="text-xs">Stats</span></button>
-                <button onclick="navigateTo('journal')" class="flex flex-col items-center gap-1 p-2 text-slate-400"><div class="w-10 h-10 -mt-4 bg-gradient-to-br from-blue-500 to-violet-600 rounded-full flex items-center justify-center"><i data-lucide="plus" class="w-5 h-5 text-white"></i></div></button>
-                <button onclick="navigateTo('notifications')" class="flex flex-col items-center gap-1 p-2 text-slate-400 relative">
-                    <i data-lucide="bell" class="w-5 h-5"></i>
-                    <span id="mobile-notification-badge" class="notification-badge hidden" style="top: 2px; right: 2px;">0</span>
-                    <span class="text-xs">Alerts</span>
-                </button>
-                <button onclick="showMoreMenu()" class="flex flex-col items-center gap-1 p-2 text-slate-400"><i data-lucide="more-horizontal" class="w-5 h-5"></i><span class="text-xs">More</span></button>
-            </div>
-        </nav>
-    </div>
-
-    <!-- Mobile More Menu -->
-    <div id="more-menu" class="hidden fixed inset-0 z-50">
-        <div class="absolute inset-0 bg-black/60" onclick="hideMoreMenu()"></div>
-        <div class="absolute bottom-20 left-4 right-4 glass rounded-2xl p-4">
-            <div class="grid grid-cols-3 gap-4" id="more-menu-grid">
-                <button onclick="hideMoreMenu(); navigateTo('chart-analysis')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5"><i data-lucide="scan-eye" class="w-6 h-6 text-blue-400"></i><span class="text-xs">Analyze</span></button>
-                <button onclick="hideMoreMenu(); navigateTo('discipline')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5"><i data-lucide="shield-check" class="w-6 h-6 text-green-400"></i><span class="text-xs">Discipline</span></button>
-                <button onclick="hideMoreMenu(); navigateTo('mentor')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5"><i data-lucide="message-circle" class="w-6 h-6 text-violet-400"></i><span class="text-xs">Mentor</span></button>
-                <button onclick="hideMoreMenu(); navigateTo('courses')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5"><i data-lucide="graduation-cap" class="w-6 h-6 text-yellow-400"></i><span class="text-xs">Courses</span></button>
-                <button onclick="hideMoreMenu(); navigateTo('webinars')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5"><i data-lucide="video" class="w-6 h-6 text-red-400"></i><span class="text-xs">Webinars</span></button>
-                <button onclick="hideMoreMenu(); navigateTo('subscription')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5"><i data-lucide="crown" class="w-6 h-6 text-amber-400"></i><span class="text-xs">Pro</span></button>
-                <button onclick="hideMoreMenu(); navigateTo('blog')" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5"><i data-lucide="newspaper" class="w-6 h-6 text-cyan-400"></i><span class="text-xs">Blog</span></button>
-                <button onclick="hideMoreMenu(); logout()" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5 text-red-400"><i data-lucide="log-out" class="w-6 h-6 text-red-400"></i><span class="text-xs">Logout</span></button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Container -->
-    <div id="modal-container" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"></div>
-
-    <script>
-        // ==========================================
-        // CONFIGURATION
-        // ==========================================
-        const API_URL = (() => {
-            const hostname = window.location.hostname;
-            console.log('Detected hostname:', hostname);
-            
-            if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                return 'http://localhost:8000';
-            }
-            
-            if (hostname.includes('render.com')) {
-                const apiHostname = hostname.replace('-web-', '-api-');
-                console.log('Inferred API hostname:', apiHostname);
-                return `https://${apiHostname}`;
-            }
-            
-            return 'https://pipways-api.onrender.com';
-        })();
-        
-        console.log('API URL:', API_URL);
-        
-        // ==========================================
-        // STATE MANAGEMENT
-        // ==========================================
-        let authToken = localStorage.getItem('pipways_token');
-        let currentUser = null;
-        let currentPage = 'dashboard';
-        let notificationInterval = null;
-        let appConfig = {
-            features: {
-                aiAnalysis: true,
-                courses: true,
-                webinars: true,
-                blog: true,
-                subscriptions: true
-            }
+// ============================================
+// API CLIENT - FIXED: Proper baseUrl and error handling
+// ============================================
+const api = {
+    // FIXED: Use current origin as base URL
+    baseUrl: window.location.origin,
+    
+    async request(endpoint, options = {}) {
+        const url = `${this.baseUrl}/api${endpoint}`;
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers
         };
-
-        // ==========================================
-        // UTILITY FUNCTIONS
-        // ==========================================
-        function showToast(message, type = 'info', duration = 3000) {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            const colors = { 
-                success: 'bg-green-500', 
-                error: 'bg-red-500', 
-                info: 'bg-blue-500', 
-                warning: 'bg-yellow-500' 
-            };
-            toast.className = `${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg animate-fade-in flex items-center gap-2`;
-            toast.innerHTML = `
-                <i data-lucide="${type === 'success' ? 'check-circle' : type === 'error' ? 'alert-circle' : type === 'warning' ? 'alert-triangle' : 'info'}" class="w-5 h-5"></i>
-                <span>${message}</span>
-            `;
-            container.appendChild(toast);
-            lucide.createIcons();
-            setTimeout(() => toast.remove(), duration);
+        
+        if (store.token) {
+            headers['Authorization'] = `Bearer ${store.token}`;
         }
-
-        function formatDate(dateStr) {
-            if (!dateStr) return 'N/A';
-            return new Date(dateStr).toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
+        
+        try {
+            const response = await fetch(url, { 
+                ...options, 
+                headers,
+                // Ensure credentials are included for CORS
+                credentials: 'same-origin'
             });
-        }
-
-        function formatDateTime(dateStr) {
-            if (!dateStr) return 'N/A';
-            return new Date(dateStr).toLocaleString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-
-        function formatCurrency(amount) {
-            return new Intl.NumberFormat('en-US', { 
-                style: 'currency', 
-                currency: 'USD' 
-            }).format(amount);
-        }
-
-        function generateSlug(title) {
-            return title.toLowerCase()
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/^-|-$/g, '');
-        }
-
-        function truncateText(text, maxLength = 100) {
-            if (!text || text.length <= maxLength) return text;
-            return text.substring(0, maxLength) + '...';
-        }
-
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
-
-        async function copyToClipboard(text) {
-            try {
-                await navigator.clipboard.writeText(text);
-                showToast('Copied to clipboard!', 'success');
-            } catch (err) {
-                showToast('Failed to copy', 'error');
-            }
-        }
-
-        // ==========================================
-        // API CLIENT
-        // ==========================================
-        async function apiCall(endpoint, options = {}) {
-            const url = `${API_URL}${endpoint}`;
-            const config = {
-                headers: { 
-                    'Authorization': `Bearer ${authToken}`, 
-                    'Content-Type': 'application/json',
-                    ...options.headers 
-                },
-                ...options
-            };
             
-            try {
-                const response = await fetch(url, config);
-                
-                if (response.status === 401) { 
-                    logout(); 
-                    throw new Error('Session expired. Please log in again.'); 
-                }
-                
-                if (response.status === 403) {
-                    throw new Error('You do not have permission to perform this action.');
-                }
-                
-                if (response.status === 429) {
-                    throw new Error('Rate limit exceeded. Please try again later.');
-                }
-                
-                return response;
-            } catch (error) {
-                console.error('API Call Error:', error);
-                if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                    throw new Error('Cannot connect to server. Please check your internet connection.');
-                }
-                throw error;
+            // Handle 401/403 explicitly
+            if (response.status === 401) {
+                store.logout();
+                renderApp();
+                throw new Error('Session expired. Please sign in again.');
             }
-        }
-
-        // ==========================================
-        // MODAL SYSTEM
-        // ==========================================
-        function showModal(content, options = {}) {
-            const container = document.getElementById('modal-container');
-            const sizeClass = options.size === 'lg' ? 'max-w-4xl' : options.size === 'xl' ? 'max-w-6xl' : 'max-w-2xl';
             
-            container.innerHTML = `
-                <div class="${sizeClass} w-full glass rounded-2xl p-6 max-h-[90vh] overflow-y-auto">
-                    ${options.title ? `<h2 class="text-xl font-bold mb-4">${options.title}</h2>` : ''}
-                    ${content}
-                </div>
-            `;
-            container.classList.remove('hidden');
-            lucide.createIcons();
-        }
-
-        function hideModal() {
-            document.getElementById('modal-container').classList.add('hidden');
-        }
-
-        function showConfirm(title, message, onConfirm, onCancel = null) {
-            const content = `
-                <p class="text-slate-300 mb-6">${message}</p>
-                <div class="flex justify-end gap-3">
-                    <button onclick="hideModal()" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors">Cancel</button>
-                    <button id="confirm-btn" class="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 transition-colors">Confirm</button>
-                </div>
-            `;
-            showModal(content, { title });
+            if (response.status === 403) {
+                throw new Error('Access denied. Insufficient permissions.');
+            }
             
-            document.getElementById('confirm-btn').onclick = () => {
-                hideModal();
-                onConfirm();
-            };
-        }
-
-        // ==========================================
-        // FILE UPLOAD COMPONENT
-        // ==========================================
-        function createFileUploader(options = {}) {
-            const {
-                accept = '*',
-                multiple = false,
-                maxSize = 10 * 1024 * 1024, // 10MB
-                onUpload,
-                preview = true
-            } = options;
-
-            const container = document.createElement('div');
-            container.className = 'file-uploader';
+            if (response.status === 405) {
+                throw new Error('Method not allowed. Please check API configuration.');
+            }
             
-            container.innerHTML = `
-                <div class="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center hover:border-blue-500 transition-colors cursor-pointer" id="drop-zone">
-                    <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto mb-4 text-slate-400"></i>
-                    <p class="text-slate-300 mb-2">Drag & drop files here or click to browse</p>
-                    <p class="text-slate-500 text-sm">Maximum file size: ${(maxSize / 1024 / 1024).toFixed(1)}MB</p>
-                    <input type="file" id="file-input" class="hidden" accept="${accept}" ${multiple ? 'multiple' : ''}>
-                </div>
-                <div id="upload-preview" class="mt-4 space-y-2"></div>
-            `;
-
-            const dropZone = container.querySelector('#drop-zone');
-            const fileInput = container.querySelector('#file-input');
-            const previewContainer = container.querySelector('#upload-preview');
-
-            dropZone.addEventListener('click', () => fileInput.click());
+            const data = await response.json().catch(() => null);
             
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('drag-over');
-            });
-
-            dropZone.addEventListener('dragleave', () => {
-                dropZone.classList.remove('drag-over');
-            });
-
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('drag-over');
-                handleFiles(e.dataTransfer.files);
-            });
-
-            fileInput.addEventListener('change', (e) => {
-                handleFiles(e.target.files);
-            });
-
-            function handleFiles(files) {
-                Array.from(files).forEach(file => {
-                    if (file.size > maxSize) {
-                        showToast(`File ${file.name} is too large`, 'error');
-                        return;
-                    }
-                    
-                    if (preview) {
-                        showFilePreview(file);
-                    }
-                    
-                    if (onUpload) {
-                        onUpload(file);
-                    }
-                });
+            if (!response.ok) {
+                const errorMsg = data?.detail || data?.message || `HTTP ${response.status}: ${response.statusText}`;
+                throw new Error(errorMsg);
             }
-
-            function showFilePreview(file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const isImage = file.type.startsWith('image/');
-                    const isVideo = file.type.startsWith('video/');
-                    
-                    const previewItem = document.createElement('div');
-                    previewItem.className = 'flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg';
-                    previewItem.innerHTML = `
-                        ${isImage ? `<img src="${e.target.result}" class="w-12 h-12 object-cover rounded">` : 
-                          isVideo ? `<div class="w-12 h-12 bg-slate-700 rounded flex items-center justify-center"><i data-lucide="video" class="w-6 h-6"></i></div>` :
-                          `<div class="w-12 h-12 bg-slate-700 rounded flex items-center justify-center"><i data-lucide="file" class="w-6 h-6"></i></div>`}
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium truncate">${file.name}</p>
-                            <p class="text-xs text-slate-500">${(file.size / 1024).toFixed(1)} KB</p>
-                        </div>
-                        <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-red-400">
-                            <i data-lucide="x" class="w-4 h-4"></i>
-                        </button>
-                    `;
-                    previewContainer.appendChild(previewItem);
-                    lucide.createIcons();
-                };
-                
-                if (file.type.startsWith('image/')) {
-                    reader.readAsDataURL(file);
-                } else {
-                    reader.readAsText(file);
-                }
-            }
-
-            return container;
-        }
-
-        // ==========================================
-        // RICH TEXT EDITOR
-        // ==========================================
-        function createRichEditor(containerId, options = {}) {
-            const container = document.getElementById(containerId);
-            if (!container) return null;
-
-            const { placeholder = 'Start writing...', height = '300px' } = options;
-
-            container.innerHTML = `
-                <div class="rich-editor-toolbar">
-                    <button type="button" class="rich-editor-btn" data-command="formatBlock" data-value="H1">H1</button>
-                    <button type="button" class="rich-editor-btn" data-command="formatBlock" data-value="H2">H2</button>
-                    <button type="button" class="rich-editor-btn" data-command="formatBlock" data-value="H3">H3</button>
-                    <div class="w-px h-6 bg-slate-600 mx-1"></div>
-                    <button type="button" class="rich-editor-btn" data-command="bold"><i data-lucide="bold" class="w-4 h-4"></i></button>
-                    <button type="button" class="rich-editor-btn" data-command="italic"><i data-lucide="italic" class="w-4 h-4"></i></button>
-                    <button type="button" class="rich-editor-btn" data-command="underline"><i data-lucide="underline" class="w-4 h-4"></i></button>
-                    <div class="w-px h-6 bg-slate-600 mx-1"></div>
-                    <button type="button" class="rich-editor-btn" data-command="insertUnorderedList"><i data-lucide="list" class="w-4 h-4"></i></button>
-                    <button type="button" class="rich-editor-btn" data-command="insertOrderedList"><i data-lucide="list-ordered" class="w-4 h-4"></i></button>
-                    <div class="w-px h-6 bg-slate-600 mx-1"></div>
-                    <button type="button" class="rich-editor-btn" data-command="createLink"><i data-lucide="link" class="w-4 h-4"></i></button>
-                    <button type="button" class="rich-editor-btn" data-command="insertImage"><i data-lucide="image" class="w-4 h-4"></i></button>
-                    <button type="button" class="rich-editor-btn" data-command="removeFormat"><i data-lucide="remove-formatting" class="w-4 h-4"></i></button>
-                </div>
-                <div class="rich-editor-content" contenteditable="true" style="min-height: ${height};" placeholder="${placeholder}"></div>
-            `;
-
-            const editor = container.querySelector('.rich-editor-content');
-            const toolbar = container.querySelector('.rich-editor-toolbar');
-
-            toolbar.addEventListener('click', (e) => {
-                const btn = e.target.closest('.rich-editor-btn');
-                if (!btn) return;
-
-                const command = btn.dataset.command;
-                const value = btn.dataset.value || null;
-
-                if (command === 'createLink') {
-                    const url = prompt('Enter URL:');
-                    if (url) document.execCommand(command, false, url);
-                } else if (command === 'insertImage') {
-                    const url = prompt('Enter image URL:');
-                    if (url) document.execCommand(command, false, url);
-                } else {
-                    document.execCommand(command, false, value);
-                }
-
-                editor.focus();
-            });
-
-            return {
-                getContent: () => editor.innerHTML,
-                setContent: (html) => editor.innerHTML = html,
-                getText: () => editor.innerText,
-                clear: () => editor.innerHTML = ''
-            };
-        }
-
-        // ==========================================
-        // TAG INPUT COMPONENT
-        // ==========================================
-        function createTagInput(containerId, options = {}) {
-            const container = document.getElementById(containerId);
-            if (!container) return null;
-
-            const { 
-                placeholder = 'Add tags...', 
-                maxTags = 10, 
-                suggestions = [],
-                allowNew = true 
-            } = options;
-
-            let tags = [];
-
-            container.innerHTML = `
-                <div class="flex flex-wrap gap-2 p-3 bg-slate-800 border border-slate-700 rounded-lg min-h-[48px]">
-                    <div id="tags-container" class="flex flex-wrap gap-2"></div>
-                    <input type="text" id="tag-input" class="flex-1 min-w-[120px] bg-transparent outline-none text-sm" placeholder="${placeholder}">
-                </div>
-                <div id="tag-suggestions" class="hidden mt-2 p-2 bg-slate-800 border border-slate-700 rounded-lg max-h-40 overflow-y-auto"></div>
-            `;
-
-            const tagsContainer = container.querySelector('#tags-container');
-            const input = container.querySelector('#tag-input');
-            const suggestionsContainer = container.querySelector('#tag-suggestions');
-
-            function renderTags() {
-                tagsContainer.innerHTML = tags.map(tag => `
-                    <span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/20 text-blue-400 text-sm rounded">
-                        ${tag}
-                        <button type="button" class="tag-remove hover:text-red-400" data-tag="${tag}">
-                            <i data-lucide="x" class="w-3 h-3"></i>
-                        </button>
-                    </span>
-                `).join('');
-                lucide.createIcons();
-            }
-
-            function addTag(tag) {
-                tag = tag.trim().toLowerCase();
-                if (!tag || tags.includes(tag)) return;
-                if (tags.length >= maxTags) {
-                    showToast(`Maximum ${maxTags} tags allowed`, 'warning');
-                    return;
-                }
-                tags.push(tag);
-                renderTags();
-                input.value = '';
-                suggestionsContainer.classList.add('hidden');
-            }
-
-            function removeTag(tag) {
-                tags = tags.filter(t => t !== tag);
-                renderTags();
-            }
-
-            function showSuggestions(query) {
-                if (!query || suggestions.length === 0) {
-                    suggestionsContainer.classList.add('hidden');
-                    return;
-                }
-
-                const filtered = suggestions.filter(s => 
-                    s.toLowerCase().includes(query.toLowerCase()) && 
-                    !tags.includes(s.toLowerCase())
-                );
-
-                if (filtered.length === 0) {
-                    suggestionsContainer.classList.add('hidden');
-                    return;
-                }
-
-                suggestionsContainer.innerHTML = filtered.map(s => `
-                    <div class="tag-suggestion px-3 py-2 hover:bg-slate-700 cursor-pointer rounded text-sm" data-tag="${s}">
-                        ${s}
-                    </div>
-                `).join('');
-                suggestionsContainer.classList.remove('hidden');
-            }
-
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ',') {
-                    e.preventDefault();
-                    addTag(input.value);
-                } else if (e.key === 'Backspace' && !input.value && tags.length > 0) {
-                    removeTag(tags[tags.length - 1]);
-                }
-            });
-
-            input.addEventListener('input', (e) => {
-                showSuggestions(e.target.value);
-            });
-
-            container.addEventListener('click', (e) => {
-                if (e.target.classList.contains('tag-remove') || e.target.closest('.tag-remove')) {
-                    const tag = e.target.closest('.tag-remove').dataset.tag;
-                    removeTag(tag);
-                }
-                if (e.target.classList.contains('tag-suggestion')) {
-                    addTag(e.target.dataset.tag);
-                }
-            });
-
-            document.addEventListener('click', (e) => {
-                if (!container.contains(e.target)) {
-                    suggestionsContainer.classList.add('hidden');
-                }
-            });
-
-            return {
-                getTags: () => [...tags],
-                setTags: (newTags) => {
-                    tags = [...newTags];
-                    renderTags();
-                },
-                clear: () => {
-                    tags = [];
-                    renderTags();
-                },
-                addTag,
-                removeTag
-            };
-        }
-
-        // ==========================================
-        // FORM VALIDATOR
-        // ==========================================
-        function createFormValidator(formId, rules = {}) {
-            const form = document.getElementById(formId);
-            if (!form) return null;
-
-            const errors = {};
-
-            function validateField(field, rule) {
-                const value = field.value.trim();
-                const fieldErrors = [];
-
-                if (rule.required && !value) {
-                    fieldErrors.push('This field is required');
-                }
-
-                if (rule.minLength && value.length < rule.minLength) {
-                    fieldErrors.push(`Minimum ${rule.minLength} characters required`);
-                }
-
-                if (rule.maxLength && value.length > rule.maxLength) {
-                    fieldErrors.push(`Maximum ${rule.maxLength} characters allowed`);
-                }
-
-                if (rule.pattern && !rule.pattern.test(value)) {
-                    fieldErrors.push(rule.patternMessage || 'Invalid format');
-                }
-
-                if (rule.match) {
-                    const matchField = form.querySelector(`[name="${rule.match}"]`);
-                    if (matchField && value !== matchField.value) {
-                        fieldErrors.push('Fields do not match');
-                    }
-                }
-
-                if (rule.custom) {
-                    const customError = rule.custom(value);
-                    if (customError) {
-                        fieldErrors.push(customError);
-                    }
-                }
-
-                errors[field.name] = fieldErrors;
-                showFieldErrors(field, fieldErrors);
-                return fieldErrors.length === 0;
-            }
-
-            function showFieldErrors(field, fieldErrors) {
-                const container = field.closest('.form-field') || field.parentElement;
-                let errorEl = container.querySelector('.field-error');
-                
-                if (fieldErrors.length > 0) {
-                    field.classList.add('border-red-500');
-                    field.classList.remove('border-green-500');
-                    
-                    if (!errorEl) {
-                        errorEl = document.createElement('p');
-                        errorEl.className = 'field-error text-red-400 text-xs mt-1';
-                        container.appendChild(errorEl);
-                    }
-                    errorEl.textContent = fieldErrors[0];
-                } else {
-                    field.classList.remove('border-red-500');
-                    field.classList.add('border-green-500');
-                    if (errorEl) {
-                        errorEl.remove();
-                    }
-                }
-            }
-
-            // Real-time validation
-            Object.keys(rules).forEach(fieldName => {
-                const field = form.querySelector(`[name="${fieldName}"]`);
-                if (field) {
-                    field.addEventListener('blur', () => validateField(field, rules[fieldName]));
-                    field.addEventListener('input', debounce(() => {
-                        if (errors[fieldName]) {
-                            validateField(field, rules[fieldName]);
-                        }
-                    }, 300));
-                }
-            });
-
-            return {
-                validate: () => {
-                    let isValid = true;
-                    Object.keys(rules).forEach(fieldName => {
-                        const field = form.querySelector(`[name="${fieldName}"]`);
-                        if (field) {
-                            if (!validateField(field, rules[fieldName])) {
-                                isValid = false;
-                            }
-                        }
-                    });
-                    return isValid;
-                },
-                getErrors: () => ({ ...errors }),
-                clearErrors: () => {
-                    Object.keys(errors).forEach(key => delete errors[key]);
-                    form.querySelectorAll('.field-error').forEach(el => el.remove());
-                    form.querySelectorAll('.border-red-500, .border-green-500').forEach(el => {
-                        el.classList.remove('border-red-500', 'border-green-500');
-                    });
-                }
-            };
-        }
-
-        // ==========================================
-        // AUTHENTICATION SYSTEM
-        // ==========================================
-        function initializeModernLogin() {
-            const container = document.getElementById('auth-container');
-            container.innerHTML = `
-                <div class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-                    <div class="w-full max-w-md">
-                        <!-- Logo Section -->
-                        <div class="text-center mb-8">
-                            <div class="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-2xl shadow-blue-500/20">
-                                <i data-lucide="trending-up" class="w-10 h-10 text-white"></i>
-                            </div>
-                            <h1 class="text-4xl font-bold gradient-text mb-2">Pipways</h1>
-                            <p class="text-slate-400">Master Your Trading Journey</p>
-                        </div>
-
-                        <!-- Auth Card -->
-                        <div class="glass rounded-2xl p-8 shadow-2xl">
-                            <!-- Tab Switcher -->
-                            <div class="flex mb-6 bg-slate-800/50 rounded-xl p-1">
-                                <button id="login-tab" class="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all bg-blue-600 text-white" onclick="switchAuthTab('login')">
-                                    Sign In
-                                </button>
-                                <button id="register-tab" class="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white" onclick="switchAuthTab('register')">
-                                    Create Account
-                                </button>
-                            </div>
-
-                            <!-- Login Form -->
-                            <form id="login-form" class="space-y-4" onsubmit="handleModernLogin(event)">
-                                <div class="form-field">
-                                    <label class="block text-sm text-slate-400 mb-1.5">Email Address</label>
-                                    <div class="relative">
-                                        <i data-lucide="mail" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
-                                        <input type="email" name="email" class="w-full pl-10 pr-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" placeholder="your@email.com" required>
-                                    </div>
-                                </div>
-                                <div class="form-field">
-                                    <label class="block text-sm text-slate-400 mb-1.5">Password</label>
-                                    <div class="relative">
-                                        <i data-lucide="lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
-                                        <input type="password" name="password" id="login-password" class="w-full pl-10 pr-12 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" placeholder="••••••••" required>
-                                        <button type="button" onclick="togglePassword('login-password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
-                                            <i data-lucide="eye" class="w-5 h-5"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="flex items-center justify-between text-sm">
-                                    <label class="flex items-center gap-2 text-slate-400 cursor-pointer">
-                                        <input type="checkbox" class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-blue-500">
-                                        <span>Remember me</span>
-                                    </label>
-                                    <button type="button" onclick="showForgotPassword()" class="text-blue-400 hover:text-blue-300">Forgot password?</button>
-                                </div>
-                                <button type="submit" id="login-btn" class="w-full btn-primary py-3 rounded-lg font-medium flex items-center justify-center gap-2">
-                                    <span>Sign In</span>
-                                </button>
-                            </form>
-
-                            <!-- Register Form -->
-                            <form id="register-form" class="space-y-4 hidden" onsubmit="handleModernRegister(event)">
-                                <div class="form-field">
-                                    <label class="block text-sm text-slate-400 mb-1.5">Full Name</label>
-                                    <div class="relative">
-                                        <i data-lucide="user" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
-                                        <input type="text" name="name" class="w-full pl-10 pr-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" placeholder="John Doe" required>
-                                    </div>
-                                </div>
-                                <div class="form-field">
-                                    <label class="block text-sm text-slate-400 mb-1.5">Email Address</label>
-                                    <div class="relative">
-                                        <i data-lucide="mail" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
-                                        <input type="email" name="email" class="w-full pl-10 pr-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" placeholder="your@email.com" required>
-                                    </div>
-                                </div>
-                                <div class="form-field">
-                                    <label class="block text-sm text-slate-400 mb-1.5">Password</label>
-                                    <div class="relative">
-                                        <i data-lucide="lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
-                                        <input type="password" name="password" id="register-password" class="w-full pl-10 pr-12 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" placeholder="••••••••" required minlength="8">
-                                        <button type="button" onclick="togglePassword('register-password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
-                                            <i data-lucide="eye" class="w-5 h-5"></i>
-                                        </button>
-                                    </div>
-                                    <div class="mt-2">
-                                        <div class="password-strength" id="password-strength"></div>
-                                        <p class="text-xs text-slate-500 mt-1" id="password-hint">Use 8+ characters with uppercase, lowercase, and numbers</p>
-                                    </div>
-                                </div>
-                                <div class="form-field">
-                                    <label class="block text-sm text-slate-400 mb-1.5">Confirm Password</label>
-                                    <div class="relative">
-                                        <i data-lucide="lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
-                                        <input type="password" name="confirm_password" id="confirm-password" class="w-full pl-10 pr-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" placeholder="••••••••" required>
-                                    </div>
-                                </div>
-                                <div class="flex items-start gap-2 text-sm">
-                                    <input type="checkbox" id="terms" class="mt-0.5 w-4 h-4 rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-blue-500" required>
-                                    <label for="terms" class="text-slate-400">
-                                        I agree to the <a href="#" class="text-blue-400 hover:underline">Terms of Service</a> and <a href="#" class="text-blue-400 hover:underline">Privacy Policy</a>
-                                    </label>
-                                </div>
-                                <button type="submit" id="register-btn" class="w-full btn-primary py-3 rounded-lg font-medium flex items-center justify-center gap-2">
-                                    <span>Create Account</span>
-                                </button>
-                            </form>
-
-                            <!-- Social Login -->
-                            <div class="mt-6">
-                                <div class="relative">
-                                    <div class="absolute inset-0 flex items-center">
-                                        <div class="w-full border-t border-slate-700"></div>
-                                    </div>
-                                    <div class="relative flex justify-center text-sm">
-                                        <span class="px-2 bg-slate-900/50 text-slate-500">Or continue with</span>
-                                    </div>
-                                </div>
-                                <div class="mt-4 grid grid-cols-2 gap-3">
-                                    <button type="button" class="flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors border border-slate-700">
-                                        <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                                        <span class="text-sm">Google</span>
-                                    </button>
-                                    <button type="button" class="flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors border border-slate-700">
-                                        <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
-                                        <span class="text-sm">Apple</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Footer -->
-                        <p class="text-center mt-6 text-slate-500 text-sm">
-                            © 2026 Pipways. All rights reserved.
-                        </p>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-
-            // Password strength indicator
-            const passwordInput = document.getElementById('register-password');
-            if (passwordInput) {
-                passwordInput.addEventListener('input', (e) => {
-                    const strength = calculatePasswordStrength(e.target.value);
-                    const strengthBar = document.getElementById('password-strength');
-                    const hint = document.getElementById('password-hint');
-                    
-                    strengthBar.className = 'password-strength';
-                    if (e.target.value.length > 0) {
-                        strengthBar.classList.add(strength);
-                    }
-                    
-                    if (strength === 'strong') {
-                        hint.textContent = 'Strong password';
-                        hint.className = 'text-xs text-green-400 mt-1';
-                    } else if (strength === 'fair') {
-                        hint.textContent = 'Good, but could be stronger';
-                        hint.className = 'text-xs text-yellow-400 mt-1';
-                    } else {
-                        hint.textContent = 'Use 8+ characters with uppercase, lowercase, and numbers';
-                        hint.className = 'text-xs text-slate-500 mt-1';
-                    }
-                });
-            }
-        }
-
-        function calculatePasswordStrength(password) {
-            let score = 0;
-            if (password.length >= 8) score++;
-            if (password.length >= 12) score++;
-            if (/[a-z]/.test(password)) score++;
-            if (/[A-Z]/.test(password)) score++;
-            if (/[0-9]/.test(password)) score++;
-            if (/[^A-Za-z0-9]/.test(password)) score++;
             
-            if (score >= 5) return 'strong';
-            if (score >= 3) return 'fair';
-            return 'weak';
-        }
-
-        function togglePassword(inputId, btn) {
-            const input = document.getElementById(inputId);
-            const icon = btn.querySelector('i');
-            
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.setAttribute('data-lucide', 'eye-off');
-            } else {
-                input.type = 'password';
-                icon.setAttribute('data-lucide', 'eye');
+            return data;
+        } catch (error) {
+            console.error('API Error:', error);
+            // Distinguish network errors from HTTP errors
+            if (error.message === 'Failed to fetch') {
+                throw new Error('Cannot connect to server. Please check your internet connection and try again.');
             }
-            lucide.createIcons();
+            throw error;
         }
+    },
+    
+    get(endpoint) { return this.request(endpoint, { method: 'GET' }); },
+    post(endpoint, data) { return this.request(endpoint, { method: 'POST', body: JSON.stringify(data) }); },
+    put(endpoint, data) { return this.request(endpoint, { method: 'PUT', body: JSON.stringify(data) }); },
+    delete(endpoint) { return this.request(endpoint, { method: 'DELETE' }); }
+};
 
-        function switchAuthTab(tab) {
-            document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
-            document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
-            document.getElementById('login-tab').className = `flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${tab === 'login' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`;
-            document.getElementById('register-tab').className = `flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${tab === 'register' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`;
-        }
+// ============================================
+// UI COMPONENTS
+// ============================================
+const Components = {
+    Button({ text, onClick, variant = 'primary', type = 'button', disabled = false, className = '' }) {
+        const variants = {
+            primary: 'bg-blue-600 hover:bg-blue-700 text-white',
+            secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-800',
+            danger: 'bg-red-600 hover:bg-red-700 text-white',
+            success: 'bg-green-600 hover:bg-green-700 text-white',
+            outline: 'border-2 border-blue-600 text-blue-600 hover:bg-blue-50'
+        };
+        return `<button type="${type}" onclick="${onClick}" ${disabled ? 'disabled' : ''} class="${variants[variant]} px-6 py-2 rounded-lg font-medium transition-all ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}">${disabled ? '<span class="spinner inline-block mr-2"></span>' : ''}${text}</button>`;
+    },
+    
+    Input({ label, type = 'text', name, value = '', placeholder = '', required = false }) {
+        return `<div class="mb-4"><label class="block text-sm font-medium text-gray-700 mb-1">${label}</label><input type="${type}" name="${name}" value="${value}" placeholder="${placeholder}" ${required ? 'required' : ''} class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></div>`;
+    },
+    
+    Card({ title, children, className = '' }) {
+        return `<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 ${className}">${title ? `<h3 class="text-lg font-semibold text-gray-800 mb-4">${title}</h3>` : ''}${children}</div>`;
+    },
+    
+    Alert({ type = 'info', message }) {
+        const styles = { info: 'bg-blue-50 border-blue-200 text-blue-800', success: 'bg-green-50 border-green-200 text-green-800', warning: 'bg-yellow-50 border-yellow-200 text-yellow-800', error: 'bg-red-50 border-red-200 text-red-800' };
+        return `<div class="${styles[type]} border px-4 py-3 rounded-lg mb-4">${message}</div>`;
+    }
+};
 
-        async function handleModernLogin(e) {
+// ============================================
+// VIEWS
+// ============================================
+const Views = {
+    Login() {
+        const handleSubmit = async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('login-btn');
-            const originalContent = btn.innerHTML;
-            btn.innerHTML = '<div class="loading-spinner w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>';
-            btn.disabled = true;
-
+            e.stopPropagation(); // Prevent any bubbling
+            
+            const formData = new FormData(e.target);
+            const data = {
+                email: formData.get('email'),
+                password: formData.get('password')
+            };
+            
+            // Validation
+            if (!data.email || !data.password) {
+                alert('Please enter both email and password');
+                return;
+            }
+            
             try {
-                const formData = new URLSearchParams();
-                formData.append('email', e.target.email.value);
-                formData.append('password', e.target.password.value);
-
-                const response = await fetch(`${API_URL}/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: formData
-                });
-
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.detail || 'Login failed');
-
-                authToken = data.access_token;
-                currentUser = data;
-                localStorage.setItem('pipways_token', authToken);
-                showApp();
-                showToast('Welcome back!', 'success');
+                store.loading = true;
+                renderApp();
+                
+                console.log('Attempting login to:', `${api.baseUrl}/api/auth/login`);
+                const response = await api.post('/auth/login', data);
+                
+                store.setToken(response.access_token);
+                store.setUser(response.user);
+                store.currentView = 'dashboard';
             } catch (error) {
                 console.error('Login error:', error);
-                showToast(error.message, 'error');
-                e.target.classList.add('shake');
-                setTimeout(() => e.target.classList.remove('shake'), 500);
+                alert(error.message || 'Login failed. Please try again.');
             } finally {
-                btn.innerHTML = originalContent;
-                btn.disabled = false;
+                store.loading = false;
+                renderApp();
             }
-        }
-
-        async function handleModernRegister(e) {
-            e.preventDefault();
-            
-            // Validate passwords match
-            const password = e.target.password.value;
-            const confirmPassword = e.target.confirm_password.value;
-            
-            if (password !== confirmPassword) {
-                showToast('Passwords do not match', 'error');
-                return;
-            }
-
-            const btn = document.getElementById('register-btn');
-            const originalContent = btn.innerHTML;
-            btn.innerHTML = '<div class="loading-spinner w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>';
-            btn.disabled = true;
-
-            try {
-                const formData = new URLSearchParams();
-                formData.append('name', e.target.name.value);
-                formData.append('email', e.target.email.value);
-                formData.append('password', password);
-
-                const response = await fetch(`${API_URL}/auth/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: formData
-                });
-
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.detail || 'Registration failed');
-
-                authToken = data.access_token;
-                currentUser = data;
-                localStorage.setItem('pipways_token', authToken);
-                showApp();
-                showToast('Welcome! Your trial has started.', 'success');
-            } catch (error) {
-                console.error('Register error:', error);
-                showToast(error.message, 'error');
-                e.target.classList.add('shake');
-                setTimeout(() => e.target.classList.remove('shake'), 500);
-            } finally {
-                btn.innerHTML = originalContent;
-                btn.disabled = false;
-            }
-        }
-
-        function showForgotPassword() {
-            const content = `
-                <div class="space-y-4">
-                    <p class="text-slate-300">Enter your email address and we'll send you a link to reset your password.</p>
-                    <div class="form-field">
-                        <label class="block text-sm text-slate-400 mb-1.5">Email Address</label>
-                        <div class="relative">
-                            <i data-lucide="mail" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
-                            <input type="email" id="reset-email" class="w-full pl-10 pr-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 outline-none" placeholder="your@email.com">
-                        </div>
-                    </div>
-                    <button onclick="handleForgotPassword()" class="w-full btn-primary py-3 rounded-lg font-medium">
-                        Send Reset Link
-                    </button>
-                </div>
-            `;
-            showModal(content, { title: 'Reset Password' });
-        }
-
-        async function handleForgotPassword() {
-            const email = document.getElementById('reset-email').value;
-            if (!email) {
-                showToast('Please enter your email', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_URL}/auth/forgot-password`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ email })
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail);
-                }
-
-                hideModal();
-                showToast('Password reset link sent to your email', 'success');
-            } catch (error) {
-                showToast(error.message, 'error');
-            }
-        }
-
-        // ==========================================
-        // ADMIN LOGIN (Separate Route)
-        // ==========================================
-        function initializeAdminLogin() {
-            const container = document.getElementById('auth-container');
-            container.innerHTML = `
-                <div class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-                    <!-- Security Grid Overlay -->
-                    <div class="absolute inset-0 opacity-5" style="background-image: linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px); background-size: 50px 50px;"></div>
-                    
-                    <div class="w-full max-w-md relative z-10">
-                        <!-- Security Header -->
-                        <div class="text-center mb-8">
-                            <div class="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center shadow-2xl shadow-red-500/20">
-                                <i data-lucide="shield" class="w-10 h-10 text-white"></i>
-                            </div>
-                            <h1 class="text-3xl font-bold text-white mb-2">Admin Access</h1>
-                            <p class="text-red-400 flex items-center justify-center gap-2">
-                                <i data-lucide="alert-triangle" class="w-4 h-4"></i>
-                                Authorized personnel only
-                            </p>
-                        </div>
-
-                        <!-- Admin Login Card -->
-                        <div class="glass rounded-2xl p-8 shadow-2xl border-red-500/20" style="animation: pulse-border 2s infinite;">
-                            <style>
-                                @keyframes pulse-border {
-                                    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.2); }
-                                    50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-                                }
-                            </style>
-
-                            <form id="admin-login-form" class="space-y-4" onsubmit="handleAdminLogin(event)">
-                                <div class="form-field">
-                                    <label class="block text-sm text-slate-400 mb-1.5">Admin Email</label>
-                                    <div class="relative">
-                                        <i data-lucide="shield" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
-                                        <input type="email" name="email" class="w-full pl-10 pr-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all" placeholder="admin@pipways.com" required>
-                                    </div>
-                                </div>
-                                <div class="form-field">
-                                    <label class="block text-sm text-slate-400 mb-1.5">Password</label>
-                                    <div class="relative">
-                                        <i data-lucide="lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
-                                        <input type="password" name="password" id="admin-password" class="w-full pl-10 pr-12 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all" placeholder="••••••••" required>
-                                        <button type="button" onclick="togglePassword('admin-password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
-                                            <i data-lucide="eye" class="w-5 h-5"></i>
-                                        </button>
-                                    </div>
-                                    <div class="mt-2">
-                                        <div class="flex gap-1" id="admin-password-strength">
-                                            <div class="flex-1 h-1 bg-slate-700 rounded"></div>
-                                            <div class="flex-1 h-1 bg-slate-700 rounded"></div>
-                                            <div class="flex-1 h-1 bg-slate-700 rounded"></div>
-                                            <div class="flex-1 h-1 bg-slate-700 rounded"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="form-field">
-                                    <label class="block text-sm text-slate-400 mb-1.5">Two-Factor Code</label>
-                                    <div class="relative">
-                                        <i data-lucide="key" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
-                                        <input type="text" name="totp_code" class="w-full pl-10 pr-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all font-mono tracking-widest" placeholder="000000" maxlength="6" pattern="[0-9]{6}">
-                                    </div>
-                                    <p class="text-xs text-slate-500 mt-1">Enter the 6-digit code from your authenticator app</p>
-                                </div>
-                                <button type="submit" id="admin-login-btn" class="w-full bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all">
-                                    <i data-lucide="shield-check" class="w-5 h-5"></i>
-                                    <span>Secure Login</span>
-                                </button>
-                            </form>
-
-                            <div class="mt-6 pt-6 border-t border-slate-700">
-                                <div class="flex items-center gap-3 text-sm text-slate-500">
-                                    <i data-lucide="info" class="w-4 h-4"></i>
-                                    <span>Session timeout: 30 minutes</span>
-                                </div>
-                                <div class="flex items-center gap-3 text-sm text-slate-500 mt-2">
-                                    <i data-lucide="lock" class="w-4 h-4"></i>
-                                    <span>IP logging enabled</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Security Footer -->
-                        <div class="mt-6 text-center">
-                            <p class="text-slate-600 text-sm">
-                                This is a secure system. Unauthorized access is prohibited and will be prosecuted.
-                            </p>
-                            <button onclick="showClientLogin()" class="mt-4 text-slate-500 hover:text-slate-300 text-sm underline">
-                                Return to Client Login
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-
-            // Admin password strength
-            const passwordInput = document.getElementById('admin-password');
-            if (passwordInput) {
-                passwordInput.addEventListener('input', (e) => {
-                    const strength = calculatePasswordStrength(e.target.value);
-                    const bars = document.querySelectorAll('#admin-password-strength div');
-                    
-                    bars.forEach((bar, index) => {
-                        bar.className = 'flex-1 h-1 rounded transition-all';
-                        if (strength === 'weak' && index < 1) {
-                            bar.classList.add('bg-red-500');
-                        } else if (strength === 'fair' && index < 2) {
-                            bar.classList.add('bg-yellow-500');
-                        } else if (strength === 'strong' && index < 4) {
-                            bar.classList.add('bg-green-500');
-                        } else {
-                            bar.classList.add('bg-slate-700');
-                        }
-                    });
-                });
-            }
-        }
-
-        async function handleAdminLogin(e) {
-            e.preventDefault();
-            const btn = document.getElementById('admin-login-btn');
-            const originalContent = btn.innerHTML;
-            btn.innerHTML = '<div class="loading-spinner w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>';
-            btn.disabled = true;
-
-            try {
-                const formData = new URLSearchParams();
-                formData.append('email', e.target.email.value);
-                formData.append('password', e.target.password.value);
-                if (e.target.totp_code.value) {
-                    formData.append('totp_code', e.target.totp_code.value);
-                }
-
-                const response = await fetch(`${API_URL}/auth/admin-login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: formData
-                });
-
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.detail || 'Admin login failed');
-
-                authToken = data.access_token;
-                currentUser = data;
-                localStorage.setItem('pipways_token', authToken);
-                showApp();
-                showToast('Admin access granted', 'success');
-            } catch (error) {
-                console.error('Admin login error:', error);
-                showToast(error.message, 'error');
-                e.target.classList.add('shake');
-                setTimeout(() => e.target.classList.remove('shake'), 500);
-            } finally {
-                btn.innerHTML = originalContent;
-                btn.disabled = false;
-            }
-        }
-
-        function showClientLogin() {
-            initializeModernLogin();
-        }
-
-        // ==========================================
-        // MAIN APP FUNCTIONS
-        // ==========================================
-        function logout() {
-            // Call logout endpoint to invalidate token
-            if (authToken) {
-                fetch(`${API_URL}/auth/logout`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                }).catch(() => {}); // Ignore errors
-            }
-            
-            authToken = null;
-            currentUser = null;
-            localStorage.removeItem('pipways_token');
-            if (notificationInterval) clearInterval(notificationInterval);
-            
-            document.getElementById('main-app').classList.add('hidden');
-            initializeModernLogin();
-        }
-
-        async function showApp() {
-            document.getElementById('auth-container').innerHTML = '';
-            document.getElementById('main-app').classList.remove('hidden');
-            
-            try {
-                const response = await apiCall('/auth/me');
-                currentUser = await response.json();
-                console.log('Current user:', currentUser);
-                
-                // Check if user is admin
-                const isAdmin = currentUser.role === 'admin' || currentUser.is_admin === true;
-                
-                if (isAdmin) {
-                    const adminMenu = document.getElementById('admin-menu-item');
-                    if (adminMenu) {
-                        adminMenu.classList.remove('hidden');
-                        adminMenu.style.display = 'flex';
-                    }
-                    addAdminToMobileMenu();
-                }
-            } catch (error) {
-                console.error('Failed to fetch user info:', error);
-                showToast('Failed to load user data', 'error');
-            }
-            
-            navigateTo('dashboard');
-            startNotificationPolling();
-        }
-
-        function addAdminToMobileMenu() {
-            const moreMenuGrid = document.getElementById('more-menu-grid');
-            if (moreMenuGrid && !document.getElementById('mobile-admin-btn')) {
-                const adminBtn = document.createElement('button');
-                adminBtn.id = 'mobile-admin-btn';
-                adminBtn.onclick = () => { hideMoreMenu(); navigateTo('admin'); };
-                adminBtn.className = 'flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/5';
-                adminBtn.innerHTML = '<i data-lucide="shield" class="w-6 h-6 text-orange-400"></i><span class="text-xs">Admin</span>';
-                moreMenuGrid.appendChild(adminBtn);
-                lucide.createIcons();
-            }
-        }
-
-        function startNotificationPolling() {
-            fetchNotifications();
-            notificationInterval = setInterval(fetchNotifications, 30000);
-        }
-
-        async function fetchNotifications() {
-            try {
-                const response = await apiCall('/notifications/unread-count');
-                const data = await response.json();
-                updateNotificationBadge(data.unread_count);
-            } catch (error) {
-                console.error('Failed to fetch notifications:', error);
-            }
-        }
-
-        function updateNotificationBadge(count) {
-            const sidebarBadge = document.getElementById('sidebar-notification-badge');
-            const mobileBadge = document.getElementById('mobile-notification-badge');
-            
-            if (count > 0) {
-                sidebarBadge.textContent = count > 99 ? '99+' : count;
-                sidebarBadge.classList.remove('hidden');
-                mobileBadge.textContent = count > 99 ? '99+' : count;
-                mobileBadge.classList.remove('hidden');
-            } else {
-                sidebarBadge.classList.add('hidden');
-                mobileBadge.classList.add('hidden');
-            }
-        }
-
-        function navigateTo(page) {
-            currentPage = page;
-            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll(`[onclick="navigateTo('${page}')"]`).forEach(el => el.classList.add('active'));
-
-            const renderers = {
-                'dashboard': renderDashboard,
-                'journal': renderJournal,
-                'analytics': renderAnalytics,
-                'performance': renderPerformance,
-                'chart-analysis': renderChartAnalysis,
-                'discipline': renderDiscipline,
-                'mentor': renderMentor,
-                'courses': renderCourses,
-                'webinars': renderWebinars,
-                'subscription': renderSubscription,
-                'notifications': renderNotifications,
-                'blog': renderBlog,
-                'admin': renderAdmin
-            };
-
-            if (renderers[page]) {
-                renderers[page]();
-            } else {
-                document.getElementById('page-content').innerHTML = `
-                    <div class="text-center py-20">
-                        <i data-lucide="construction" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i>
-                        <h2 class="text-xl font-bold text-slate-400">Page Under Construction</h2>
-                        <p class="text-slate-500 mt-2">This feature is coming soon.</p>
-                    </div>
-                `;
-            }
-            
-            lucide.createIcons();
-            window.scrollTo(0, 0);
-        }
-
-        function showMoreMenu() { 
-            document.getElementById('more-menu').classList.remove('hidden'); 
-        }
+        };
         
-        function hideMoreMenu() { 
-            document.getElementById('more-menu').classList.add('hidden'); 
-        }
-
-        // ==========================================
-        // PAGE RENDERERS
-        // ==========================================
-        async function renderDashboard() {
-            const container = document.getElementById('page-content');
-            container.innerHTML = '<div class="flex justify-center py-20"><div class="loading-spinner w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full"></div></div>';
-
-            try {
-                const [tradesRes, analyticsRes] = await Promise.all([
-                    apiCall('/trades'),
-                    apiCall('/analytics/dashboard')
-                ]);
-                
-                const trades = await tradesRes.json();
-                const analytics = await analyticsRes.json();
-
-                const totalPips = trades.reduce((sum, t) => sum + (t.pips || 0), 0);
-                const wins = trades.filter(t => t.pips > 0).length;
-                const winRate = trades.length ? Math.round((wins / trades.length) * 100) : 0;
-
-                container.innerHTML = `
-                    <div class="animate-fade-in">
-                        <div class="flex justify-between items-center mb-6">
-                            <div>
-                                <h1 class="text-2xl font-bold">Dashboard</h1>
-                                <p class="text-slate-400 text-sm">Welcome back, ${currentUser?.name || 'Trader'}</p>
-                            </div>
-                            <button onclick="navigateTo('journal')" class="btn-primary px-4 py-2 rounded-lg flex items-center gap-2">
-                                <i data-lucide="plus" class="w-4 h-4"></i>
-                                <span>New Trade</span>
-                            </button>
+        // FIXED: Use proper event handler attachment
+        window.handleLoginSubmit = handleSubmit;
+        
+        return `
+            <div class="min-h-screen gradient-bg flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 fade-in">
+                    <div class="text-center mb-8">
+                        <div class="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                         </div>
-
-                        <!-- Stats Grid -->
-                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                            <div class="glass rounded-xl p-4 hover:bg-white/5 transition-colors">
-                                <div class="text-slate-400 text-sm mb-1">Total Trades</div>
-                                <div class="text-2xl font-bold">${analytics.total_trades || trades.length}</div>
-                                <div class="text-xs text-slate-500 mt-1">${analytics.trades_7d || 0} this week</div>
-                            </div>
-                            <div class="glass rounded-xl p-4 hover:bg-white/5 transition-colors">
-                                <div class="text-slate-400 text-sm mb-1">Win Rate</div>
-                                <div class="text-2xl font-bold ${winRate >= 50 ? 'text-green-400' : 'text-red-400'}">${analytics.win_rate || winRate}%</div>
-                                <div class="text-xs text-slate-500 mt-1">${wins} wins, ${trades.length - wins} losses</div>
-                            </div>
-                            <div class="glass rounded-xl p-4 hover:bg-white/5 transition-colors">
-                                <div class="text-slate-400 text-sm mb-1">Total Pips</div>
-                                <div class="text-2xl font-bold ${totalPips >= 0 ? 'text-green-400' : 'text-red-400'}">${totalPips > 0 ? '+' : ''}${analytics.total_pips || totalPips}</div>
-                                <div class="text-xs text-slate-500 mt-1">All time</div>
-                            </div>
-                            <div class="glass rounded-xl p-4 hover:bg-white/5 transition-colors">
-                                <div class="text-slate-400 text-sm mb-1">Profit Factor</div>
-                                <div class="text-2xl font-bold text-blue-400">${analytics.profit_factor || '0.00'}</div>
-                                <div class="text-xs text-slate-500 mt-1">Risk adjusted</div>
-                            </div>
-                        </div>
-
-                        <!-- Charts Row -->
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                            <div class="glass rounded-xl p-6">
-                                <h2 class="text-lg font-semibold mb-4">Equity Curve</h2>
-                                <canvas id="equityChart" height="200"></canvas>
-                            </div>
-                            <div class="glass rounded-xl p-6">
-                                <h2 class="text-lg font-semibold mb-4">Monthly Performance</h2>
-                                <canvas id="monthlyChart" height="200"></canvas>
-                            </div>
-                        </div>
-
-                        <!-- Recent Trades -->
-                        <div class="glass rounded-xl p-6 mb-6">
-                            <div class="flex justify-between items-center mb-4">
-                                <h2 class="text-lg font-semibold">Recent Trades</h2>
-                                <button onclick="navigateTo('journal')" class="text-blue-400 hover:text-blue-300 text-sm">View All</button>
-                            </div>
-                            ${trades.slice(0, 5).length > 0 ? `
-                                <div class="space-y-3">
-                                    ${trades.slice(0, 5).map(t => `
-                                        <div class="flex justify-between items-center py-3 border-b border-white/5 last:border-0">
-                                            <div class="flex items-center gap-4">
-                                                <span class="text-slate-400 text-sm">${formatDate(t.created_at)}</span>
-                                                <span class="font-semibold">${t.pair}</span>
-                                                <span class="px-2 py-1 rounded text-xs ${t.direction === 'LONG' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${t.direction}</span>
-                                                <span class="px-2 py-1 rounded text-xs bg-slate-700">${t.grade}</span>
-                                            </div>
-                                            <span class="font-mono font-bold ${t.pips >= 0 ? 'text-green-400' : 'text-red-400'}">${t.pips > 0 ? '+' : ''}${t.pips}</span>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            ` : '<p class="text-slate-500 text-center py-8">No trades yet. Start by logging your first trade!</p>'}
-                        </div>
-
-                        ${currentUser?.subscription_status === 'trial' && currentUser?.trial_ends_at ? `
-                        <div class="glass rounded-xl p-4 border border-yellow-500/30 bg-yellow-500/10">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-3">
-                                    <i data-lucide="clock" class="w-5 h-5 text-yellow-400"></i>
-                                    <span class="text-yellow-200">${(() => {
-                                        const daysLeft = Math.ceil((new Date(currentUser.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24));
-                                        if (daysLeft < 0) return 'Trial has expired';
-                                        if (daysLeft === 0) return 'Trial ends today';
-                                        return `Trial ends in ${daysLeft} days`;
-                                    })()}</span>
-                                </div>
-                                <button onclick="navigateTo('subscription')" class="text-yellow-400 hover:text-yellow-300 text-sm font-medium">Upgrade Now</button>
-                            </div>
-                        </div>
-                        ` : ''}
+                        <h1 class="text-2xl font-bold text-gray-800">Welcome Back</h1>
+                        <p class="text-gray-500">Sign in to your trading journal</p>
                     </div>
-                `;
-
-                // Initialize charts
-                if (analytics.equity_curve && analytics.equity_curve.length > 0) {
-                    new Chart(document.getElementById('equityChart'), {
-                        type: 'line',
-                        data: { 
-                            labels: analytics.equity_curve.map(d => formatDate(d.date)), 
-                            datasets: [{ 
-                                label: 'Cumulative Pips', 
-                                data: analytics.equity_curve.map(d => d.cumulative_pips), 
-                                borderColor: '#3b82f6', 
-                                backgroundColor: 'rgba(59, 130, 246, 0.1)', 
-                                fill: true, 
-                                tension: 0.4 
-                            }] 
-                        },
-                        options: { 
-                            responsive: true, 
-                            plugins: { legend: { display: false } }, 
-                            scales: { 
-                                x: { display: false }, 
-                                y: { grid: { color: 'rgba(255,255,255,0.05)' } } 
-                            } 
-                        }
-                    });
-                }
-
-                if (analytics.monthly_performance && analytics.monthly_performance.length > 0) {
-                    new Chart(document.getElementById('monthlyChart'), {
-                        type: 'bar',
-                        data: {
-                            labels: analytics.monthly_performance.map(m => m.month),
-                            datasets: [{
-                                label: 'Pips',
-                                data: analytics.monthly_performance.map(m => m.pips),
-                                backgroundColor: analytics.monthly_performance.map(m => m.pips >= 0 ? '#10b981' : '#ef4444'),
-                                borderRadius: 4
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                y: { grid: { color: 'rgba(255,255,255,0.05)' } }
-                            }
-                        }
-                    });
-                }
-            } catch (error) {
-                container.innerHTML = `<div class="text-red-400 text-center py-20">${error.message}</div>`;
-            }
-            lucide.createIcons();
-        }
-
-        async function renderJournal() {
-            const container = document.getElementById('page-content');
-            container.innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">Trade Journal</h1>
-                    <div class="glass rounded-xl p-6 mb-6">
-                        <h2 class="text-lg font-semibold mb-4">Log New Trade</h2>
-                        <form id="trade-form" onsubmit="handleTradeSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="form-field">
-                                <label class="block text-sm text-slate-400 mb-1">Currency Pair</label>
-                                <input type="text" name="pair" placeholder="EURUSD" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 uppercase focus:border-blue-500 outline-none" required>
-                            </div>
-                            <div class="form-field">
-                                <label class="block text-sm text-slate-400 mb-1">Direction</label>
-                                <select name="direction" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 outline-none">
-                                    <option value="LONG">Long</option>
-                                    <option value="SHORT">Short</option>
-                                </select>
-                            </div>
-                            <div class="form-field">
-                                <label class="block text-sm text-slate-400 mb-1">Pips</label>
-                                <input type="number" name="pips" step="0.1" placeholder="+45.5" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 outline-none" required>
-                            </div>
-                            <div class="form-field">
-                                <label class="block text-sm text-slate-400 mb-1">Grade</label>
-                                <select name="grade" class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 outline-none">
-                                    <option value="A">A - Excellent</option>
-                                    <option value="B">B - Good</option>
-                                    <option value="C">C - Poor</option>
-                                    <option value="D">D - Bad</option>
-                                </select>
-                            </div>
-                            <div class="form-field md:col-span-2">
-                                <label class="block text-sm text-slate-400 mb-1">Notes (Optional)</label>
-                                <textarea name="notes" rows="3" placeholder="Trade setup, emotions, lessons learned..." class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 outline-none resize-none"></textarea>
-                            </div>
-                            <div class="md:col-span-2">
-                                <button type="submit" class="w-full btn-primary py-3 rounded-lg font-medium">Save Trade</button>
-                            </div>
-                        </form>
+                    <form onsubmit="window.handleLoginSubmit(event)" method="POST" action="javascript:void(0);">
+                        ${Components.Input({ label: 'Email', type: 'email', name: 'email', placeholder: 'you@example.com', required: true })}
+                        ${Components.Input({ label: 'Password', type: 'password', name: 'password', placeholder: '••••••••', required: true })}
+                        <div class="flex items-center justify-between mb-6">
+                            <label class="flex items-center"><input type="checkbox" class="rounded border-gray-300 text-blue-600"><span class="ml-2 text-sm text-gray-600">Remember me</span></label>
+                            <a href="#" class="text-sm text-blue-600 hover:text-blue-700">Forgot password?</a>
+                        </div>
+                        ${Components.Button({ text: 'Sign In', type: 'submit', variant: 'primary', className: 'w-full', disabled: store.loading })}
+                    </form>
+                    <div class="mt-6 text-center">
+                        <p class="text-gray-600">Don't have an account? <a href="#" onclick="event.preventDefault(); store.currentView='register'; renderApp()" class="text-blue-600 hover:text-blue-700 font-medium">Sign up</a></p>
                     </div>
-                    <div id="trades-list"></div>
                 </div>
-            `;
-            loadTradesList();
-            lucide.createIcons();
-        }
-
-        async function loadTradesList() {
-            const container = document.getElementById('trades-list');
-            if (!container) return;
+            </div>`;
+    },
+    
+    Register() {
+        const handleSubmit = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const formData = new FormData(e.target);
+            const data = {
+                email: formData.get('email'),
+                password: formData.get('password'),
+                full_name: formData.get('full_name')
+            };
+            
+            const confirmPassword = formData.get('confirmPassword');
+            
+            if (data.password !== confirmPassword) {
+                alert('Passwords do not match');
+                return;
+            }
+            
+            if (data.password.length < 8) {
+                alert('Password must be at least 8 characters');
+                return;
+            }
             
             try {
-                const response = await apiCall('/trades');
-                const trades = await response.json();
+                store.loading = true;
+                renderApp();
                 
-                container.innerHTML = `
-                    <div class="glass rounded-xl p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-lg font-semibold">Trade History</h2>
-                            <button onclick="exportTrades()" class="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1">
-                                <i data-lucide="download" class="w-4 h-4"></i>
-                                Export CSV
-                            </button>
-                        </div>
-                        ${trades.length > 0 ? `
+                console.log('Attempting registration to:', `${api.baseUrl}/api/auth/register`);
+                const response = await api.post('/auth/register', data);
+                
+                store.setToken(response.access_token);
+                store.setUser(response.user);
+                store.currentView = 'dashboard';
+            } catch (error) {
+                console.error('Registration error:', error);
+                alert(error.message || 'Registration failed. Please try again.');
+            } finally {
+                store.loading = false;
+                renderApp();
+            }
+        };
+        
+        window.handleRegisterSubmit = handleSubmit;
+        
+        return `
+            <div class="min-h-screen gradient-bg flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 fade-in">
+                    <div class="text-center mb-8">
+                        <h1 class="text-2xl font-bold text-gray-800">Create Account</h1>
+                        <p class="text-gray-500">Start your trading journey</p>
+                    </div>
+                    <form onsubmit="window.handleRegisterSubmit(event)" method="POST" action="javascript:void(0);">
+                        ${Components.Input({ label: 'Full Name', name: 'full_name', placeholder: 'John Doe', required: true })}
+                        ${Components.Input({ label: 'Email', type: 'email', name: 'email', placeholder: 'you@example.com', required: true })}
+                        ${Components.Input({ label: 'Password', type: 'password', name: 'password', placeholder: '••••••••', required: true })}
+                        ${Components.Input({ label: 'Confirm Password', type: 'password', name: 'confirmPassword', placeholder: '••••••••', required: true })}
+                        ${Components.Button({ text: 'Create Account', type: 'submit', variant: 'primary', className: 'w-full', disabled: store.loading })}
+                    </form>
+                    <div class="mt-6 text-center">
+                        <p class="text-gray-600">Already have an account? <a href="#" onclick="event.preventDefault(); store.currentView='login'; renderApp()" class="text-blue-600 hover:text-blue-700 font-medium">Sign in</a></p>
+                    </div>
+                </div>
+            </div>`;
+    },
+    
+    Dashboard() {
+        let stats = null, recentTrades = [];
+        
+        const loadData = async () => {
+            try {
+                const [analytics, trades] = await Promise.all([
+                    api.get('/analytics/dashboard'),
+                    api.get('/trades?per_page=5')
+                ]);
+                stats = analytics.overall;
+                recentTrades = trades.trades;
+                renderApp();
+            } catch (error) { 
+                console.error('Failed to load dashboard:', error);
+                // FIXED: Handle auth errors
+                if (error.message?.includes('401') || error.message?.includes('403') || error.message?.includes('Session expired')) {
+                    store.logout();
+                    renderApp();
+                }
+            }
+        };
+        
+        if (!stats) { loadData(); }
+        
+        const StatCard = ({ title, value, change, icon, color }) => `
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">${title}</p>
+                        <p class="text-2xl font-bold text-gray-800">${value}</p>
+                        ${change !== undefined ? `<p class="text-sm ${change >= 0 ? 'text-green-600' : 'text-red-600'}">${change >= 0 ? '+' : ''}${change}%</p>` : ''}
+                    </div>
+                    <div class="w-12 h-12 ${color} rounded-lg flex items-center justify-center">${icon}</div>
+                </div>
+            </div>`;
+        
+        return `
+            <div class="fade-in">
+                <div class="mb-8">
+                    <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+                    <p class="text-gray-500">Welcome back, ${store.user?.full_name || 'Trader'}!</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    ${StatCard({ title: 'Total Trades', value: stats?.total_trades || 0, change: 12, color: 'bg-blue-100', icon: '<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>' })}
+                    ${StatCard({ title: 'Win Rate', value: `${stats?.win_rate || 0}%`, change: 5, color: 'bg-green-100', icon: '<svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>' })}
+                    ${StatCard({ title: 'Net P&L', value: `$${stats?.net_pnl?.toFixed(2) || '0.00'}`, change: stats?.net_pnl >= 0 ? 8 : -3, color: stats?.net_pnl >= 0 ? 'bg-green-100' : 'bg-red-100', icon: '<svg class="w-6 h-6 ' + (stats?.net_pnl >= 0 ? 'text-green-600' : 'text-red-600') + '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' })}
+                    ${StatCard({ title: 'Profit Factor', value: stats?.profit_factor?.toFixed(2) || '0.00', change: 2, color: 'bg-purple-100', icon: '<svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>' })}
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    ${Components.Card({
+                        title: 'Recent Trades',
+                        children: `
                             <div class="overflow-x-auto">
                                 <table class="w-full">
-                                    <thead class="text-slate-400 text-sm">
-                                        <tr>
-                                            <th class="text-left py-2">Date</th>
-                                            <th class="text-left">Pair</th>
-                                            <th class="text-left">Direction</th>
-                                            <th class="text-left">Grade</th>
-                                            <th class="text-right">Pips</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${trades.map(t => `
-                                            <tr class="border-t border-white/5 hover:bg-white/5 transition-colors">
-                                                <td class="py-3">${formatDate(t.created_at)}</td>
-                                                <td class="font-semibold">${t.pair}</td>
-                                                <td>
-                                                    <span class="px-2 py-1 rounded text-xs ${t.direction === 'LONG' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${t.direction}</span>
-                                                </td>
-                                                <td>
-                                                    <span class="px-2 py-1 rounded text-xs bg-slate-700">${t.grade}</span>
-                                                </td>
-                                                <td class="text-right font-mono ${t.pips >= 0 ? 'text-green-400' : 'text-red-400'}">${t.pips > 0 ? '+' : ''}${t.pips}</td>
-                                            </tr>
-                                        `).join('')}
+                                    <thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">P&L</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th></tr></thead>
+                                    <tbody class="divide-y divide-gray-200">
+                                        ${recentTrades.length === 0 ? '<tr><td colspan="4" class="px-4 py-4 text-center text-gray-500">No trades yet</td></tr>' : recentTrades.map(trade => `<tr class="hover:bg-gray-50"><td class="px-4 py-3 font-medium">${trade.symbol}</td><td class="px-4 py-3"><span class="px-2 py-1 text-xs rounded-full ${trade.trade_type === 'BUY' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${trade.trade_type}</span></td><td class="px-4 py-3 ${trade.profit_loss >= 0 ? 'text-green-600' : 'text-red-600'}">${trade.profit_loss >= 0 ? '+' : ''}$${trade.profit_loss?.toFixed(2) || '0.00'}</td><td class="px-4 py-3 text-sm text-gray-500">${new Date(trade.entry_date).toLocaleDateString()}</td></tr>`).join('')}
                                     </tbody>
                                 </table>
                             </div>
-                        ` : '<p class="text-slate-500 text-center py-8">No trades yet. Start by logging your first trade above!</p>'}
-                    </div>
-                `;
-            } catch (error) {
-                container.innerHTML = `<div class="text-red-400">${error.message}</div>`;
-            }
-            lucide.createIcons();
-        }
-
-        async function handleTradeSubmit(e) {
-            e.preventDefault();
-            const btn = e.target.querySelector('button[type="submit"]');
-            const originalText = btn.textContent;
-            btn.innerHTML = '<div class="loading-spinner w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>';
-            btn.disabled = true;
-
-            try {
-                const formData = new FormData(e.target);
-                const response = await apiCall('/trades', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
-                    body: new URLSearchParams(formData) 
-                });
-                
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Failed to save trade');
-                }
-                
-                showToast('Trade saved successfully!', 'success');
-                e.target.reset();
-                loadTradesList();
-            } catch (error) {
-                showToast(error.message, 'error');
-            } finally {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }
-        }
-
-        async function exportTrades() {
-            try {
-                const response = await apiCall('/trades/export?format=csv');
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `trades_${new Date().toISOString().split('T')[0]}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                showToast('Trades exported successfully!', 'success');
-            } catch (error) {
-                showToast('Failed to export trades', 'error');
-            }
-        }
-
-        // Placeholder renderers for other pages
-        async function renderAnalytics() {
-            document.getElementById('page-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">Analytics</h1>
-                    <div class="glass rounded-xl p-8 text-center">
-                        <i data-lucide="bar-chart-3" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i>
-                        <h2 class="text-xl font-bold text-slate-400">Advanced Analytics</h2>
-                        <p class="text-slate-500 mt-2">Detailed analytics dashboard is loading...</p>
-                    </div>
+                            <div class="mt-4"><button onclick="store.currentView='trades';renderApp()" class="text-blue-600 hover:text-blue-700 text-sm font-medium">View All Trades →</button></div>`
+                    })}
+                    ${Components.Card({
+                        title: 'Quick Actions',
+                        children: `
+                            <div class="grid grid-cols-2 gap-4">
+                                <button onclick="store.currentView='newTrade';renderApp()" class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-center">
+                                    <svg class="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                    <span class="text-sm font-medium text-gray-700">Add Trade</span>
+                                </button>
+                                <button onclick="store.currentView='courses';renderApp()" class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-center">
+                                    <svg class="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                                    <span class="text-sm font-medium text-gray-700">Browse Courses</span>
+                                </button>
+                            </div>`
+                    })}
                 </div>
-            `;
-            lucide.createIcons();
+            </div>`;
+    },
+    
+    Layout({ children }) {
+        const menuItems = [
+            { id: 'dashboard', label: 'Dashboard', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>' },
+            { id: 'trades', label: 'Trades', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>' },
+            { id: 'analytics', label: 'Analytics', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>' },
+            { id: 'courses', label: 'Courses', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>' },
+            { id: 'blog', label: 'Blog', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>' },
+        ];
+        
+        if (store.isAdmin) {
+            menuItems.push({ id: 'admin', label: 'Admin', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>' });
         }
-
-        async function renderPerformance() {
-            document.getElementById('page-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">AI Performance Analysis</h1>
-                    <div class="glass rounded-xl p-8 text-center">
-                        <i data-lucide="target" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i>
-                        <h2 class="text-xl font-bold text-slate-400">Performance Analysis</h2>
-                        <p class="text-slate-500 mt-2">AI-powered performance insights are loading...</p>
+        
+        window.handleLogout = () => { store.logout(); renderApp(); };
+        
+        return `
+            <div class="min-h-screen bg-gray-50 flex">
+                <aside class="w-64 bg-white border-r border-gray-200 fixed h-full z-10">
+                    <div class="p-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                            </div>
+                            <span class="text-xl font-bold text-gray-800">Pipways</span>
+                        </div>
                     </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        async function renderChartAnalysis() {
-            document.getElementById('page-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">Chart Analysis</h1>
-                    <div class="glass rounded-xl p-8 text-center">
-                        <i data-lucide="scan-eye" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i>
-                        <h2 class="text-xl font-bold text-slate-400">AI Chart Analysis</h2>
-                        <p class="text-slate-500 mt-2">Upload charts for AI-powered technical analysis</p>
+                    <nav class="px-4 pb-4">
+                        ${menuItems.map(item => `<a href="#" onclick="event.preventDefault(); store.currentView='${item.id}';renderApp();" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 mb-1 ${store.currentView === item.id ? 'active bg-blue-50 text-blue-600' : ''}">${item.icon}<span class="font-medium">${item.label}</span></a>`).join('')}
+                    </nav>
+                    <div class="absolute bottom-0 left-0 right-0 p-4 border-t">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                                <span class="text-gray-600 font-medium">${store.user?.full_name?.charAt(0) || 'U'}</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-800 truncate">${store.user?.full_name || 'User'}</p>
+                                <p class="text-xs text-gray-500 truncate">${store.user?.email || ''}</p>
+                            </div>
+                        </div>
+                        <button onclick="handleLogout()" class="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                            Sign Out
+                        </button>
                     </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
+                </aside>
+                <main class="flex-1 ml-64 p-8">${children}</main>
+            </div>`;
+    }
+};
 
-        async function renderDiscipline() {
-            document.getElementById('page-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">Trading Discipline</h1>
-                    <div class="glass rounded-xl p-8 text-center">
-                        <i data-lucide="shield-check" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i>
-                        <h2 class="text-xl font-bold text-slate-400">Discipline Tracker</h2>
-                        <p class="text-slate-500 mt-2">Track your trading discipline and checklist adherence</p>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
+// ============================================
+// MAIN RENDER FUNCTION
+// ============================================
+function renderApp() {
+    const app = document.getElementById('app');
+    
+    if (!store.token) {
+        app.innerHTML = store.currentView === 'register' ? Views.Register() : Views.Login();
+        return;
+    }
+    
+    let content;
+    switch (store.currentView) {
+        case 'dashboard': content = Views.Dashboard(); break;
+        case 'trades': content = `<div class="fade-in"><h1 class="text-2xl font-bold mb-6">Trades</h1><p>Trades view coming soon...</p></div>`; break;
+        case 'analytics': content = `<div class="fade-in"><h1 class="text-2xl font-bold mb-6">Analytics</h1><p>Analytics view coming soon...</p></div>`; break;
+        case 'courses': content = `<div class="fade-in"><h1 class="text-2xl font-bold mb-6">Courses</h1><p>Courses view coming soon...</p></div>`; break;
+        case 'blog': content = `<div class="fade-in"><h1 class="text-2xl font-bold mb-6">Blog</h1><p>Blog view coming soon...</p></div>`; break;
+        case 'admin': content = store.isAdmin ? `<div class="fade-in"><h1 class="text-2xl font-bold mb-6">Admin Dashboard</h1><p>Admin view coming soon...</p></div>` : Components.Alert({ type: 'error', message: 'Access denied. Admin only.' }); break;
+        default: content = Views.Dashboard();
+    }
+    
+    app.innerHTML = Views.Layout({ children: content });
+}
 
-        async function renderMentor() {
-            document.getElementById('page-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">AI Trading Mentor</h1>
-                    <div class="glass rounded-xl p-8 text-center">
-                        <i data-lucide="message-circle" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i>
-                        <h2 class="text-xl font-bold text-slate-400">AI Mentor Chat</h2>
-                        <p class="text-slate-500 mt-2">Get personalized trading psychology coaching</p>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        async function renderCourses() {
-            document.getElementById('page-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">Trading Courses</h1>
-                    <div class="glass rounded-xl p-8 text-center">
-                        <i data-lucide="graduation-cap" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i>
-                        <h2 class="text-xl font-bold text-slate-400">Course Library</h2>
-                        <p class="text-slate-500 mt-2">Browse and enroll in trading courses</p>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        async function renderWebinars() {
-            document.getElementById('page-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">Live Webinars</h1>
-                    <div class="glass rounded-xl p-8 text-center">
-                        <i data-lucide="video" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i>
-                        <h2 class="text-xl font-bold text-slate-400">Upcoming Webinars</h2>
-                        <p class="text-slate-500 mt-2">Join live trading sessions and Q&A</p>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        async function renderSubscription() {
-            document.getElementById('page-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">Subscription</h1>
-                    <div class="glass rounded-xl p-8 text-center">
-                        <i data-lucide="crown" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i>
-                        <h2 class="text-xl font-bold text-slate-400">Subscription Plans</h2>
-                        <p class="text-slate-500 mt-2">Upgrade to unlock all features</p>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        async function renderNotifications() {
-            document.getElementById('page-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">Notifications</h1>
-                    <div class="glass rounded-xl p-8 text-center">
-                        <i data-lucide="bell" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i>
-                        <h2 class="text-xl font-bold text-slate-400">Your Notifications</h2>
-                        <p class="text-slate-500 mt-2">Stay updated with platform alerts</p>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        async function renderBlog() {
-            document.getElementById('page-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">Trading Blog</h1>
-                    <div class="glass rounded-xl p-8 text-center">
-                        <i data-lucide="newspaper" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i>
-                        <h2 class="text-xl font-bold text-slate-400">Latest Articles</h2>
-                        <p class="text-slate-500 mt-2">Trading insights and market analysis</p>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        async function renderAdmin() {
-            document.getElementById('page-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <h1 class="text-2xl font-bold mb-6">Admin Dashboard</h1>
-                    <div class="glass rounded-xl p-8 text-center">
-                        <i data-lucide="shield" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i>
-                        <h2 class="text-xl font-bold text-slate-400">Admin Panel</h2>
-                        <p class="text-slate-500 mt-2">Manage platform content and users</p>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        // ==========================================
-        // INITIALIZATION
-        // ==========================================
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Check if user is already logged in
-            if (authToken) {
-                try {
-                    const response = await fetch(`${API_URL}/auth/me`, {
-                        headers: { 'Authorization': `Bearer ${authToken}` }
-                    });
-                    
-                    if (response.ok) {
-                        currentUser = await response.json();
-                        showApp();
-                    } else {
-                        // Token invalid, clear it
-                        localStorage.removeItem('pipways_token');
-                        authToken = null;
-                        initializeModernLogin();
-                    }
-                } catch (error) {
-                    console.error('Auth check failed:', error);
-                    initializeModernLogin();
-                }
-            } else {
-                // Check URL for admin login
-                if (window.location.pathname === '/admin-login') {
-                    initializeAdminLogin();
-                } else {
-                    initializeModernLogin();
-                }
-            }
-        });
-
-        // Handle browser back/forward buttons
-        window.addEventListener('popstate', (e) => {
-            if (e.state && e.state.page) {
-                navigateTo(e.state.page);
-            }
-        });
-    </script>
+// ============================================
+// INITIALIZE
+// ============================================
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Pipways app initializing...');
+    console.log('API Base URL:', api.baseUrl);
+    renderApp();
+});
+</script>
 </body>
 </html>
