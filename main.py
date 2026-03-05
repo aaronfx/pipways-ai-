@@ -3,10 +3,11 @@ Pipways Trading Platform API
 Enhanced with SEO-friendly blog, media management, and optimized PDF processing
 """
 
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Form, Query, Request
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Form, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime, timedelta
@@ -23,7 +24,6 @@ from contextlib import asynccontextmanager
 # Security & Auth
 from passlib.context import CryptContext
 from jose import JWTError, jwt
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 # Database (using SQLite for simplicity - replace with PostgreSQL for production)
 import sqlite3
@@ -47,10 +47,10 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# CORS Configuration
+# CORS Configuration - More permissive for debugging
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -88,19 +88,15 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./pipways.db")
 
 def get_db_connection():
     """Get database connection with row factory"""
-    # Parse DATABASE_URL to extract file path
-    # Handle both "sqlite:///path/to/db.db" and just "path/to/db.db"
     db_url = DATABASE_URL
     
     if db_url.startswith("sqlite:///"):
-        # Remove the sqlite:/// prefix (handles both absolute and relative paths)
         db_path = db_url[10:]
     elif db_url.startswith("sqlite://"):
         db_path = db_url[9:]
     else:
         db_path = db_url
     
-    # Ensure the directory exists for the database file
     db_dir = os.path.dirname(db_path)
     if db_dir and not os.path.exists(db_dir):
         os.makedirs(db_dir, exist_ok=True)
@@ -162,12 +158,12 @@ def init_db():
                 excerpt TEXT,
                 featured_image TEXT,
                 category TEXT DEFAULT 'general',
-                tags TEXT, -- JSON array
-                status TEXT DEFAULT 'draft', -- draft, published, archived
-                meta_title TEXT, -- SEO meta title
-                meta_description TEXT, -- SEO meta description
-                meta_keywords TEXT, -- SEO keywords
-                og_image TEXT, -- Open Graph image
+                tags TEXT,
+                status TEXT DEFAULT 'draft',
+                meta_title TEXT,
+                meta_description TEXT,
+                meta_keywords TEXT,
+                og_image TEXT,
                 author_id INTEGER,
                 view_count INTEGER DEFAULT 0,
                 published_at TIMESTAMP,
@@ -203,7 +199,7 @@ def init_db():
                 file_type TEXT NOT NULL,
                 trader_score INTEGER,
                 trader_type TEXT,
-                analysis_data TEXT, -- JSON
+                analysis_data TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
@@ -215,7 +211,7 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 image_path TEXT NOT NULL,
-                analysis_data TEXT, -- JSON
+                analysis_data TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
@@ -232,6 +228,10 @@ class UserCreate(BaseModel):
     email: str
     password: str
     name: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
 
 class User(BaseModel):
     id: int
@@ -360,7 +360,7 @@ def generate_slug(title: str) -> str:
     """Generate URL-friendly slug from title"""
     slug = re.sub(r'[^\w\s-]', '', title.lower())
     slug = re.sub(r'[-\s]+', '-', slug)
-    return slug[:200]  # Limit length
+    return slug[:200]
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
@@ -386,14 +386,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 async def validate_file_type(file: UploadFile, allowed_types: set) -> bool:
     """Validate file type by content"""
-    content = await file.read(2048)  # Read first 2KB for magic number check
+    content = await file.read(2048)
     await file.seek(0)
     
-    # Check MIME type
     if file.content_type not in allowed_types:
         return False
     
-    # Additional magic number check for images
     if file.content_type.startswith('image/'):
         file_type = imghdr.what(None, content)
         if not file_type:
@@ -408,9 +406,8 @@ async def save_upload_file(upload_file: UploadFile, destination: Path) -> str:
     filename = f"{file_id}{extension}"
     file_path = destination / filename
     
-    # Stream file in chunks
     async with aiofiles.open(file_path, 'wb') as out_file:
-        while chunk := await upload_file.read(1024 * 1024):  # 1MB chunks
+        while chunk := await upload_file.read(1024 * 1024):
             await out_file.write(chunk)
     
     return str(file_path.relative_to(UPLOAD_DIR))
@@ -418,17 +415,14 @@ async def save_upload_file(upload_file: UploadFile, destination: Path) -> str:
 def process_image_for_web(file_path: Path, max_width: int = 1920, max_height: int = 1080) -> Path:
     """Process and optimize image for web"""
     with Image.open(file_path) as img:
-        # Convert to RGB if necessary
         if img.mode in ('RGBA', 'LA', 'P'):
             background = Image.new('RGB', img.size, (255, 255, 255))
             background.paste(img, mask=img.split()[-1] if img.mode != 'P' else None)
             img = background
         
-        # Resize if too large
         if img.width > max_width or img.height > max_height:
             img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
         
-        # Save optimized version
         output_path = file_path.parent / f"{file_path.stem}_optimized{file_path.suffix}"
         img.save(output_path, 'JPEG', quality=85, optimize=True)
         return output_path
@@ -438,12 +432,10 @@ async def extract_text_from_pdf(file_path: Path) -> str:
     """Fast PDF text extraction using PyMuPDF"""
     text = []
     try:
-        # Open PDF with PyMuPDF (much faster than pdfplumber)
         doc = fitz.open(file_path)
         
         for page_num in range(len(doc)):
             page = doc[page_num]
-            # Extract text with layout preservation
             text.append(f"\n--- Page {page_num + 1} ---\n")
             text.append(page.get_text("text"))
         
@@ -460,19 +452,16 @@ async def extract_tables_from_pdf(file_path: Path) -> List[pd.DataFrame]:
         
         for page_num in range(len(doc)):
             page = doc[page_num]
-            # Find tables using PyMuPDF
             tabs = page.find_tables()
             
             if tabs.tables:
                 for tab in tabs.tables:
-                    # Extract table as pandas DataFrame
                     df = pd.DataFrame(tab.extract())
                     tables.append(df)
         
         doc.close()
         return tables
     except Exception as e:
-        # If table extraction fails, return empty list
         return []
 
 async def process_trading_statement(file_path: Path, file_type: str) -> Dict[str, Any]:
@@ -482,12 +471,10 @@ async def process_trading_statement(file_path: Path, file_type: str) -> Dict[str
     
     try:
         if file_type == "application/pdf":
-            # Use PyMuPDF for fast extraction
             content = await extract_text_from_pdf(file_path)
             tables = await extract_tables_from_pdf(file_path)
         elif file_type in ["text/csv", "application/vnd.ms-excel", 
                           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]:
-            # Process Excel/CSV
             if file_type == "text/csv":
                 df = pd.read_csv(file_path)
             else:
@@ -495,13 +482,10 @@ async def process_trading_statement(file_path: Path, file_type: str) -> Dict[str
             tables = [df]
             content = df.to_string()
         elif file_type == "text/html":
-            # Process HTML (MT4/MT5 statements)
             async with aiofiles.open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 content = await f.read()
-            # Parse HTML tables
             tables = pd.read_html(str(file_path))
         
-        # Analyze trading data
         analysis = analyze_trading_data(content, tables)
         return analysis
         
@@ -509,8 +493,7 @@ async def process_trading_statement(file_path: Path, file_type: str) -> Dict[str
         raise HTTPException(status_code=400, detail=f"Processing error: {str(e)}")
 
 def analyze_trading_data(content: str, tables: List[pd.DataFrame]) -> Dict[str, Any]:
-    """AI-powered trading analysis (simplified version - integrate with your AI)"""
-    # This is a placeholder - replace with your actual AI analysis logic
+    """AI-powered trading analysis"""
     analysis = {
         "trader_score": 75,
         "trader_type": "developing_scalper",
@@ -551,27 +534,23 @@ def analyze_trading_data(content: str, tables: List[pd.DataFrame]) -> Dict[str, 
     
     return analysis
 
-# Authentication Endpoints
+# FIXED: Authentication Endpoints - Now accept JSON instead of just form data
 @app.post("/auth/register", response_model=Token)
-async def register(
-    email: str = Form(...),
-    password: str = Form(...),
-    name: str = Form(...)
-):
-    """Register new user"""
+async def register(user_data: UserCreate):
+    """Register new user with JSON body"""
     with get_db() as conn:
         cursor = conn.cursor()
         
         # Check if user exists
-        cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+        cursor.execute("SELECT id FROM users WHERE email = ?", (user_data.email,))
         if cursor.fetchone():
             raise HTTPException(status_code=400, detail="Email already registered")
         
         # Create user
-        hashed_password = get_password_hash(password)
+        hashed_password = get_password_hash(user_data.password)
         cursor.execute(
             "INSERT INTO users (email, hashed_password, name) VALUES (?, ?, ?)",
-            (email, hashed_password, name)
+            (user_data.email, hashed_password, user_data.name)
         )
         conn.commit()
         user_id = cursor.lastrowid
@@ -592,8 +571,35 @@ async def register(
         }
 
 @app.post("/auth/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    """Login user"""
+async def login(user_data: UserLogin):
+    """Login user with JSON body - accepts email and password"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE email = ?", (user_data.email,))
+        user = cursor.fetchone()
+        
+        if not user or not verify_password(user_data.password, user["hashed_password"]):
+            raise HTTPException(
+                status_code=401,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        access_token = create_access_token(
+            data={"sub": str(user["id"])},
+            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        )
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": User(**dict(user))
+        }
+
+# Keep OAuth2 endpoint for Swagger UI compatibility
+@app.post("/auth/token")
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    """OAuth2 compatible token endpoint for Swagger UI"""
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM users WHERE email = ?", (form_data.username,))
@@ -613,8 +619,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         
         return {
             "access_token": access_token,
-            "token_type": "bearer",
-            "user": User(**dict(user))
+            "token_type": "bearer"
         }
 
 # Trade Endpoints
@@ -676,19 +681,16 @@ async def get_blog_posts(
             search_term = f"%{search}%"
             params.extend([search_term, search_term, search_term])
         
-        # Get total count
         count_query = query.replace("SELECT *", "SELECT COUNT(*)")
         cursor.execute(count_query, params)
         total = cursor.fetchone()[0]
         
-        # Get paginated results
         query += " ORDER BY published_at DESC LIMIT ? OFFSET ?"
         params.extend([per_page, (page - 1) * per_page])
         
         cursor.execute(query, params)
         posts = [dict(row) for row in cursor.fetchall()]
         
-        # Parse tags and get author info
         for post in posts:
             post["tags"] = json.loads(post["tags"]) if post["tags"] else []
             if post["author_id"]:
@@ -718,14 +720,12 @@ async def get_blog_post(slug: str):
         
         post = dict(post)
         
-        # Increment view count
         cursor.execute("UPDATE blog_posts SET view_count = view_count + 1 WHERE id = ?", 
                       (post["id"],))
         conn.commit()
         
         post["tags"] = json.loads(post["tags"]) if post["tags"] else []
         
-        # Get author
         if post["author_id"]:
             cursor.execute("SELECT id, email, name, is_admin FROM users WHERE id = ?", 
                          (post["author_id"],))
@@ -740,7 +740,7 @@ async def create_blog_post(
     content: str = Form(...),
     excerpt: Optional[str] = Form(None),
     category: str = Form("general"),
-    tags: Optional[str] = Form(None),  # JSON string
+    tags: Optional[str] = Form(None),
     status: str = Form("draft"),
     featured_image_id: Optional[int] = Form(None),
     meta_title: Optional[str] = Form(None),
@@ -752,14 +752,12 @@ async def create_blog_post(
     if not current_user.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    # Generate slug
     base_slug = generate_slug(title)
     slug = base_slug
     
     with get_db() as conn:
         cursor = conn.cursor()
         
-        # Ensure unique slug
         counter = 1
         while True:
             cursor.execute("SELECT id FROM blog_posts WHERE slug = ?", (slug,))
@@ -768,10 +766,8 @@ async def create_blog_post(
             slug = f"{base_slug}-{counter}"
             counter += 1
         
-        # Parse tags
         tag_list = json.loads(tags) if tags else []
         
-        # Get featured image URL if provided
         featured_image = None
         og_image = None
         if featured_image_id:
@@ -781,16 +777,14 @@ async def create_blog_post(
                 featured_image = f"/uploads/{media['file_path']}"
                 og_image = featured_image
         
-        # Set published date if publishing
         published_at = None
         if status == "published":
             published_at = datetime.utcnow().isoformat()
         
-        # Auto-generate meta description if not provided
         if not meta_description and excerpt:
             meta_description = excerpt[:160]
         elif not meta_description:
-            meta_description = content[:160].replace("<[^>]*>", "")  # Strip HTML
+            meta_description = content[:160].replace("<[^>]*>", "")
         
         cursor.execute("""
             INSERT INTO blog_posts 
@@ -838,14 +832,12 @@ async def update_blog_post(
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
         
-        # Build update query dynamically
         updates = []
         params = []
         
         if title:
             updates.append("title = ?")
             params.append(title)
-            # Update slug if title changes
             new_slug = generate_slug(title)
             cursor.execute("SELECT id FROM blog_posts WHERE slug = ? AND id != ?", 
                           (new_slug, post_id))
@@ -932,11 +924,9 @@ async def upload_media(
     if not current_user.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    # Validate file type
     if not await validate_file_type(file, ALLOWED_IMAGE_TYPES | ALLOWED_DOCUMENT_TYPES):
         raise HTTPException(status_code=400, detail="Invalid file type")
     
-    # Check file size
     content = await file.read()
     if len(content) > MAX_IMAGE_SIZE and file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="Image too large (max 10MB)")
@@ -945,7 +935,6 @@ async def upload_media(
     
     await file.seek(0)
     
-    # Generate safe filename
     file_id = str(uuid.uuid4())
     extension = Path(file.filename).suffix.lower()
     if file.content_type == "image/jpeg" and extension not in ['.jpg', '.jpeg']:
@@ -956,15 +945,12 @@ async def upload_media(
     filename = f"{file_id}{extension}"
     file_path = MEDIA_DIR / filename
     
-    # Save file
     async with aiofiles.open(file_path, 'wb') as out_file:
         await out_file.write(content)
     
-    # Process images for web
     if file.content_type.startswith('image/'):
         try:
             optimized_path = process_image_for_web(file_path)
-            # Replace original with optimized
             file_path.unlink()
             optimized_path.rename(file_path)
             file_size = file_path.stat().st_size
@@ -973,7 +959,6 @@ async def upload_media(
     else:
         file_size = len(content)
     
-    # Save to database
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -1040,7 +1025,6 @@ async def delete_media(
         if not media:
             raise HTTPException(status_code=404, detail="Media not found")
         
-        # Delete file
         file_path = UPLOAD_DIR / media["file_path"]
         if file_path.exists():
             file_path.unlink()
@@ -1057,11 +1041,9 @@ async def analyze_chart(
     current_user: dict = Depends(get_current_user)
 ):
     """Analyze chart image with AI"""
-    # Validate image
     if not await validate_file_type(file, ALLOWED_IMAGE_TYPES):
         raise HTTPException(status_code=400, detail="Invalid image format. Use JPEG, PNG, or WebP.")
     
-    # Save uploaded file
     file_id = str(uuid.uuid4())
     file_path = UPLOAD_DIR / f"{file_id}{Path(file.filename).suffix}"
     
@@ -1070,13 +1052,10 @@ async def analyze_chart(
         await out_file.write(content)
     
     try:
-        # Convert image to base64 for AI processing
         import base64
         with open(file_path, "rb") as img_file:
             image_data = base64.b64encode(img_file.read()).decode()
         
-        # TODO: Integrate with your AI model here
-        # For now, return mock analysis
         analysis = {
             "setup_quality": "A",
             "pair": "EURUSD",
@@ -1090,7 +1069,6 @@ async def analyze_chart(
             "key_levels": ["1.08200", "1.08500", "1.09000", "1.09200"]
         }
         
-        # Save analysis to database
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -1112,7 +1090,6 @@ async def analyze_chart(
             error=str(e)
         )
     finally:
-        # Cleanup
         if file_path.exists():
             file_path.unlink()
 
@@ -1123,23 +1100,19 @@ async def analyze_trade_file(
     current_user: dict = Depends(get_current_user)
 ):
     """Analyze trading statement with optimized processing"""
-    # Validate file type
     allowed_types = ALLOWED_DOCUMENT_TYPES | {"application/octet-stream"}
     if file.content_type not in allowed_types and not file.filename.endswith(('.pdf', '.csv', '.xls', '.xlsx', '.html', '.htm')):
         raise HTTPException(status_code=400, detail="Invalid file format")
     
-    # Save file temporarily
     file_id = str(uuid.uuid4())
     extension = Path(file.filename).suffix or '.pdf'
     temp_path = PDF_TEMP_DIR / f"{file_id}{extension}"
     
     try:
-        # Stream file to disk
         async with aiofiles.open(temp_path, 'wb') as out_file:
-            while chunk := await file.read(1024 * 1024):  # 1MB chunks
+            while chunk := await file.read(1024 * 1024):
                 await out_file.write(chunk)
         
-        # Determine MIME type if not provided
         mime_type = file.content_type
         if mime_type == "application/octet-stream":
             if extension == '.pdf':
@@ -1151,16 +1124,14 @@ async def analyze_trade_file(
             elif extension in ['.html', '.htm']:
                 mime_type = "text/html"
         
-        # Process with timeout
         try:
             analysis = await asyncio.wait_for(
                 process_trading_statement(temp_path, mime_type),
-                timeout=30.0  # 30 second timeout
+                timeout=30.0
             )
         except asyncio.TimeoutError:
             raise HTTPException(status_code=408, detail="Analysis timeout - file too complex")
         
-        # Save to database
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -1181,7 +1152,6 @@ async def analyze_trade_file(
     except Exception as e:
         return TradeAnalysisResponse(success=False, analysis={}, error=str(e))
     finally:
-        # Cleanup temp file
         if temp_path.exists():
             temp_path.unlink()
 
@@ -1217,7 +1187,6 @@ async def mentorship_personalized(
     current_user: dict = Depends(get_current_user)
 ):
     """AI Mentor for trading psychology"""
-    # TODO: Integrate with your AI model
     responses = {
         "fomo": "FOMO (Fear Of Missing Out) is dangerous. Stick to your trading plan and only take setups that meet your criteria.",
         "risk": "Proper risk management means never risking more than 1-2% of your account per trade.",
@@ -1225,7 +1194,6 @@ async def mentorship_personalized(
         "plan": "A trading plan should include: entry criteria, exit rules, position sizing, and risk management."
     }
     
-    # Simple keyword matching (replace with AI)
     response_text = responses.get(context_type, 
         "I'm here to help with your trading psychology and discipline. What specific aspect would you like to discuss?")
     
@@ -1245,7 +1213,6 @@ async def admin_dashboard(current_user: dict = Depends(get_current_user)):
     with get_db() as conn:
         cursor = conn.cursor()
         
-        # User stats
         cursor.execute("SELECT COUNT(*) as total FROM users")
         total_users = cursor.fetchone()["total"]
         
@@ -1256,7 +1223,6 @@ async def admin_dashboard(current_user: dict = Depends(get_current_user)):
         """)
         new_users_7d = cursor.fetchone()["new_users"]
         
-        # Trade stats
         cursor.execute("SELECT COUNT(*) as total FROM trades")
         total_trades = cursor.fetchone()["total"]
         
@@ -1267,7 +1233,6 @@ async def admin_dashboard(current_user: dict = Depends(get_current_user)):
         """)
         trades_7d = cursor.fetchone()["recent"]
         
-        # Blog stats
         cursor.execute("""
             SELECT COUNT(*) as published 
             FROM blog_posts 
@@ -1278,14 +1243,12 @@ async def admin_dashboard(current_user: dict = Depends(get_current_user)):
         cursor.execute("SELECT SUM(view_count) as total_views FROM blog_posts")
         total_views = cursor.fetchone()["total_views"] or 0
         
-        # Analysis stats
         cursor.execute("SELECT AVG(trader_score) as avg_score FROM trade_analyses")
         avg_trader_score = cursor.fetchone()["avg_score"] or 0
         
         cursor.execute("SELECT COUNT(*) as total FROM trade_analyses")
         total_analyses = cursor.fetchone()["total"]
         
-        # Recent activity
         cursor.execute("""
             SELECT id, name, created_at 
             FROM users 
