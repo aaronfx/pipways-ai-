@@ -3,872 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blog Admin - Pipways</title>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/code@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/image@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/paragraph@latest"></script>
+    <title>Blog - Pipways Trading Academy</title>
+    <meta name="description" content="Expert trading insights, strategies, and psychology tips from Pipways Trading Academy.">
+    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f7fa;
-            color: #333;
+            background: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.6;
         }
-        .admin-container { display: flex; min-height: 100vh; }
-        .sidebar { 
-            width: 250px; 
-            background: #1a1a2e; 
-            color: white;
-            padding: 20px;
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+        
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-radius: 16px;
         }
-        .sidebar h2 { margin-bottom: 30px; font-size: 1.5rem; }
-        .nav-item { 
-            padding: 12px 15px; 
-            margin-bottom: 5px;
-            border-radius: 6px;
+        
+        header h1 { font-size: 3em; margin-bottom: 20px; color: #60a5fa; }
+        header p { font-size: 1.2em; color: #94a3b8; max-width: 600px; margin: 0 auto; }
+        
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .filter-btn {
+            padding: 10px 20px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            border-radius: 30px;
             cursor: pointer;
-            transition: background 0.3s;
-        }
-        .nav-item:hover, .nav-item.active { background: #16213e; }
-        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
-        .header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
-            margin-bottom: 30px;
-        }
-        .btn { 
-            padding: 10px 20px; 
-            border: none; 
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
             transition: all 0.3s;
         }
-        .btn-primary { background: #007bff; color: white; }
-        .btn-success { background: #28a745; color: white; }
-        .btn-warning { background: #ffc107; color: #212529; }
-        .btn-secondary { background: #6c757d; color: white; }
-        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-        .editor-container { 
-            background: white; 
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+        
+        .filter-btn:hover, .filter-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
         }
-        .editor-header { 
-            padding: 20px; 
-            border-bottom: 1px solid #e9ecef;
+        
+        .blog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 30px;
         }
-        .form-group { margin-bottom: 20px; }
-        .form-group label { 
-            display: block; 
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
+        
+        .blog-card {
+            background: #1e293b;
+            border-radius: 16px;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
         }
-        .form-control { 
-            width: 100%; 
-            padding: 10px 15px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
+        
+        .blog-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
         }
-        .form-control:focus { outline: none; border-color: #007bff; }
-        #editorjs { padding: 20px; min-height: 400px; }
-        .seo-panel { 
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        
+        .blog-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
         }
-        .seo-score { 
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            font-size: 1.5rem;
-            font-weight: bold;
+        
+        .blog-card-content { padding: 25px; }
+        
+        .category {
+            display: inline-block;
+            padding: 5px 15px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
             margin-bottom: 15px;
         }
-        .score-good { background: #d4edda; color: #155724; }
-        .score-medium { background: #fff3cd; color: #856404; }
-        .score-bad { background: #f8d7da; color: #721c24; }
-        .suggestion-list { list-style: none; }
-        .suggestion-list li { 
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            align-items: center;
+        
+        .blog-card h2 {
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            color: #f1f5f9;
         }
-        .suggestion-list li:before {
-            content: "•";
-            margin-right: 10px;
-            color: #007bff;
-        }
-        .char-counter { 
-            float: right;
-            font-size: 0.85rem;
-            color: #6c757d;
-        }
-        .char-counter.warning { color: #ffc107; }
-        .char-counter.danger { color: #dc3545; }
-        .tabs { display: flex; border-bottom: 2px solid #e9ecef; margin-bottom: 20px; }
-        .tab { 
-            padding: 12px 24px;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -2px;
-        }
-        .tab.active { 
-            border-bottom-color: #007bff;
-            color: #007bff;
-            font-weight: 600;
-        }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .ai-panel {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 8px;
-            padding: 20px;
+        
+        .blog-card p {
+            color: #94a3b8;
             margin-bottom: 20px;
+            line-height: 1.6;
         }
-        .ai-panel h3 { margin-bottom: 15px; }
-        .ai-input { 
-            width: 100%;
-            padding: 10px;
-            border: none;
-            border-radius: 6px;
-            margin-bottom: 10px;
+        
+        .meta {
+            display: flex;
+            gap: 20px;
+            color: #64748b;
+            font-size: 14px;
         }
-        .media-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-        .media-item {
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            padding: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .media-item:hover { border-color: #007bff; }
-        .media-item img { width: 100%; height: 100px; object-fit: cover; border-radius: 4px; }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            align-items: center;
+        
+        .pagination {
+            display: flex;
             justify-content: center;
+            gap: 10px;
+            margin-top: 60px;
         }
-        .modal.active { display: flex; }
-        .modal-content {
-            background: white;
+        
+        .page-btn {
+            padding: 10px 20px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #e2e8f0;
             border-radius: 8px;
-            width: 90%;
-            max-width: 800px;
-            max-height: 80vh;
-            overflow-y: auto;
-            padding: 30px;
-        }
-        .drop-zone {
-            border: 2px dashed #007bff;
-            border-radius: 8px;
-            padding: 40px;
-            text-align: center;
             cursor: pointer;
-            transition: all 0.3s;
         }
-        .drop-zone:hover { background: #f8f9fa; }
-        .posts-table {
-            width: 100%;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        
+        .page-btn.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
         }
-        .posts-table th, .posts-table td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #e9ecef;
-        }
-        .posts-table th { background: #f8f9fa; font-weight: 600; }
-        .status-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-        .status-published { background: #d4edda; color: #155724; }
-        .status-draft { background: #f8f9fa; color: #6c757d; }
-        .status-scheduled { background: #fff3cd; color: #856404; }
-        .link-suggestions {
-            background: #e7f3ff;
-            border-left: 4px solid #007bff;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 4px;
+        
+        @media (max-width: 768px) {
+            header h1 { font-size: 2em; }
+            .blog-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div class="admin-container">
-        <aside class="sidebar">
-            <h2>📝 Blog Admin</h2>
-            <div class="nav-item active" onclick="showTab('posts')">All Posts</div>
-            <div class="nav-item" onclick="showTab('editor')">New Post</div>
-            <div class="nav-item" onclick="showTab('media')">Media Library</div>
-            <div class="nav-item" onclick="showTab('stats')">Analytics</div>
-        </aside>
+    <div class="container">
+        <header>
+            <h1>Trading Insights & Education</h1>
+            <p>Master the markets with expert analysis, proven strategies, and trading psychology tips from our team of professional traders.</p>
+        </header>
         
-        <main class="main-content">
-            <!-- Posts List Tab -->
-            <div id="posts-tab" class="tab-content active">
-                <div class="header">
-                    <h1>All Blog Posts</h1>
-                    <button class="btn btn-primary" onclick="showTab('editor'); resetEditor();">+ New Post</button>
-                </div>
-                <div id="posts-list"></div>
-            </div>
-            
-            <!-- Editor Tab -->
-            <div id="editor-tab" class="tab-content">
-                <div class="header">
-                    <h1 id="editor-title">Create New Post</h1>
-                    <div>
-                        <button class="btn btn-secondary" onclick="saveDraft()">Save Draft</button>
-                        <button class="btn btn-warning" onclick="schedulePost()">Schedule</button>
-                        <button class="btn btn-success" onclick="publishPost()">Publish</button>
-                    </div>
-                </div>
-                
-                <!-- AI Generator -->
-                <div class="ai-panel">
-                    <h3>🤖 AI Blog Writer</h3>
-                    <input type="text" id="ai-topic" class="ai-input" placeholder="Enter topic (e.g., Risk Management Strategies)">
-                    <input type="text" id="ai-keywords" class="ai-input" placeholder="Keywords (comma separated)">
-                    <select id="ai-audience" class="ai-input">
-                        <option value="beginner">Beginner Traders</option>
-                        <option value="intermediate">Intermediate Traders</option>
-                        <option value="advanced">Advanced Traders</option>
-                    </select>
-                    <select id="ai-tone" class="ai-input">
-                        <option value="professional">Professional</option>
-                        <option value="casual">Casual</option>
-                        <option value="educational">Educational</option>
-                        <option value="motivational">Motivational</option>
-                    </select>
-                    <button class="btn btn-light" onclick="generateWithAI()">Generate Content</button>
-                </div>
-                
-                <div class="tabs">
-                    <div class="tab active" onclick="showEditorTab('content')">Content</div>
-                    <div class="tab" onclick="showEditorTab('seo')">SEO</div>
-                    <div class="tab" onclick="showEditorTab('media')">Media</div>
-                </div>
-                
-                <!-- Content Tab -->
-                <div id="editor-content" class="editor-tab-content active">
-                    <div class="editor-container">
-                        <div class="editor-header">
-                            <div class="form-group">
-                                <label>Title</label>
-                                <input type="text" id="post-title" class="form-control" placeholder="Enter post title...">
-                            </div>
-                            <div class="form-group">
-                                <label>Slug</label>
-                                <input type="text" id="post-slug" class="form-control" placeholder="auto-generated-from-title">
-                            </div>
-                            <div class="form-group">
-                                <label>Excerpt</label>
-                                <textarea id="post-excerpt" class="form-control" rows="3" placeholder="Brief summary for blog listing..."></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label>Category</label>
-                                <input type="text" id="post-category" class="form-control" placeholder="e.g., Risk Management">
-                            </div>
-                            <div class="form-group">
-                                <label>Tags (comma separated)</label>
-                                <input type="text" id="post-tags" class="form-control" placeholder="forex, trading, psychology">
-                            </div>
-                        </div>
-                        <div id="editorjs"></div>
-                    </div>
-                </div>
-                
-                <!-- SEO Tab -->
-                <div id="editor-seo" class="editor-tab-content">
-                    <div class="seo-panel">
-                        <h3>SEO Score</h3>
-                        <div class="seo-score score-medium" id="seo-score">--</div>
-                        <button class="btn btn-primary" onclick="analyzeSEO()">Analyze SEO</button>
-                        <ul class="suggestion-list" id="seo-suggestions">
-                            <li>Click "Analyze SEO" to get suggestions</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="seo-panel">
-                        <h3>Meta Information</h3>
-                        <div class="form-group">
-                            <label>
-                                Meta Title
-                                <span class="char-counter" id="meta-title-count">0 / 70</span>
-                            </label>
-                            <input type="text" id="meta-title" class="form-control" maxlength="70" oninput="updateCharCount('meta-title', 70)">
-                        </div>
-                        <div class="form-group">
-                            <label>
-                                Meta Description
-                                <span class="char-counter" id="meta-desc-count">0 / 160</span>
-                            </label>
-                            <textarea id="meta-description" class="form-control" rows="3" maxlength="160" oninput="updateCharCount('meta-description', 160)"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Focus Keyword</label>
-                            <input type="text" id="focus-keyword" class="form-control" placeholder="Primary keyword for SEO">
-                        </div>
-                        <div class="form-group">
-                            <label>Meta Keywords (comma separated)</label>
-                            <input type="text" id="meta-keywords" class="form-control" placeholder="trading, forex, risk management">
-                        </div>
-                        <div class="form-group">
-                            <label>Canonical URL</label>
-                            <input type="text" id="canonical-url" class="form-control" placeholder="https://pipways.com/blog/custom-url">
-                        </div>
-                    </div>
-                    
-                    <div class="seo-panel">
-                        <h3>Social Media</h3>
-                        <div class="form-group">
-                            <label>OpenGraph Image URL</label>
-                            <input type="text" id="og-image" class="form-control" placeholder="https://pipways.com/uploads/images/og-image.jpg">
-                        </div>
-                        <div class="form-group">
-                            <label>Featured Image</label>
-                            <input type="text" id="featured-image" class="form-control" placeholder="https://pipways.com/uploads/images/featured.jpg">
-                        </div>
-                    </div>
-                    
-                    <div class="link-suggestions" id="link-suggestions" style="display: none;">
-                        <h4>🔗 Suggested Internal Links</h4>
-                        <div id="link-suggestions-content"></div>
-                    </div>
-                </div>
-                
-                <!-- Media Tab -->
-                <div id="editor-media" class="editor-tab-content">
-                    <div class="seo-panel">
-                        <h3>Media Library</h3>
-                        <div class="drop-zone" onclick="document.getElementById('media-upload').click()">
-                            <p>📁 Click or drag files here to upload</p>
-                            <input type="file" id="media-upload" style="display: none;" multiple onchange="handleMediaUpload(event)">
-                        </div>
-                        <div class="media-grid" id="media-grid"></div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Media Library Tab -->
-            <div id="media-tab" class="tab-content">
-                <div class="header">
-                    <h1>Media Library</h1>
-                    <button class="btn btn-primary" onclick="document.getElementById('media-upload-main').click()">+ Upload New</button>
-                    <input type="file" id="media-upload-main" style="display: none;" multiple onchange="handleMediaUpload(event, true)">
-                </div>
-                <div class="media-grid" id="media-grid-main"></div>
-            </div>
-            
-            <!-- Stats Tab -->
-            <div id="stats-tab" class="tab-content">
-                <div class="header">
-                    <h1>Blog Analytics</h1>
-                </div>
-                <div id="stats-content"></div>
-            </div>
-        </main>
-    </div>
-    
-    <!-- Schedule Modal -->
-    <div id="schedule-modal" class="modal">
-        <div class="modal-content">
-            <h2>Schedule Post</h2>
-            <input type="datetime-local" id="schedule-date" class="form-control" style="margin: 20px 0;">
-            <div style="text-align: right;">
-                <button class="btn btn-secondary" onclick="closeModal('schedule-modal')">Cancel</button>
-                <button class="btn btn-success" onclick="confirmSchedule()">Schedule</button>
-            </div>
+        <div class="filters">
+            <button class="filter-btn active" onclick="filterPosts('all')">All</button>
+            <button class="filter-btn" onclick="filterPosts('Psychology')">Psychology</button>
+            <button class="filter-btn" onclick="filterPosts('Strategy')">Strategy</button>
+            <button class="filter-btn" onclick="filterPosts('Risk Management')">Risk Management</button>
+            <button class="filter-btn" onclick="filterPosts('Technical Analysis')">Technical Analysis</button>
+        </div>
+        
+        <div id="blog-grid" class="blog-grid">
+            <!-- Posts loaded dynamically -->
+        </div>
+        
+        <div id="pagination" class="pagination">
+            <!-- Pagination loaded dynamically -->
         </div>
     </div>
 
     <script>
-        let editor;
-        let currentPostId = null;
-        const API_BASE = '/blog';
+        const API_BASE = 'https://pipways-api-nhem.onrender.com';
+        let currentPage = 1;
+        let currentCategory = null;
         
-        // Initialize Editor.js
-        function initEditor(data = {}) {
-            editor = new EditorJS({
-                holder: 'editorjs',
-                tools: {
-                    header: {
-                        class: Header,
-                        config: {
-                            levels: [1, 2, 3, 4, 5, 6],
-                            defaultLevel: 2
-                        }
-                    },
-                    paragraph: Paragraph,
-                    list: List,
-                    quote: Quote,
-                    code: CodeTool,
-                    table: Table,
-                    image: {
-                        class: ImageTool,
-                        config: {
-                            endpoints: {
-                                byFile: '/media/upload'
-                            }
-                        }
-                    },
-                    embed: Embed,
-                    delimiter: Delimiter
-                },
-                data: data,
-                placeholder: 'Start writing your blog post...'
-            });
-        }
-        
-        // Tab switching
-        function showTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById(tabName + '-tab').classList.add('active');
-            event.target.classList.add('active');
-            
-            if (tabName === 'posts') loadPosts();
-            if (tabName === 'media') loadMediaLibrary();
-            if (tabName === 'stats') loadStats();
-        }
-        
-        function showEditorTab(tabName) {
-            document.querySelectorAll('.editor-tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
-            document.getElementById('editor-' + tabName).classList.add('active');
-            event.target.classList.add('active');
-        }
-        
-        // Load posts list
-        async function loadPosts() {
+        async function loadPosts(page = 1, category = null) {
             try {
-                const response = await fetch(`${API_BASE}/admin/posts`, {
-                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-                });
+                let url = `${API_BASE}/posts?page=${page}&per_page=9`;
+                if (category && category !== 'all') {
+                    url += `&category=${encodeURIComponent(category)}`;
+                }
+                
+                const response = await fetch(url);
                 const data = await response.json();
                 
-                let html = '<table class="posts-table"><thead><tr><th>Title</th><th>Status</th><th>Views</th><th>SEO</th><th>Actions</th></tr></thead><tbody>';
+                const grid = document.getElementById('blog-grid');
+                grid.innerHTML = '';
                 
                 data.posts.forEach(post => {
-                    const statusClass = `status-${post.status}`;
-                    html += `
-                        <tr>
-                            <td>
-                                <strong>${post.title}</strong><br>
-                                <small>${post.slug}</small>
-                            </td>
-                            <td><span class="status-badge ${statusClass}">${post.status}</span></td>
-                            <td>${post.view_count || 0}</td>
-                            <td>${post.seo_score || '--'}/100</td>
-                            <td>
-                                <button class="btn btn-sm btn-primary" onclick="editPost(${post.id})">Edit</button>
-                                <button class="btn btn-sm btn-secondary" onclick="viewPost('${post.slug}')">View</button>
-                                <button class="btn btn-sm btn-danger" onclick="deletePost(${post.id})">Delete</button>
-                            </td>
-                        </tr>
+                    const card = document.createElement('article');
+                    card.className = 'blog-card';
+                    card.onclick = () => window.location.href = `/blog/${post.slug}`;
+                    card.innerHTML = `
+                        ${post.featured_image ? `<img src="${post.featured_image}" alt="${post.title}">` : ''}
+                        <div class="blog-card-content">
+                            ${post.category ? `<span class="category">${post.category}</span>` : ''}
+                            <h2>${post.title}</h2>
+                            <p>${post.excerpt || ''}</p>
+                            <div class="meta">
+                                <span>⏱️ ${post.reading_time || 5} min read</span>
+                                <span>👁️ ${post.view_count || 0} views</span>
+                            </div>
+                        </div>
                     `;
+                    grid.appendChild(card);
                 });
                 
-                html += '</tbody></table>';
-                document.getElementById('posts-list').innerHTML = html;
+                // Pagination
+                const pagination = document.getElementById('pagination');
+                pagination.innerHTML = '';
+                for (let i = 1; i <= data.pagination.total_pages; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = 'page-btn' + (i === page ? ' active' : '');
+                    btn.textContent = i;
+                    btn.onclick = () => loadPosts(i, currentCategory);
+                    pagination.appendChild(btn);
+                }
+                
             } catch (error) {
                 console.error('Error loading posts:', error);
             }
         }
         
-        // Edit post
-        async function editPost(postId) {
-            try {
-                const response = await fetch(`${API_BASE}/admin/posts/${postId}`, {
-                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-                });
-                const post = await response.json();
-                
-                currentPostId = postId;
-                document.getElementById('editor-title').textContent = 'Edit Post';
-                document.getElementById('post-title').value = post.title;
-                document.getElementById('post-slug').value = post.slug;
-                document.getElementById('post-excerpt').value = post.excerpt || '';
-                document.getElementById('post-category').value = post.category || '';
-                document.getElementById('post-tags').value = post.tags ? post.tags.join(', ') : '';
-                document.getElementById('meta-title').value = post.meta_title || '';
-                document.getElementById('meta-description').value = post.meta_description || '';
-                document.getElementById('focus-keyword').value = post.focus_keyword || '';
-                document.getElementById('meta-keywords').value = post.meta_keywords || '';
-                document.getElementById('canonical-url').value = post.canonical_url || '';
-                document.getElementById('og-image').value = post.og_image || '';
-                document.getElementById('featured-image').value = post.featured_image || '';
-                
-                // Update char counters
-                updateCharCount('meta-title', 70);
-                updateCharCount('meta-description', 160);
-                
-                // Load content into editor
-                const contentData = post.content_json || { blocks: [] };
-                initEditor(contentData);
-                
-                showTab('editor');
-            } catch (error) {
-                console.error('Error loading post:', error);
-                alert('Failed to load post');
-            }
-        }
-        
-        // Reset editor for new post
-        function resetEditor() {
-            currentPostId = null;
-            document.getElementById('editor-title').textContent = 'Create New Post';
-            document.querySelectorAll('input, textarea').forEach(el => el.value = '');
-            initEditor();
-        }
-        
-        // Save functions
-        async function savePost(status) {
-            const content = await editor.save();
-            const scheduledAt = status === 'scheduled' ? document.getElementById('schedule-date').value : null;
+        function filterPosts(category) {
+            currentCategory = category;
+            currentPage = 1;
             
-            const formData = new FormData();
-            formData.append('title', document.getElementById('post-title').value);
-            formData.append('content_json', JSON.stringify(content));
-            formData.append('excerpt', document.getElementById('post-excerpt').value);
-            formData.append('featured_image', document.getElementById('featured-image').value);
-            formData.append('meta_title', document.getElementById('meta-title').value);
-            formData.append('meta_description', document.getElementById('meta-description').value);
-            formData.append('meta_keywords', document.getElementById('meta-keywords').value);
-            formData.append('focus_keyword', document.getElementById('focus-keyword').value);
-            formData.append('canonical_url', document.getElementById('canonical-url').value);
-            formData.append('og_image', document.getElementById('og-image').value);
-            formData.append('category', document.getElementById('post-category').value);
-            formData.append('tags', document.getElementById('post-tags').value);
-            formData.append('status', status);
-            if (scheduledAt) formData.append('scheduled_at', scheduledAt);
-            
-            const url = currentPostId ? `${API_BASE}/admin/posts/${currentPostId}` : `${API_BASE}/admin/posts`;
-            const method = currentPostId ? 'PUT' : 'POST';
-            
-            try {
-                const response = await fetch(url, {
-                    method: method,
-                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
-                    body: formData
-                });
-                
-                const result = await response.json();
-                if (result.success) {
-                    alert('Post saved successfully!');
-                    showTab('posts');
-                } else {
-                    alert('Error: ' + result.detail);
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent === (category === 'all' ? 'All' : category)) {
+                    btn.classList.add('active');
                 }
-            } catch (error) {
-                console.error('Error saving post:', error);
-                alert('Failed to save post');
-            }
-        }
-        
-        function saveDraft() { savePost('draft'); }
-        function publishPost() { savePost('published'); }
-        function schedulePost() { document.getElementById('schedule-modal').classList.add('active'); }
-        function confirmSchedule() { 
-            document.getElementById('schedule-modal').classList.remove('active');
-            savePost('scheduled'); 
-        }
-        
-        // SEO Analysis
-        async function analyzeSEO() {
-            const content = await editor.save();
-            const data = {
-                content_json: content,
-                title: document.getElementById('post-title').value,
-                meta_description: document.getElementById('meta-description').value,
-                focus_keyword: document.getElementById('focus-keyword').value
-            };
+            });
             
-            try {
-                const response = await fetch(`${API_BASE}/admin/seo-score`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': 'Bearer ' + localStorage.getItem('token'),
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                });
-                
-                const result = await response.json();
-                
-                // Update score display
-                const scoreEl = document.getElementById('seo-score');
-                scoreEl.textContent = result.score;
-                scoreEl.className = 'seo-score ' + (result.score >= 80 ? 'score-good' : result.score >= 60 ? 'score-medium' : 'score-bad');
-                
-                // Update suggestions
-                const suggestionsHtml = result.suggestions.map(s => `<li>${s}</li>`).join('');
-                document.getElementById('seo-suggestions').innerHTML = suggestionsHtml;
-                
-                // Get link suggestions
-                const linkResponse = await fetch(`${API_BASE}/admin/link-suggestions`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': 'Bearer ' + localStorage.getItem('token'),
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ content_json: content })
-                });
-                
-                const linkResult = await linkResponse.json();
-                if (linkResult.suggestions && linkResult.suggestions.length > 0) {
-                    document.getElementById('link-suggestions').style.display = 'block';
-                    document.getElementById('link-suggestions-content').innerHTML = linkResult.suggestions.map(s => 
-                        `<p><strong>${s.title}</strong> - ${s.context}</p>`
-                    ).join('');
-                }
-                
-            } catch (error) {
-                console.error('Error analyzing SEO:', error);
-            }
+            loadPosts(1, category);
         }
         
-        // AI Generation
-        async function generateWithAI() {
-            const topic = document.getElementById('ai-topic').value;
-            if (!topic) return alert('Please enter a topic');
-            
-            const formData = new FormData();
-            formData.append('topic', topic);
-            formData.append('keywords', document.getElementById('ai-keywords').value);
-            formData.append('audience', document.getElementById('ai-audience').value);
-            formData.append('tone', document.getElementById('ai-tone').value);
-            
-            try {
-                const response = await fetch(`${API_BASE}/admin/ai-generate`, {
-                    method: 'POST',
-                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                if (result.error) {
-                    alert('AI Error: ' + result.error);
-                    return;
-                }
-                
-                // Fill in the form
-                document.getElementById('post-title').value = result.title;
-                document.getElementById('meta-title').value = result.meta_title || '';
-                document.getElementById('meta-description').value = result.meta_description || '';
-                document.getElementById('focus-keyword').value = result.focus_keyword || '';
-                document.getElementById('post-excerpt').value = result.excerpt || '';
-                
-                updateCharCount('meta-title', 70);
-                updateCharCount('meta-description', 160);
-                
-                // Load content into editor
-                initEditor({ blocks: result.content_blocks || [] });
-                
-                alert('AI content generated! Please review and edit before publishing.');
-                
-            } catch (error) {
-                console.error('Error generating content:', error);
-                alert('Failed to generate content');
-            }
-        }
-        
-        // Media handling
-        async function handleMediaUpload(event, isMain = false) {
-            const files = event.target.files;
-            for (let file of files) {
-                const formData = new FormData();
-                formData.append('file', file);
-                
-                try {
-                    const response = await fetch('/media/upload', {
-                        method: 'POST',
-                        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
-                        body: formData
-                    });
-                    
-                    const result = await response.json();
-                    if (result.success) {
-                        if (isMain) loadMediaLibrary();
-                        else loadMediaGrid();
-                    }
-                } catch (error) {
-                    console.error('Upload error:', error);
-                }
-            }
-        }
-        
-        async function loadMediaLibrary() {
-            try {
-                const response = await fetch('/media/library', {
-                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-                });
-                const data = await response.json();
-                
-                renderMediaGrid(data.media, 'media-grid-main');
-            } catch (error) {
-                console.error('Error loading media:', error);
-            }
-        }
-        
-        async function loadMediaGrid() {
-            try {
-                const response = await fetch('/media/library?file_type=image', {
-                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-                });
-                const data = await response.json();
-                
-                renderMediaGrid(data.media, 'media-grid');
-            } catch (error) {
-                console.error('Error loading media:', error);
-            }
-        }
-        
-        function renderMediaGrid(media, containerId) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = media.map(m => `
-                <div class="media-item" onclick="selectMedia('${m.url}')">
-                    ${m.file_type === 'image' 
-                        ? `<img src="${m.url}" alt="${m.alt_text || ''}">` 
-                        : '<div style="height: 100px; display: flex; align-items: center; justify-content: center;">📄</div>'
-                    }
-                    <p style="font-size: 0.8rem; margin-top: 5px; overflow: hidden; text-overflow: ellipsis;">${m.original_name}</p>
-                </div>
-            `).join('');
-        }
-        
-        function selectMedia(url) {
-            document.getElementById('featured-image').value = url;
-            alert('Image selected for featured image');
-        }
-        
-        // Stats
-        async function loadStats() {
-            try {
-                const response = await fetch(`${API_BASE}/admin/stats`, {
-                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-                });
-                const data = await response.json();
-                
-                const stats = data.stats;
-                document.getElementById('stats-content').innerHTML = `
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
-                        <div class="seo-panel">
-                            <h3>Total Posts</h3>
-                            <p style="font-size: 2rem; font-weight: bold;">${stats.total_posts || 0}</p>
-                        </div>
-                        <div class="seo-panel">
-                            <h3>Published</h3>
-                            <p style="font-size: 2rem; font-weight: bold; color: #28a745;">${stats.published_posts || 0}</p>
-                        </div>
-                        <div class="seo-panel">
-                            <h3>Drafts</h3>
-                            <p style="font-size: 2rem; font-weight: bold; color: #6c757d;">${stats.draft_posts || 0}</p>
-                        </div>
-                        <div class="seo-panel">
-                            <h3>Total Views</h3>
-                            <p style="font-size: 2rem; font-weight: bold; color: #007bff;">${stats.total_views || 0}</p>
-                        </div>
-                        <div class="seo-panel">
-                            <h3>Avg SEO Score</h3>
-                            <p style="font-size: 2rem; font-weight: bold; color: #ffc107;">${stats.avg_seo_score ? Math.round(stats.avg_seo_score) : '--'}</p>
-                        </div>
-                    </div>
-                `;
-            } catch (error) {
-                console.error('Error loading stats:', error);
-            }
-        }
-        
-        // Utilities
-        function updateCharCount(fieldId, max) {
-            const field = document.getElementById(fieldId);
-            const count = field.value.length;
-            const counter = document.getElementById(fieldId + '-count');
-            counter.textContent = `${count} / ${max}`;
-            
-            counter.className = 'char-counter';
-            if (count > max) counter.classList.add('danger');
-            else if (count > max * 0.9) counter.classList.add('warning');
-        }
-        
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('active');
-        }
-        
-        function viewPost(slug) {
-            window.open(`/blog/${slug}`, '_blank');
-        }
-        
-        async function deletePost(postId) {
-            if (!confirm('Are you sure you want to delete this post?')) return;
-            
-            try {
-                const response = await fetch(`${API_BASE}/admin/posts/${postId}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-                });
-                
-                const result = await response.json();
-                if (result.success) {
-                    loadPosts();
-                }
-            } catch (error) {
-                console.error('Error deleting post:', error);
-            }
-        }
-        
-        // Auto-generate slug from title
-        document.getElementById('post-title')?.addEventListener('blur', function() {
-            const slug = this.value.toLowerCase()
-                .replace(/[^\w\s-]/g, '')
-                .replace(/[\s_-]+/g, '-')
-                .replace(/^-+|-+$/g, '');
-            document.getElementById('post-slug').value = slug;
-        });
-        
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            initEditor();
-            loadPosts();
-        });
+        loadPosts();
     </script>
 </body>
 </html>
