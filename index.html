@@ -125,7 +125,6 @@
         
         .hidden { display: none !important; }
         
-        /* Line clamp utilities */
         .line-clamp-2 {
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -140,7 +139,6 @@
             overflow: hidden;
         }
 
-        /* Mobile Sidebar Styles */
         .mobile-sidebar {
             position: fixed;
             top: 0;
@@ -174,7 +172,6 @@
             visibility: visible;
         }
 
-        /* Mobile Bottom Navigation */
         .mobile-nav {
             position: fixed;
             bottom: 0;
@@ -211,7 +208,6 @@
             font-weight: 500;
         }
 
-        /* Safe area for mobile */
         .safe-bottom {
             padding-bottom: calc(80px + env(safe-area-inset-bottom));
         }
@@ -222,7 +218,6 @@
             }
         }
 
-        /* Responsive typography */
         .responsive-heading {
             font-size: 1.5rem;
             line-height: 2rem;
@@ -242,24 +237,20 @@
             }
         }
 
-        /* Touch-friendly inputs */
         input, select, button {
             touch-action: manipulation;
         }
 
-        /* Prevent text selection on mobile */
         .no-select {
             -webkit-user-select: none;
             user-select: none;
         }
 
-        /* Smooth scrolling */
         html {
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
         }
         
-        /* Editor styles */
         .editor-toolbar {
             display: flex;
             gap: 0.5rem;
@@ -299,7 +290,6 @@
             outline: none;
         }
         
-        /* Scrollbar hide */
         .scrollbar-hide::-webkit-scrollbar {
             display: none;
         }
@@ -555,7 +545,6 @@ function showApp() {
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
     
-    // Update mobile user name
     const userNameEl = document.getElementById('mobile-user-name');
     if (userNameEl && currentUser.name) {
         userNameEl.textContent = currentUser.name;
@@ -619,22 +608,23 @@ function getErrorMessage(data) {
     return JSON.stringify(data);
 }
 
-// UPDATED: Login with JSON
+// UPDATED: Login with Form data (application/x-www-form-urlencoded)
 async function handleLogin(e) {
     e.preventDefault();
     const form = e.target;
     const errorEl = document.getElementById('auth-error');
     
     try {
+        const formData = new URLSearchParams();
+        formData.append('email', form.email.value);
+        formData.append('password', form.password.value);
+        
         const response = await fetch(API_URL + '/auth/login', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/x-www-form-urlencoded'
             },
-            body: JSON.stringify({
-                email: form.email.value,
-                password: form.password.value
-            })
+            body: formData.toString()
         });
         
         const data = await response.json();
@@ -644,9 +634,14 @@ async function handleLogin(e) {
         }
         
         authToken = data.access_token;
-        currentUser = data.user;
+        currentUser = {
+            id: data.user_id,
+            name: data.name,
+            email: data.email,
+            is_admin: data.is_admin
+        };
         localStorage.setItem('pipways_token', authToken);
-        localStorage.setItem('pipways_user', JSON.stringify(data.user));
+        localStorage.setItem('pipways_user', JSON.stringify(currentUser));
         showApp();
         
     } catch (err) {
@@ -655,23 +650,24 @@ async function handleLogin(e) {
     }
 }
 
-// UPDATED: Register with JSON
+// UPDATED: Register with Form data (application/x-www-form-urlencoded)
 async function handleRegister(e) {
     e.preventDefault();
     const form = e.target;
     const errorEl = document.getElementById('auth-error');
     
     try {
+        const formData = new URLSearchParams();
+        formData.append('email', form.email.value);
+        formData.append('password', form.password.value);
+        formData.append('name', form.name.value);
+        
         const response = await fetch(API_URL + '/auth/register', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/x-www-form-urlencoded'
             },
-            body: JSON.stringify({
-                email: form.email.value,
-                password: form.password.value,
-                name: form.name.value
-            })
+            body: formData.toString()
         });
         
         const data = await response.json();
@@ -681,9 +677,14 @@ async function handleRegister(e) {
         }
         
         authToken = data.access_token;
-        currentUser = data.user;
+        currentUser = {
+            id: data.user_id,
+            name: data.name,
+            email: data.email,
+            is_admin: data.is_admin
+        };
         localStorage.setItem('pipways_token', authToken);
-        localStorage.setItem('pipways_user', JSON.stringify(data.user));
+        localStorage.setItem('pipways_user', JSON.stringify(currentUser));
         showApp();
         
     } catch (err) {
@@ -1045,7 +1046,7 @@ function renderJournal(content) {
     content.innerHTML = html;
 }
 
-// UPDATED: Add trade with JSON
+// UPDATED: Add trade with Form data (application/x-www-form-urlencoded)
 async function addTrade(e) {
     e.preventDefault();
     const f = e.target;
@@ -1056,17 +1057,18 @@ async function addTrade(e) {
     btn.disabled = true;
     
     try {
+        const formData = new URLSearchParams();
+        formData.append('pair', f.pair.value.toUpperCase());
+        formData.append('direction', f.direction.value);
+        formData.append('pips', f.pips.value);
+        formData.append('grade', f.grade.value);
+        if (f.entry_price.value) formData.append('entry_price', f.entry_price.value);
+        if (f.exit_price.value) formData.append('exit_price', f.exit_price.value);
+        
         const response = await apiCall('/trades', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                pair: f.pair.value.toUpperCase(),
-                direction: f.direction.value,
-                pips: parseFloat(f.pips.value),
-                grade: f.grade.value,
-                entry_price: f.entry_price.value ? parseFloat(f.entry_price.value) : null,
-                exit_price: f.exit_price.value ? parseFloat(f.exit_price.value) : null
-            })
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData.toString()
         });
         
         const data = await response.json();
@@ -1233,7 +1235,7 @@ async function analyzeChart(input) {
         
         html += '<div class="glass rounded-xl p-4 sm:p-6 border border-yellow-500/20 bg-yellow-500/5">';
         html += '<h4 class="font-semibold text-white mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">';
-        html += '<i data-lucide="lightbulb" class="w-4 h-4 text-yellow-400"></i>';
+        html += '<i data-lucide="lightbulb" class="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400"></i>';
         html += 'Recommendations';
         html += '</h4>';
         html += '<p class="text-slate-300 text-xs sm:text-sm leading-relaxed">' + analysis.recommendations + '</p>';
@@ -1631,6 +1633,7 @@ function quickAsk(message) {
     askMentor();
 }
 
+// UPDATED: Ask mentor with Form data (application/x-www-form-urlencoded)
 async function askMentor() {
     const input = document.getElementById('mentorInput');
     const message = input.value.trim();
@@ -1671,13 +1674,14 @@ async function askMentor() {
     chat.scrollTop = chat.scrollHeight;
     
     try {
+        const formData = new URLSearchParams();
+        formData.append('message', message);
+        formData.append('context_type', 'general');
+        
         const response = await apiCall('/mentorship/personalized', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                message: message,
-                context_type: 'general'
-            })
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData.toString()
         });
         
         const data = await response.json();
@@ -2127,7 +2131,7 @@ async function uploadMedia(file) {
     formData.append('file', file);
     formData.append('alt_text', 'Description');
     
-    const response = await fetch('/admin/media/upload', {
+    const response = await fetch(API_URL + '/admin/media/upload', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + authToken },
         body: formData
@@ -2182,7 +2186,7 @@ function formatText(type) {
     editor.value = editor.value.substring(0, start) + replacement + editor.value.substring(end);
 }
 
-// UPDATED: Save blog post with JSON
+// UPDATED: Save blog post with Form data (application/x-www-form-urlencoded)
 async function saveBlogPost(e) {
     e.preventDefault();
     const form = e.target;
@@ -2191,17 +2195,18 @@ async function saveBlogPost(e) {
     btn.textContent = 'Saving...';
     
     try {
+        const formData = new URLSearchParams();
+        formData.append('title', form.title.value);
+        formData.append('content', form.content.value);
+        formData.append('category', form.category.value);
+        formData.append('status', form.status.value);
+        if (form.excerpt.value) formData.append('excerpt', form.excerpt.value);
+        if (form.tags.value) formData.append('tags', form.tags.value);
+        
         const response = await apiCall('/admin/blog/posts', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                title: form.title.value,
-                content: form.content.value,
-                category: form.category.value,
-                status: form.status.value,
-                excerpt: form.excerpt.value || null,
-                tags: form.tags.value ? form.tags.value.split(',').map(t => t.trim()) : []
-            })
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData.toString()
         });
         
         const data = await response.json();
