@@ -1,7 +1,7 @@
 # dependencies.py
 import os
 import asyncpg
-from fastapi import HTTPException, Depends, Request
+from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 
