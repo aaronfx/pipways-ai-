@@ -15,12 +15,9 @@ import re
 import uuid
 import io
 import csv
-import pandas as pd
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 import shutil
-from slugify import slugify
-import magic
 
 app = FastAPI(title="Pipways API")
 
@@ -437,12 +434,25 @@ Provide response in this JSON format:
         "success": True
     }
 
-# Startup
+# Startup with auto-migration
 @app.on_event("startup")
 async def startup():
     conn = await asyncpg.connect(DATABASE_URL, ssl="require")
     
-    # Users table with admin flag
+    # ========== AUTO-MIGRATION ==========
+    migrations = [
+        ("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE", "is_admin column"),
+    ]
+    
+    for sql, description in migrations:
+        try:
+            await conn.execute(sql)
+            print(f"✅ Migration applied: {description}")
+        except Exception as e:
+            print(f"⚠️ Migration skipped ({description}): {e}")
+    # ========== END MIGRATION ==========
+    
+    # Users table (create if not exists)
     await conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -453,12 +463,6 @@ async def startup():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    
-    # Add is_admin column if not exists
-    try:
-        await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE")
-    except:
-        pass
     
     # Trades table
     await conn.execute("""
@@ -573,18 +577,25 @@ async def startup():
         )
     """)
     
-    # Create default admin user
+    # Create default admin user and ensure is_admin = TRUE
     try:
-        existing_admin = await conn.fetchrow("SELECT id FROM users WHERE email = $1", DEFAULT_ADMIN_EMAIL)
+        existing_admin = await conn.fetchrow("SELECT id, is_admin FROM users WHERE email = $1", DEFAULT_ADMIN_EMAIL)
         if not existing_admin:
             hashed = get_password_hash(DEFAULT_ADMIN_PASSWORD)
             await conn.execute(
                 "INSERT INTO users (email, password_hash, name, is_admin) VALUES ($1, $2, $3, $4)",
                 DEFAULT_ADMIN_EMAIL, hashed, "Admin", True
             )
-            print(f"Default admin created: {DEFAULT_ADMIN_EMAIL} / {DEFAULT_ADMIN_PASSWORD}")
+            print(f"✅ Default admin created: {DEFAULT_ADMIN_EMAIL} / {DEFAULT_ADMIN_PASSWORD}")
+        else:
+            # Ensure existing admin has is_admin = TRUE
+            await conn.execute(
+                "UPDATE users SET is_admin = TRUE WHERE email = $1",
+                DEFAULT_ADMIN_EMAIL
+            )
+            print(f"✅ Admin privileges confirmed for: {DEFAULT_ADMIN_EMAIL}")
     except Exception as e:
-        print(f"Error creating admin: {e}")
+        print(f"⚠️ Admin setup error: {e}")
     
     await conn.close()
 
@@ -861,11 +872,24 @@ async def analyze_trade_file(
             raise HTTPException(status_code=413, detail="File too large (max 50MB)")
         
         # Detect file type
-        mime = magic.Magic(mime=True)
-        file_type = mime.from_buffer(contents)
+        file_type = file.content_type or "application/octet-stream"
         
         if file_type not in ALLOWED_TRADE_FILE_TYPES:
-            raise HTTPException(status_code=400, detail=f"Unsupported file type: {file_type}")
+            # Try to detect from extension
+            ext = Path(file.filename).suffix.lower()
+            type_map = {
+                '.pdf': 'application/pdf',
+                '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                '.doc': 'application/msword',
+                '.csv': 'text/csv',
+                '.xls': 'application/vnd.ms-excel',
+                '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                '.png': 'image/png',
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.webp': 'image/webp'
+            }
+            file_type = type_map.get(ext, file_type)
         
         # Extract data based on file type
         extracted_data = {}
@@ -988,7 +1012,7 @@ async def get_trade_analysis_detail(
 # ==================== PERSONALIZED MENTORSHIP ====================
 
 @app.post("/mentorship/personalized")
-async def get_personalized_mentorship(
+async def get_personalized_mentorship_endpoint(
     message: str = Form(...),
     context_type: Optional[str] = Form("general"),
     current_user: str = Depends(get_current_user),
@@ -1027,7 +1051,7 @@ async def mentor_chat(
     conn=Depends(get_db)
 ):
     """Legacy mentor chat - redirects to personalized version"""
-    return await get_personalized_mentorship(message, "general", current_user, conn)
+    return await get_personalized_mentorship_endpoint(message, "general", current_user, conn)
 
 # ==================== BLOG SYSTEM (SEO-OPTIMIZED) ====================
 
@@ -1078,15 +1102,17 @@ async def get_blog_posts(
         # Get total count
         count_result = await conn.fetchrow(f"""
             SELECT COUNT(*) as total FROM blog_posts WHERE {where_sql}
-        """, *params[:-2] if params else [])
+        """, *params[:-2] if len(params) > 2 else [])
+        
+        total = count_result['total'] if count_result else 0
         
         return {
             "posts": [dict(p) for p in posts],
             "pagination": {
                 "page": page,
                 "per_page": per_page,
-                "total": count_result['total'] if count_result else 0,
-                "total_pages": (count_result['total'] + per_page - 1) // per_page if count_result else 0
+                "total": total,
+                "total_pages": (total + per_page - 1) // per_page
             }
         }
     except Exception as e:
@@ -1127,14 +1153,16 @@ async def create_blog_post(
     meta_description: Optional[str] = Form(None),
     meta_keywords: Optional[str] = Form(None),
     category: Optional[str] = Form(None),
-    tags: Optional[str] = Form(None),  # Comma-separated
+    tags: Optional[str] = Form(None),
     status: str = Form("draft"),
     current_user: str = Depends(get_current_admin),
     conn=Depends(get_db)
 ):
     """Create new blog post (admin only)"""
     try:
-        slug = slugify(title)
+        # Create slug from title
+        slug = re.sub(r'[^\w\s-]', '', title.lower()).strip()
+        slug = re.sub(r'[-\s]+', '-', slug)
         
         # Ensure unique slug
         existing = await conn.fetchrow("SELECT id FROM blog_posts WHERE slug = $1", slug)
@@ -1203,8 +1231,11 @@ async def update_blog_post(
         if title:
             updates.append("title = $" + str(len(params)+1))
             params.append(title)
+            # Update slug if title changes
+            new_slug = re.sub(r'[^\w\s-]', '', title.lower()).strip()
+            new_slug = re.sub(r'[-\s]+', '-', new_slug)
             updates.append("slug = $" + str(len(params)+1))
-            params.append(slugify(title))
+            params.append(f"{new_slug}-{uuid.uuid4().hex[:8]}")
         if content:
             updates.append("content = $" + str(len(params)+1))
             params.append(content)
@@ -1236,6 +1267,9 @@ async def update_blog_post(
                 updates.append("published_at = $" + str(len(params)+1))
                 params.append(datetime.utcnow())
         
+        if not updates:
+            raise HTTPException(status_code=400, detail="No fields to update")
+        
         updates.append("updated_at = $" + str(len(params)+1))
         params.append(datetime.utcnow())
         params.append(post_id)
@@ -1245,6 +1279,8 @@ async def update_blog_post(
         """, *params)
         
         return {"success": True, "message": "Post updated successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1278,18 +1314,19 @@ async def upload_media(
         if file_size > MAX_FILE_SIZE:
             raise HTTPException(status_code=413, detail="File too large")
         
-        # Detect mime type
-        mime = magic.Magic(mime=True)
-        mime_type = mime.from_buffer(contents)
+        # Get file extension
+        ext = Path(file.filename).suffix.lower()
         
         # Generate unique filename
-        file_ext = Path(file.filename).suffix
-        unique_filename = f"{uuid.uuid4()}{file_ext}"
+        unique_filename = f"{uuid.uuid4()}{ext}"
         file_path = MEDIA_DIR / unique_filename
         
         # Save file
         with open(file_path, "wb") as f:
             f.write(contents)
+        
+        # Determine file type
+        file_type = ext.replace('.', '')
         
         # Save to database
         user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
@@ -1303,9 +1340,9 @@ async def upload_media(
             unique_filename,
             file.filename,
             str(file_path),
-            file_ext.replace('.', ''),
+            file_type,
             file_size,
-            mime_type,
+            file.content_type or "application/octet-stream",
             alt_text,
             user["id"]
         )
@@ -1347,7 +1384,7 @@ async def list_media(
             "pagination": {
                 "page": page,
                 "per_page": per_page,
-                "total": count['total']
+                "total": count['total'] if count else 0
             }
         }
     except Exception as e:
@@ -1420,10 +1457,10 @@ async def admin_dashboard(
         """)
         
         return {
-            "users": dict(user_stats),
-            "trades": dict(trade_stats),
-            "blog": dict(blog_stats),
-            "analyses": dict(analysis_stats),
+            "users": dict(user_stats) if user_stats else {},
+            "trades": dict(trade_stats) if trade_stats else {},
+            "blog": dict(blog_stats) if blog_stats else {},
+            "analyses": dict(analysis_stats) if analysis_stats else {},
             "recent_activity": {
                 "users": [dict(u) for u in recent_users],
                 "trades": [dict(t) for t in recent_trades]
@@ -1467,7 +1504,7 @@ async def admin_list_users(
             "pagination": {
                 "page": page,
                 "per_page": per_page,
-                "total": count['total']
+                "total": count['total'] if count else 0
             }
         }
     except Exception as e:
@@ -1477,7 +1514,6 @@ async def admin_list_users(
 async def admin_update_user(
     user_id: int,
     is_admin: Optional[bool] = Form(None),
-    is_active: Optional[bool] = Form(None),  # Would need to add is_active column
     current_user: str = Depends(get_current_admin),
     conn=Depends(get_db)
 ):
