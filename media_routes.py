@@ -17,9 +17,17 @@ UPLOAD_DIR = Path("uploads")
 IMAGES_DIR = UPLOAD_DIR / "images"
 DOCUMENTS_DIR = UPLOAD_DIR / "documents"
 
-# Create directories if they don't exist
-IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
+# Create directories if they don't exist (with error handling)
+try:
+    IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+except (FileExistsError, OSError):
+    # Directory might exist as a file or have permission issues
+    pass
+
+try:
+    DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
+except (FileExistsError, OSError):
+    pass
 
 ALLOWED_IMAGE_TYPES = {
     'image/jpeg': '.jpg',
@@ -48,6 +56,10 @@ async def upload_media(
 ):
     """Upload media file (images or documents)"""
     try:
+        # Ensure directories exist
+        IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+        DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
+        
         # Validate file size
         contents = await file.read()
         if len(contents) > MAX_FILE_SIZE:
