@@ -1611,6 +1611,25 @@ Disallow: /api/
 Sitemap: https://pipways.com/sitemap.xml
 """
     return HTMLResponse(content=content)
+    # ==================== ZOOM WEBINAR MODULE (Separate) ====================
+# This keeps webinar functionality completely modular and separate
+
+try:
+    from routers.webinars_zoom import router as zoom_webinar_router
+    app.include_router(zoom_webinar_router)
+    
+    # Mount webinar static files separately
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/webinars", StaticFiles(directory="static/webinars", html=True), name="webinars")
+    
+    print("✅ Zoom Webinar module loaded successfully")
+except Exception as e:
+    print(f"⚠️ Zoom Webinar module not loaded: {e}")
+
+# Redirect /webinars to the webinar app
+@app.get("/webinars", response_class=HTMLResponse)
+async def webinar_app_root():
+    return FileResponse("static/webinars/index.html")
 
 if __name__ == "__main__":
     import uvicorn
