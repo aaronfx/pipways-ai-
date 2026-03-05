@@ -1,68 +1,1011 @@
-<!-- Add to sidebar navigation -->
-<button onclick="showPage('trade-analysis')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-    <i data-lucide="file-bar-chart" class="w-5 h-5"></i> Trade Analysis
-</button>
-<button onclick="showPage('blog')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-    <i data-lucide="newspaper" class="w-5 h-5"></i> Blog
-</button>
-
-<!-- Admin only -->
-<button onclick="showPage('admin')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hidden" id="admin-nav">
-    <i data-lucide="settings" class="w-5 h-5"></i> Admin
-</button>
-
-<!-- TRADE ANALYSIS UPLOAD SECTION -->
-function renderTradeAnalysis(content) {
-    content.innerHTML = `
-        <div class="p-8 max-w-6xl mx-auto fade-in">
-            <div class="flex items-center justify-between mb-8">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipways - Institutional Trader Development</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        * { 
+            font-family: 'Inter', sans-serif; 
+        }
+        
+        .mono { 
+            font-family: 'JetBrains Mono', monospace; 
+        }
+        
+        .glass { 
+            background: rgba(30, 41, 59, 0.7); 
+            backdrop-filter: blur(10px); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+        }
+        
+        .glass-strong {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.4);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+        
+        .sidebar-link {
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+        
+        .sidebar-link:hover, .sidebar-link.active {
+            background: rgba(59, 130, 246, 0.1);
+            border-left-color: #3b82f6;
+            color: #60a5fa;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .chart-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.75rem;
+            background: #0f172a;
+        }
+        
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        
+        @media (max-width: 1024px) {
+            .analysis-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .hidden { display: none !important; }
+        
+        /* Line clamp utilities */
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200 antialiased">
+    
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+        <div class="glass-strong rounded-2xl p-8 w-full max-w-md shadow-2xl">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
+                    <i data-lucide="trending-up" class="w-8 h-8 text-white"></i>
+                </div>
+                <h1 class="text-3xl font-bold gradient-text mb-2">Pipways</h1>
+                <p class="text-slate-400 text-sm">Institutional Trader Development</p>
+            </div>
+            
+            <div id="auth-tabs" class="flex gap-2 mb-6 p-1 bg-slate-800/50 rounded-lg">
+                <button onclick="showAuthTab('login')" id="tab-login" class="flex-1 py-2 rounded-md bg-blue-500 text-white font-medium text-sm transition-all">Sign In</button>
+                <button onclick="showAuthTab('register')" id="tab-register" class="flex-1 py-2 rounded-md text-slate-400 hover:text-white font-medium text-sm transition-all">Register</button>
+            </div>
+            
+            <!-- Login Form -->
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
-                    <h2 class="text-3xl font-bold text-white mb-1">Advanced Trade Analysis</h2>
-                    <p class="text-slate-400">Upload your trading history for comprehensive AI analysis</p>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Email</label>
+                    <input type="email" name="email" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="admin@pipways.com">
                 </div>
-            </div>
-            
-            <!-- Upload Area -->
-            <div class="glass rounded-xl p-8 mb-6 border-2 border-dashed border-slate-700 hover:border-blue-500/50 transition-all">
-                <input type="file" id="tradeFileUpload" class="hidden" 
-                    accept=".pdf,.doc,.docx,.csv,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.html,.htm"
-                    onchange="analyzeTradeFile(this)">
-                <div class="text-center" onclick="document.getElementById('tradeFileUpload').click()">
-                    <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-violet-500/20 flex items-center justify-center">
-                        <i data-lucide="file-up" class="w-10 h-10 text-violet-400"></i>
-                    </div>
-                    <p class="text-lg font-medium text-white mb-2">Upload Trading Statement</p>
-                    <p class="text-sm text-slate-400 mb-4">
-                        Supports: PDF, Word, Excel, CSV, MT4/MT5 HTML, Screenshots
-                    </p>
-                    <div class="flex flex-wrap justify-center gap-2 text-xs text-slate-500">
-                        <span class="px-2 py-1 bg-slate-800 rounded">MT4 Statement</span>
-                        <span class="px-2 py-1 bg-slate-800 rounded">TradingView Export</span>
-                        <span class="px-2 py-1 bg-slate-800 rounded">Trade Journal</span>
-                        <span class="px-2 py-1 bg-slate-800 rounded">Screenshot</span>
-                    </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Password</label>
+                    <input type="password" name="password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="••••••••">
                 </div>
-            </div>
+                <button type="submit" class="w-full btn-primary rounded-lg py-2.5 font-medium text-white shadow-lg">
+                    Sign In
+                </button>
+            </form>
             
-            <!-- Loading State -->
-            <div id="tradeAnalysisLoading" class="hidden py-12 text-center">
-                <div class="loading-spinner mx-auto mb-4"></div>
-                <p class="text-slate-400">AI is analyzing your trading data...</p>
-                <p class="text-xs text-slate-500 mt-2">This may take 30-60 seconds</p>
-            </div>
+            <!-- Register Form -->
+            <form id="register-form" onsubmit="handleRegister(event)" class="hidden space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Full Name</label>
+                    <input type="text" name="name" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="John Doe">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Email</label>
+                    <input type="email" name="email" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="john@example.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Password</label>
+                    <input type="password" name="password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="••••••••">
+                    <p class="text-xs text-slate-500 mt-1">Max 72 characters</p>
+                </div>
+                <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 rounded-lg py-2.5 font-medium text-white shadow-lg transition-all">
+                    Create Account
+                </button>
+            </form>
             
-            <!-- Results Container -->
-            <div id="tradeAnalysisResult" class="hidden"></div>
+            <div id="auth-error" class="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm hidden"></div>
             
-            <!-- History -->
-            <div class="mt-8">
-                <h3 class="text-lg font-semibold text-white mb-4">Previous Analyses</h3>
-                <div id="tradeAnalysisHistory" class="space-y-3">
-                    <p class="text-slate-500 text-center py-8">Loading history...</p>
+            <div class="mt-6 p-4 bg-slate-800/30 rounded-lg border border-slate-700/50">
+                <p class="text-xs text-slate-500 font-medium mb-2 uppercase tracking-wider">Demo Credentials</p>
+                <div class="text-xs text-slate-400 space-y-1 font-mono">
+                    <p><span class="text-slate-500">Email:</span> admin@pipways.com</p>
+                    <p><span class="text-slate-500">Password:</span> admin123</p>
                 </div>
             </div>
         </div>
-    `;
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="hidden h-screen flex overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-slate-900/50 border-r border-slate-800 flex flex-col backdrop-blur-xl">
+            <div class="p-6 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
+                        <i data-lucide="trending-up" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-white">Pipways</h1>
+                        <p class="text-xs text-slate-500">Institutional Trader</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+                <button onclick="showPage('dashboard')" class="nav-btn sidebar-link active w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
+                </button>
+                <button onclick="showPage('journal')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="book-open" class="w-5 h-5"></i> Trade Journal
+                </button>
+                <button onclick="showPage('analysis')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="scan-eye" class="w-5 h-5"></i> Chart Analysis
+                </button>
+                <button onclick="showPage('trade-analysis')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="file-bar-chart" class="w-5 h-5"></i> Trade Analysis
+                </button>
+                <button onclick="showPage('discipline')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="shield-check" class="w-5 h-5"></i> Discipline
+                </button>
+                <button onclick="showPage('mentor')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="bot" class="w-5 h-5"></i> AI Mentor
+                </button>
+                <button onclick="showPage('blog')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="newspaper" class="w-5 h-5"></i> Blog
+                </button>
+                <button onclick="showPage('admin')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hidden" id="admin-nav">
+                    <i data-lucide="settings" class="w-5 h-5"></i> Admin
+                </button>
+            </nav>
+            
+            <div class="p-4 border-t border-slate-800 space-y-3">
+                <div class="bg-slate-800/50 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-medium text-slate-400">Level 2</span>
+                        <span class="text-xs font-bold text-blue-400">65%</span>
+                    </div>
+                    <div class="w-full bg-slate-700 rounded-full h-2">
+                        <div class="bg-gradient-to-r from-blue-500 to-violet-500 h-2 rounded-full transition-all" style="width: 65%"></div>
+                    </div>
+                </div>
+                <button onclick="logout()" class="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium">
+                    <i data-lucide="log-out" class="w-4 h-4"></i> Sign Out
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto bg-gradient-to-br from-slate-950 to-slate-900" id="content"></main>
+    </div>
+
+<script>
+const API_URL = 'https://pipways-api-nhem.onrender.com';
+let authToken = localStorage.getItem('pipways_token');
+let currentUser = JSON.parse(localStorage.getItem('pipways_user') || '{}');
+
+if (authToken) {
+    showApp();
+} else {
+    showAuth();
+}
+
+function showAuth() {
+    document.getElementById('auth-screen').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+}
+
+function showApp() {
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    showPage('dashboard');
+}
+
+function showAuthTab(tab) {
+    const loginBtn = document.getElementById('tab-login');
+    const registerBtn = document.getElementById('tab-register');
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    
+    if (tab === 'login') {
+        loginBtn.classList.add('bg-blue-500', 'text-white');
+        loginBtn.classList.remove('text-slate-400');
+        registerBtn.classList.remove('bg-blue-500', 'text-white');
+        registerBtn.classList.add('text-slate-400');
+        loginForm.classList.remove('hidden');
+        registerForm.classList.add('hidden');
+    } else {
+        registerBtn.classList.add('bg-blue-500', 'text-white');
+        registerBtn.classList.remove('text-slate-400');
+        loginBtn.classList.remove('bg-blue-500', 'text-white');
+        loginBtn.classList.add('text-slate-400');
+        registerForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+    }
+    document.getElementById('auth-error').classList.add('hidden');
+}
+
+function getErrorMessage(data) {
+    if (typeof data === 'string') return data;
+    if (data.detail) {
+        if (typeof data.detail === 'string') return data.detail;
+        if (Array.isArray(data.detail)) {
+            return data.detail.map(err => {
+                if (typeof err === 'string') return err;
+                if (err.msg) return err.msg;
+                if (err.message) return err.message;
+                return JSON.stringify(err);
+            }).join(', ');
+        }
+        return JSON.stringify(data.detail);
+    }
+    if (data.message) return data.message;
+    if (data.error) return data.error;
+    return JSON.stringify(data);
+}
+
+async function handleLogin(e) {
+    e.preventDefault();
+    const form = e.target;
+    const errorEl = document.getElementById('auth-error');
+    
+    try {
+        const formData = new URLSearchParams();
+        formData.append('email', form.email.value);
+        formData.append('password', form.password.value);
+        
+        const response = await fetch(API_URL + '/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData.toString()
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(getErrorMessage(data));
+        }
+        
+        authToken = data.access_token;
+        currentUser = data;
+        localStorage.setItem('pipways_token', authToken);
+        localStorage.setItem('pipways_user', JSON.stringify(data));
+        showApp();
+        
+    } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+    }
+}
+
+async function handleRegister(e) {
+    e.preventDefault();
+    const form = e.target;
+    const errorEl = document.getElementById('auth-error');
+    
+    try {
+        const formData = new URLSearchParams();
+        formData.append('email', form.email.value);
+        formData.append('password', form.password.value);
+        formData.append('name', form.name.value);
+        
+        const response = await fetch(API_URL + '/auth/register', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData.toString()
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(getErrorMessage(data));
+        }
+        
+        authToken = data.access_token;
+        currentUser = data;
+        localStorage.setItem('pipways_token', authToken);
+        localStorage.setItem('pipways_user', JSON.stringify(data));
+        showApp();
+        
+    } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+    }
+}
+
+function logout() {
+    localStorage.removeItem('pipways_token');
+    localStorage.removeItem('pipways_user');
+    authToken = null;
+    currentUser = {};
+    showAuth();
+}
+
+async function apiCall(endpoint, options = {}) {
+    const headers = {
+        'Authorization': 'Bearer ' + authToken,
+        ...options.headers
+    };
+    
+    const response = await fetch(API_URL + endpoint, {
+        ...options,
+        headers
+    });
+    
+    if (response.status === 401) {
+        logout();
+        throw new Error('Session expired. Please login again.');
+    }
+    
+    return response;
+}
+
+async function showPage(page) {
+    const content = document.getElementById('content');
+    
+    // Update sidebar active state
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    const activeBtn = document.querySelector('[onclick="showPage(\'' + page + '\')"]');
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
+
+    if (page === 'dashboard') {
+        await renderDashboard(content);
+    } else if (page === 'journal') {
+        renderJournal(content);
+    } else if (page === 'analysis') {
+        renderChartAnalysis(content);
+    } else if (page === 'trade-analysis') {
+        renderTradeAnalysis(content);
+    } else if (page === 'discipline') {
+        renderDiscipline(content);
+    } else if (page === 'mentor') {
+        renderMentor(content);
+    } else if (page === 'blog') {
+        renderBlog(content);
+    } else if (page === 'admin') {
+        renderAdmin(content);
+    }
+    
+    // Show admin nav if user is admin
+    if (currentUser.is_admin) {
+        const adminNav = document.getElementById('admin-nav');
+        if (adminNav) adminNav.classList.remove('hidden');
+    }
+    
+    lucide.createIcons();
+}
+
+async function renderDashboard(content) {
+    try {
+        const response = await apiCall('/trades');
+        const trades = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(getErrorMessage(trades));
+        }
+        
+        const totalPips = trades.reduce((a, b) => a + (b.pips || 0), 0);
+        const wins = trades.filter(t => t.pips > 0).length;
+        const winRate = trades.length ? (wins / trades.length * 100).toFixed(0) : 0;
+        
+        let html = '<div class="p-8 max-w-7xl mx-auto">';
+        html += '<div class="flex items-center justify-between mb-8">';
+        html += '<div>';
+        html += '<h2 class="text-3xl font-bold text-white mb-1">Dashboard</h2>';
+        html += '<p class="text-slate-400">Welcome back, ' + (currentUser.name || 'Trader') + '</p>';
+        html += '</div>';
+        html += '<button onclick="showPage(\'journal\')" class="btn-primary px-6 py-2.5 rounded-lg text-white font-medium flex items-center gap-2">';
+        html += '<i data-lucide="plus" class="w-4 h-4"></i> New Trade';
+        html += '</button>';
+        html += '</div>';
+        
+        // Metrics Grid
+        html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">';
+        
+        // Discipline Score
+        html += '<div class="metric-card rounded-xl p-6 card-hover">';
+        html += '<div class="flex items-center justify-between mb-4">';
+        html += '<div class="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">';
+        html += '<i data-lucide="shield" class="w-6 h-6 text-blue-400"></i>';
+        html += '</div>';
+        html += '<span class="text-xs font-medium text-emerald-400 flex items-center gap-1">';
+        html += '<i data-lucide="trending-up" class="w-3 h-3"></i> +12%';
+        html += '</span>';
+        html += '</div>';
+        html += '<div class="text-slate-400 text-sm mb-1">Discipline Score</div>';
+        html += '<div class="text-3xl font-bold text-white">87<span class="text-lg text-slate-500">/100</span></div>';
+        html += '</div>';
+        
+        // Win Rate
+        html += '<div class="metric-card rounded-xl p-6 card-hover">';
+        html += '<div class="flex items-center justify-between mb-4">';
+        html += '<div class="w-12 h-12 rounded-lg bg-violet-500/20 flex items-center justify-center">';
+        html += '<i data-lucide="target" class="w-6 h-6 text-violet-400"></i>';
+        html += '</div>';
+        html += '<span class="text-xs font-medium text-slate-500">All time</span>';
+        html += '</div>';
+        html += '<div class="text-slate-400 text-sm mb-1">Win Rate</div>';
+        html += '<div class="text-3xl font-bold text-white">' + winRate + '<span class="text-lg text-slate-500">%</span></div>';
+        html += '</div>';
+        
+        // Total Pips
+        html += '<div class="metric-card rounded-xl p-6 card-hover">';
+        html += '<div class="flex items-center justify-between mb-4">';
+        html += '<div class="w-12 h-12 rounded-lg ' + (totalPips >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20') + ' flex items-center justify-center">';
+        html += '<i data-lucide="activity" class="w-6 h-6 ' + (totalPips >= 0 ? 'text-emerald-400' : 'text-red-400') + '"></i>';
+        html += '</div>';
+        html += '<span class="text-xs font-medium text-slate-500">Total</span>';
+        html += '</div>';
+        html += '<div class="text-slate-400 text-sm mb-1">Total Pips</div>';
+        html += '<div class="text-3xl font-bold ' + (totalPips >= 0 ? 'text-emerald-400' : 'text-red-400') + '">';
+        html += (totalPips > 0 ? '+' : '') + totalPips;
+        html += '</div>';
+        html += '</div>';
+        
+        // Total Trades
+        html += '<div class="metric-card rounded-xl p-6 card-hover">';
+        html += '<div class="flex items-center justify-between mb-4">';
+        html += '<div class="w-12 h-12 rounded-lg bg-orange-500/20 flex items-center justify-center">';
+        html += '<i data-lucide="bar-chart-2" class="w-6 h-6 text-orange-400"></i>';
+        html += '</div>';
+        html += '<span class="text-xs font-medium text-slate-500">This month</span>';
+        html += '</div>';
+        html += '<div class="text-slate-400 text-sm mb-1">Total Trades</div>';
+        html += '<div class="text-3xl font-bold text-white">' + trades.length + '</div>';
+        html += '</div>';
+        
+        html += '</div>'; // End metrics grid
+        
+        // Recent Trades & Quick Actions
+        html += '<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">';
+        
+        // Recent Trades
+        html += '<div class="lg:col-span-2 glass rounded-xl p-6">';
+        html += '<div class="flex items-center justify-between mb-6">';
+        html += '<h3 class="text-lg font-semibold text-white">Recent Trades</h3>';
+        html += '<button onclick="showPage(\'journal\')" class="text-sm text-blue-400 hover:text-blue-300 font-medium">View All</button>';
+        html += '</div>';
+        html += '<div class="space-y-3">';
+        
+        if (trades.length > 0) {
+            trades.slice(0, 5).forEach(function(t) {
+                const date = new Date(t.created_at);
+                const dateStr = date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+                const yearStr = date.getFullYear();
+                
+                html += '<div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-slate-600 transition-colors">';
+                html += '<div class="flex items-center gap-4">';
+                html += '<div class="text-center min-w-[60px]">';
+                html += '<div class="text-xs text-slate-500">' + dateStr + '</div>';
+                html += '<div class="text-xs text-slate-600">' + yearStr + '</div>';
+                html += '</div>';
+                html += '<div class="w-px h-8 bg-slate-700"></div>';
+                html += '<div>';
+                html += '<div class="font-bold text-white">' + t.pair + '</div>';
+                html += '<div class="flex items-center gap-2 mt-1">';
+                html += '<span class="status-badge ' + (t.direction === 'LONG' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400') + '">';
+                html += t.direction;
+                html += '</span>';
+                html += '<span class="text-xs text-slate-500">Grade ' + t.grade + '</span>';
+                html += '</div>';
+                html += '</div>';
+                html += '</div>';
+                html += '<div class="text-right">';
+                html += '<div class="font-mono font-bold ' + (t.pips >= 0 ? 'text-emerald-400' : 'text-red-400') + ' text-lg">';
+                html += (t.pips > 0 ? '+' : '') + t.pips + ' <span class="text-xs text-slate-500">pips</span>';
+                html += '</div>';
+                html += '</div>';
+                html += '</div>';
+            });
+        } else {
+            html += '<div class="text-center py-12 text-slate-500">';
+            html += '<i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>';
+            html += '<p>No trades recorded yet</p>';
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        html += '</div>'; // End recent trades
+        
+        // Quick Actions
+        html += '<div class="glass rounded-xl p-6">';
+        html += '<h3 class="text-lg font-semibold text-white mb-6">Quick Actions</h3>';
+        html += '<div class="space-y-3">';
+        
+        html += '<button onclick="showPage(\'analysis\')" class="w-full p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-blue-500/50 hover:bg-slate-800 transition-all text-left group">';
+        html += '<div class="flex items-center gap-3">';
+        html += '<div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/30 transition-colors">';
+        html += '<i data-lucide="scan-eye" class="w-5 h-5 text-blue-400"></i>';
+        html += '</div>';
+        html += '<div>';
+        html += '<div class="font-medium text-white">Analyze Chart</div>';
+        html += '<div class="text-xs text-slate-400">AI-powered setup review</div>';
+        html += '</div>';
+        html += '</div>';
+        html += '</button>';
+        
+        html += '<button onclick="showPage(\'mentor\')" class="w-full p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-violet-500/50 hover:bg-slate-800 transition-all text-left group">';
+        html += '<div class="flex items-center gap-3">';
+        html += '<div class="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center group-hover:bg-violet-500/30 transition-colors">';
+        html += '<i data-lucide="message-circle" class="w-5 h-5 text-violet-400"></i>';
+        html += '</div>';
+        html += '<div>';
+        html += '<div class="font-medium text-white">Ask Mentor</div>';
+        html += '<div class="text-xs text-slate-400">Trading psychology help</div>';
+        html += '</div>';
+        html += '</div>';
+        html += '</button>';
+        
+        html += '</div>';
+        html += '</div>'; // End quick actions
+        
+        html += '</div>'; // End grid
+        html += '</div>'; // End container
+        
+        content.innerHTML = html;
+        
+    } catch (err) {
+        content.innerHTML = '<div class="p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">' + err.message + '</div></div>';
+    }
+}
+
+function renderJournal(content) {
+    let html = '<div class="p-8 max-w-4xl mx-auto fade-in">';
+    html += '<div class="flex items-center justify-between mb-8">';
+    html += '<div>';
+    html += '<h2 class="text-3xl font-bold text-white mb-1">Trade Journal</h2>';
+    html += '<p class="text-slate-400">Log and review your trading history</p>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '<div class="glass rounded-xl p-6 mb-6">';
+    html += '<h3 class="text-lg font-semibold text-white mb-6 flex items-center gap-2">';
+    html += '<i data-lucide="plus-circle" class="w-5 h-5 text-blue-400"></i>';
+    html += 'New Trade Entry';
+    html += '</h3>';
+    html += '<form onsubmit="addTrade(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">';
+    
+    html += '<div>';
+    html += '<label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Currency Pair</label>';
+    html += '<input name="pair" placeholder="EURUSD" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all uppercase" required>';
+    html += '</div>';
+    
+    html += '<div>';
+    html += '<label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Direction</label>';
+    html += '<select name="direction" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">';
+    html += '<option value="LONG">LONG</option>';
+    html += '<option value="SHORT">SHORT</option>';
+    html += '</select>';
+    html += '</div>';
+    
+    html += '<div>';
+    html += '<label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Pips (+/-)</label>';
+    html += '<input name="pips" type="number" step="0.1" placeholder="+25 or -10" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" required>';
+    html += '</div>';
+    
+    html += '<div>';
+    html += '<label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Grade</label>';
+    html += '<select name="grade" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">';
+    html += '<option value="A">A - Excellent</option>';
+    html += '<option value="B">B - Good</option>';
+    html += '<option value="C">C - Needs Work</option>';
+    html += '</select>';
+    html += '</div>';
+    
+    html += '<div>';
+    html += '<label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Entry Price (Optional)</label>';
+    html += '<input name="entry_price" type="number" step="0.00001" placeholder="1.08500" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">';
+    html += '</div>';
+    
+    html += '<div>';
+    html += '<label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Exit Price (Optional)</label>';
+    html += '<input name="exit_price" type="number" step="0.00001" placeholder="1.09000" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">';
+    html += '</div>';
+    
+    html += '<div class="md:col-span-2">';
+    html += '<button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 rounded-lg py-3 font-medium text-white shadow-lg transition-all flex items-center justify-center gap-2">';
+    html += '<i data-lucide="save" class="w-4 h-4"></i> Save Trade Entry';
+    html += '</button>';
+    html += '</div>';
+    
+    html += '</form>';
+    html += '</div>';
+    html += '</div>';
+    
+    content.innerHTML = html;
+}
+
+function renderChartAnalysis(content) {
+    let html = '<div class="p-8 max-w-6xl mx-auto fade-in">';
+    html += '<div class="flex items-center justify-between mb-8">';
+    html += '<div>';
+    html += '<h2 class="text-3xl font-bold text-white mb-1">Chart Analysis</h2>';
+    html += '<p class="text-slate-400">AI-powered trade setup evaluation</p>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '<div class="glass rounded-xl p-8 mb-6 border-2 border-dashed border-slate-700 hover:border-blue-500/50 transition-all cursor-pointer" onclick="document.getElementById(\'chartUpload\').click()">';
+    html += '<input type="file" id="chartUpload" accept="image/*" class="hidden" onchange="analyzeChart(this)">';
+    html += '<div class="text-center">';
+    html += '<div class="w-20 h-20 mx-auto mb-4 rounded-full bg-blue-500/20 flex items-center justify-center">';
+    html += '<i data-lucide="upload-cloud" class="w-10 h-10 text-blue-400"></i>';
+    html += '</div>';
+    html += '<p class="text-lg font-medium text-white mb-2">Upload Chart Screenshot</p>';
+    html += '<p class="text-sm text-slate-400 mb-4">Support: TradingView, MT4, MT5, or any chart image</p>';
+    html += '<button class="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium transition-colors">';
+    html += 'Select Image';
+    html += '</button>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '<div id="analysisLoading" class="hidden py-12 text-center">';
+    html += '<div class="loading-spinner mx-auto mb-4"></div>';
+    html += '<p class="text-slate-400">Analyzing chart with AI...</p>';
+    html += '</div>';
+    
+    html += '<div id="analysisResult" class="hidden fade-in"></div>';
+    html += '</div>';
+    
+    content.innerHTML = html;
+}
+
+async function analyzeChart(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    const loadingDiv = document.getElementById('analysisLoading');
+    const resultDiv = document.getElementById('analysisResult');
+    
+    loadingDiv.classList.remove('hidden');
+    resultDiv.classList.add('hidden');
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await apiCall('/analyze-chart', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        loadingDiv.classList.add('hidden');
+        resultDiv.classList.remove('hidden');
+        
+        if (!data.success) {
+            resultDiv.innerHTML = '<div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400"><div class="flex items-center gap-2 mb-2"><i data-lucide="alert-circle" class="w-5 h-5"></i><span class="font-medium">Analysis Failed</span></div><p class="text-sm">' + (data.error || 'Unknown error occurred') + '</p></div>';
+            lucide.createIcons();
+            return;
+        }
+        
+        const analysis = data.analysis;
+        const qualityColors = {
+            'A': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+            'B': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+            'C': 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+        };
+        const qualityColor = qualityColors[analysis.setup_quality] || qualityColors['B'];
+        
+        let html = '<div class="analysis-grid">';
+        
+        // Chart Display
+        html += '<div class="glass rounded-xl overflow-hidden">';
+        html += '<div class="p-4 border-b border-slate-800 flex items-center justify-between">';
+        html += '<h3 class="font-semibold text-white flex items-center gap-2">';
+        html += '<i data-lucide="image" class="w-4 h-4 text-blue-400"></i>';
+        html += 'Chart Screenshot';
+        html += '</h3>';
+        html += '<span class="text-xs text-slate-500">' + new Date().toLocaleDateString() + '</span>';
+        html += '</div>';
+        html += '<div class="p-4">';
+        html += '<img src="data:image/png;base64,' + data.image_data + '" class="w-full rounded-lg border border-slate-700" alt="Chart Analysis">';
+        html += '</div>';
+        html += '</div>';
+        
+        // Analysis Results
+        html += '<div class="space-y-4">';
+        
+        // Setup Quality Card
+        html += '<div class="glass rounded-xl p-6 border ' + qualityColor + '">';
+        html += '<div class="flex items-center justify-between mb-4">';
+        html += '<span class="text-sm font-medium opacity-80">Setup Quality</span>';
+        html += '<div class="w-12 h-12 rounded-full bg-current bg-opacity-20 flex items-center justify-center text-2xl font-bold">';
+        html += analysis.setup_quality;
+        html += '</div>';
+        html += '</div>';
+        html += '<div class="grid grid-cols-2 gap-4 text-sm">';
+        html += '<div>';
+        html += '<span class="text-slate-400 block text-xs mb-1">PAIR</span>';
+        html += '<span class="font-bold text-white text-lg">' + analysis.pair + '</span>';
+        html += '</div>';
+        html += '<div>';
+        html += '<span class="text-slate-400 block text-xs mb-1">DIRECTION</span>';
+        html += '<span class="font-bold ' + (analysis.direction === 'LONG' ? 'text-emerald-400' : 'text-red-400') + ' text-lg">' + analysis.direction + '</span>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+        
+        // Trade Levels
+        html += '<div class="glass rounded-xl p-6">';
+        html += '<h4 class="font-semibold text-white mb-4 flex items-center gap-2">';
+        html += '<i data-lucide="layers" class="w-4 h-4 text-violet-400"></i>';
+        html += 'Trade Levels';
+        html += '</h4>';
+        html += '<div class="space-y-3">';
+        html += '<div class="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">';
+        html += '<span class="text-slate-400 text-sm">Entry Price</span>';
+        html += '<span class="font-mono font-bold text-white">' + analysis.entry_price + '</span>';
+        html += '</div>';
+        html += '<div class="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">';
+        html += '<span class="text-slate-400 text-sm">Stop Loss</span>';
+        html += '<span class="font-mono font-bold text-red-400">' + analysis.stop_loss + '</span>';
+        html += '</div>';
+        html += '<div class="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">';
+        html += '<span class="text-slate-400 text-sm">Take Profit</span>';
+        html += '<span class="font-mono font-bold text-emerald-400">' + analysis.take_profit + '</span>';
+        html += '</div>';
+        html += '<div class="flex items-center justify-between p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">';
+        html += '<span class="text-blue-400 text-sm font-medium">Risk:Reward</span>';
+        html += '<span class="font-mono font-bold text-blue-400 text-lg">' + analysis.risk_reward + '</span>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+        
+        // Analysis Text
+        html += '<div class="glass rounded-xl p-6">';
+        html += '<h4 class="font-semibold text-white mb-3 flex items-center gap-2">';
+        html += '<i data-lucide="file-text" class="w-4 h-4 text-orange-400"></i>';
+        html += 'Analysis';
+        html += '</h4>';
+        html += '<p class="text-slate-300 text-sm leading-relaxed">' + analysis.analysis + '</p>';
+        html += '</div>';
+        
+        // Recommendations
+        html += '<div class="glass rounded-xl p-6 border border-yellow-500/20 bg-yellow-500/5">';
+        html += '<h4 class="font-semibold text-white mb-3 flex items-center gap-2">';
+        html += '<i data-lucide="lightbulb" class="w-4 h-4 text-yellow-400"></i>';
+        html += 'Recommendations';
+        html += '</h4>';
+        html += '<p class="text-slate-300 text-sm leading-relaxed">' + analysis.recommendations + '</p>';
+        html += '</div>';
+        
+        // Key Levels
+        if (analysis.key_levels && analysis.key_levels.length > 0) {
+            html += '<div class="glass rounded-xl p-6">';
+            html += '<h4 class="font-semibold text-white mb-3 flex items-center gap-2">';
+            html += '<i data-lucide="target" class="w-4 h-4 text-pink-400"></i>';
+            html += 'Key Levels';
+            html += '</h4>';
+            html += '<div class="flex flex-wrap gap-2">';
+            analysis.key_levels.forEach(function(level) {
+                html += '<span class="px-3 py-1 bg-slate-800 rounded-full text-sm font-mono text-slate-300 border border-slate-700">' + level + '</span>';
+            });
+            html += '</div>';
+            html += '</div>';
+        }
+        
+        // Action Buttons
+        html += '<div class="flex gap-3">';
+        html += '<button onclick="saveAnalysisToJournal(\'' + analysis.pair + '\', \'' + analysis.direction + '\', \'' + analysis.setup_quality + '\')" class="flex-1 bg-blue-500 hover:bg-blue-600 rounded-lg py-3 font-medium text-white transition-colors flex items-center justify-center gap-2">';
+        html += '<i data-lucide="save" class="w-4 h-4"></i> Save to Journal';
+        html += '</button>';
+        html += '<button onclick="renderChartAnalysis(document.getElementById(\'content\'))" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition-colors">';
+        html += '<i data-lucide="refresh-cw" class="w-4 h-4"></i>';
+        html += '</button>';
+        html += '</div>';
+        
+        html += '</div>'; // End analysis results
+        html += '</div>'; // End analysis grid
+        
+        resultDiv.innerHTML = html;
+        
+    } catch (err) {
+        loadingDiv.classList.add('hidden');
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = '<div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400"><div class="flex items-center gap-2 mb-2"><i data-lucide="alert-circle" class="w-5 h-5"></i><span class="font-medium">Error</span></div><p class="text-sm">' + err.message + '</p></div>';
+    }
+    
+    lucide.createIcons();
+}
+
+function saveAnalysisToJournal(pair, direction, grade) {
+    showPage('journal');
+    alert('Analysis for ' + pair + ' ' + direction + ' (Grade ' + grade + ') ready to save to journal!');
+}
+
+async function addTrade(e) {
+    e.preventDefault();
+    const f = e.target;
+    const btn = f.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<div class="loading-spinner w-5 h-5 border-2"></div> Saving...';
+    btn.disabled = true;
+    
+    try {
+        const formData = new URLSearchParams();
+        formData.append('pair', f.pair.value.toUpperCase());
+        formData.append('direction', f.direction.value);
+        formData.append('pips', f.pips.value);
+        formData.append('grade', f.grade.value);
+        if (f.entry_price.value) formData.append('entry_price', f.entry_price.value);
+        if (f.exit_price.value) formData.append('exit_price', f.exit_price.value);
+        
+        const response = await apiCall('/trades', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData.toString()
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(getErrorMessage(data));
+        }
+        
+        btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Saved!';
+        btn.classList.remove('bg-emerald-500');
+        btn.classList.add('bg-emerald-600');
+        
+        setTimeout(function() {
+            showPage('dashboard');
+        }, 1000);
+        
+    } catch (err) {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        alert('Error: ' + err.message);
+    }
+}
+
+function renderTradeAnalysis(content) {
+    let html = '<div class="p-8 max-w-6xl mx-auto fade-in">';
+    html += '<div class="flex items-center justify-between mb-8">';
+    html += '<div>';
+    html += '<h2 class="text-3xl font-bold text-white mb-1">Advanced Trade Analysis</h2>';
+    html += '<p class="text-slate-400">Upload your trading history for comprehensive AI analysis</p>';
+    html += '</div>';
+    html += '</div>';
+    
+    // Upload Area
+    html += '<div class="glass rounded-xl p-8 mb-6 border-2 border-dashed border-slate-700 hover:border-blue-500/50 transition-all">';
+    html += '<input type="file" id="tradeFileUpload" class="hidden" ';
+    html += 'accept=".pdf,.doc,.docx,.csv,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.html,.htm" ';
+    html += 'onchange="analyzeTradeFile(this)">';
+    html += '<div class="text-center" onclick="document.getElementById(\'tradeFileUpload\').click()">';
+    html += '<div class="w-20 h-20 mx-auto mb-4 rounded-full bg-violet-500/20 flex items-center justify-center">';
+    html += '<i data-lucide="file-up" class="w-10 h-10 text-violet-400"></i>';
+    html += '</div>';
+    html += '<p class="text-lg font-medium text-white mb-2">Upload Trading Statement</p>';
+    html += '<p class="text-sm text-slate-400 mb-4">';
+    html += 'Supports: PDF, Word, Excel, CSV, MT4/MT5 HTML, Screenshots';
+    html += '</p>';
+    html += '<div class="flex flex-wrap justify-center gap-2 text-xs text-slate-500">';
+    html += '<span class="px-2 py-1 bg-slate-800 rounded">MT4 Statement</span>';
+    html += '<span class="px-2 py-1 bg-slate-800 rounded">TradingView Export</span>';
+    html += '<span class="px-2 py-1 bg-slate-800 rounded">Trade Journal</span>';
+    html += '<span class="px-2 py-1 bg-slate-800 rounded">Screenshot</span>';
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+    
+    // Loading State
+    html += '<div id="tradeAnalysisLoading" class="hidden py-12 text-center">';
+    html += '<div class="loading-spinner mx-auto mb-4"></div>';
+    html += '<p class="text-slate-400">AI is analyzing your trading data...</p>';
+    html += '<p class="text-xs text-slate-500 mt-2">This may take 30-60 seconds</p>';
+    html += '</div>';
+    
+    // Results Container
+    html += '<div id="tradeAnalysisResult" class="hidden"></div>';
+    
+    // History
+    html += '<div class="mt-8">';
+    html += '<h3 class="text-lg font-semibold text-white mb-4">Previous Analyses</h3>';
+    html += '<div id="tradeAnalysisHistory" class="space-y-3">';
+    html += '<p class="text-slate-500 text-center py-8">Loading history...</p>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '</div>';
+    
+    content.innerHTML = html;
     loadTradeAnalysisHistory();
 }
 
@@ -91,191 +1034,441 @@ async function analyzeTradeFile(input) {
         resultDiv.classList.remove('hidden');
         
         if (!data.success) {
-            resultDiv.innerHTML = `
-                <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
-                    <p class="font-medium mb-2">Analysis Failed</p>
-                    <p class="text-sm">${data.error}</p>
-                </div>
-            `;
+            resultDiv.innerHTML = '<div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400"><p class="font-medium mb-2">Analysis Failed</p><p class="text-sm">' + (data.error || 'Unknown error') + '</p></div>';
             return;
         }
         
         const analysis = data.analysis;
+        const scoreColor = analysis.trader_score >= 80 ? 'text-emerald-400' : (analysis.trader_score >= 60 ? 'text-blue-400' : 'text-orange-400');
+        const borderColor = analysis.trader_score >= 80 ? 'border-emerald-500/30' : (analysis.trader_score >= 60 ? 'border-blue-500/30' : 'border-orange-500/30');
         
-        resultDiv.innerHTML = `
-            <div class="space-y-6">
-                <!-- Score Card -->
-                <div class="glass rounded-xl p-8 text-center border-2 ${
-                    analysis.trader_score >= 80 ? 'border-emerald-500/30' : 
-                    analysis.trader_score >= 60 ? 'border-blue-500/30' : 'border-orange-500/30'
-                }">
-                    <div class="text-sm text-slate-400 mb-2">Your Trader Score</div>
-                    <div class="text-6xl font-bold mb-2 ${
-                        analysis.trader_score >= 80 ? 'text-emerald-400' : 
-                        analysis.trader_score >= 60 ? 'text-blue-400' : 'text-orange-400'
-                    }">${analysis.trader_score}<span class="text-2xl text-slate-500">/100</span></div>
-                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800">
-                        <i data-lucide="user-check" class="w-4 h-4 text-violet-400"></i>
-                        <span class="font-medium text-white">${analysis.trader_type.replace('_', ' ').toUpperCase()}</span>
-                        <span class="text-xs text-slate-500">(${(analysis.trader_type_confidence || 75)}% confidence)</span>
-                    </div>
-                </div>
-                
-                <!-- Score Breakdown -->
-                <div class="glass rounded-xl p-6">
-                    <h4 class="font-semibold text-white mb-4">Performance Breakdown</h4>
-                    <div class="space-y-3">
-                        ${Object.entries(analysis.score_breakdown || {}).map(([key, score]) => `
-                            <div class="flex items-center gap-4">
-                                <span class="text-sm text-slate-400 w-32 capitalize">${key.replace('_', ' ')}</span>
-                                <div class="flex-1 bg-slate-800 rounded-full h-2">
-                                    <div class="bg-gradient-to-r from-blue-500 to-violet-500 h-2 rounded-full" style="width: ${score}%"></div>
-                                </div>
-                                <span class="text-sm font-bold text-white w-12 text-right">${score}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Mistakes Detected -->
-                    <div class="glass rounded-xl p-6">
-                        <h4 class="font-semibold text-white mb-4 flex items-center gap-2">
-                            <i data-lucide="alert-triangle" class="w-5 h-5 text-red-400"></i>
-                            Mistakes Detected
-                        </h4>
-                        <div class="space-y-3">
-                            ${(analysis.mistakes_detected || []).map(m => `
-                                <div class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <span class="font-medium text-red-400 text-sm">${m.mistake}</span>
-                                        <span class="text-xs px-2 py-1 bg-red-500/20 rounded text-red-400">${m.frequency}</span>
-                                    </div>
-                                    <p class="text-xs text-slate-400">${m.impact}</p>
-                                    <p class="text-xs text-slate-500 mt-1 italic">${m.evidence}</p>
-                                </div>
-                            `).join('') || '<p class="text-slate-500 text-sm">No major mistakes detected - great job!</p>'}
-                        </div>
-                    </div>
-                    
-                    <!-- Patterns -->
-                    <div class="glass rounded-xl p-6">
-                        <h4 class="font-semibold text-white mb-4 flex items-center gap-2">
-                            <i data-lucide="activity" class="w-5 h-5 text-blue-400"></i>
-                            Patterns Detected
-                        </h4>
-                        <div class="space-y-3">
-                            ${(analysis.patterns_detected || []).map(p => `
-                                <div class="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                                    <div class="font-medium text-blue-400 text-sm mb-1">${p.pattern}</div>
-                                    <p class="text-xs text-slate-400">Occurs: ${p.occurrence}</p>
-                                    <p class="text-xs text-slate-500 mt-1">${p.consequence}</p>
-                                </div>
-                            `).join('') || '<p class="text-slate-500 text-sm">No significant patterns detected</p>'}
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Recommendations -->
-                <div class="glass rounded-xl p-6 border border-yellow-500/20">
-                    <h4 class="font-semibold text-white mb-4 flex items-center gap-2">
-                        <i data-lucide="lightbulb" class="w-5 h-5 text-yellow-400"></i>
-                        Actionable Recommendations
-                    </h4>
-                    <ul class="space-y-2">
-                        ${(analysis.recommendations || []).map(r => `
-                            <li class="flex items-start gap-3 text-sm text-slate-300">
-                                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0"></i>
-                                <span>${r}</span>
-                            </li>
-                        `).join('')}
-                    </ul>
-                </div>
-                
-                <!-- Learning Resources -->
-                <div class="glass rounded-xl p-6">
-                    <h4 class="font-semibold text-white mb-4 flex items-center gap-2">
-                        <i data-lucide="book-open" class="w-5 h-5 text-violet-400"></i>
-                        Recommended Learning
-                    </h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        ${(analysis.learning_resources || []).map(r => `
-                            <div class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg">
-                                <i data-lucide="external-link" class="w-4 h-4 text-slate-500"></i>
-                                <span class="text-sm text-slate-300">${r}</span>
-                            </div>
-                        `).join('') || '<p class="text-slate-500 text-sm col-span-2">Continue practicing your current strategy</p>'}
-                    </div>
-                </div>
-                
-                <!-- Projected Improvement -->
-                <div class="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-                    <p class="text-sm text-emerald-400">
-                        <i data-lucide="trending-up" class="w-4 h-4 inline mr-2"></i>
-                        ${analysis.projected_improvement || 'Consistent practice will lead to steady improvement'}
-                    </p>
-                </div>
-            </div>
-        `;
+        let html = '<div class="space-y-6">';
         
+        // Score Card
+        html += '<div class="glass rounded-xl p-8 text-center border-2 ' + borderColor + '">';
+        html += '<div class="text-sm text-slate-400 mb-2">Your Trader Score</div>';
+        html += '<div class="text-6xl font-bold mb-2 ' + scoreColor + '">' + analysis.trader_score + '<span class="text-2xl text-slate-500">/100</span></div>';
+        html += '<div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800">';
+        html += '<i data-lucide="user-check" class="w-4 h-4 text-violet-400"></i>';
+        html += '<span class="font-medium text-white">' + analysis.trader_type.replace(/_/g, ' ').toUpperCase() + '</span>';
+        html += '<span class="text-xs text-slate-500">(' + (analysis.trader_type_confidence || 75) + '% confidence)</span>';
+        html += '</div>';
+        html += '</div>';
+        
+        // Score Breakdown
+        html += '<div class="glass rounded-xl p-6">';
+        html += '<h4 class="font-semibold text-white mb-4">Performance Breakdown</h4>';
+        html += '<div class="space-y-3">';
+        
+        if (analysis.score_breakdown) {
+            Object.entries(analysis.score_breakdown).forEach(function([key, score]) {
+                html += '<div class="flex items-center gap-4">';
+                html += '<span class="text-sm text-slate-400 w-32 capitalize">' + key.replace(/_/g, ' ') + '</span>';
+                html += '<div class="flex-1 bg-slate-800 rounded-full h-2">';
+                html += '<div class="bg-gradient-to-r from-blue-500 to-violet-500 h-2 rounded-full" style="width: ' + score + '%"></div>';
+                html += '</div>';
+                html += '<span class="text-sm font-bold text-white w-12 text-right">' + score + '</span>';
+                html += '</div>';
+            });
+        }
+        
+        html += '</div>';
+        html += '</div>';
+        
+        // Mistakes & Patterns Grid
+        html += '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">';
+        
+        // Mistakes
+        html += '<div class="glass rounded-xl p-6">';
+        html += '<h4 class="font-semibold text-white mb-4 flex items-center gap-2">';
+        html += '<i data-lucide="alert-triangle" class="w-5 h-5 text-red-400"></i>';
+        html += 'Mistakes Detected';
+        html += '</h4>';
+        html += '<div class="space-y-3">';
+        
+        if (analysis.mistakes_detected && analysis.mistakes_detected.length > 0) {
+            analysis.mistakes_detected.forEach(function(m) {
+                html += '<div class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">';
+                html += '<div class="flex items-center justify-between mb-1">';
+                html += '<span class="font-medium text-red-400 text-sm">' + m.mistake + '</span>';
+                html += '<span class="text-xs px-2 py-1 bg-red-500/20 rounded text-red-400">' + m.frequency + '</span>';
+                html += '</div>';
+                html += '<p class="text-xs text-slate-400">' + m.impact + '</p>';
+                html += '<p class="text-xs text-slate-500 mt-1 italic">' + m.evidence + '</p>';
+                html += '</div>';
+            });
+        } else {
+            html += '<p class="text-slate-500 text-sm">No major mistakes detected - great job!</p>';
+        }
+        
+        html += '</div>';
+        html += '</div>';
+        
+        // Patterns
+        html += '<div class="glass rounded-xl p-6">';
+        html += '<h4 class="font-semibold text-white mb-4 flex items-center gap-2">';
+        html += '<i data-lucide="activity" class="w-5 h-5 text-blue-400"></i>';
+        html += 'Patterns Detected';
+        html += '</h4>';
+        html += '<div class="space-y-3">';
+        
+        if (analysis.patterns_detected && analysis.patterns_detected.length > 0) {
+            analysis.patterns_detected.forEach(function(p) {
+                html += '<div class="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">';
+                html += '<div class="font-medium text-blue-400 text-sm mb-1">' + p.pattern + '</div>';
+                html += '<p class="text-xs text-slate-400">Occurs: ' + p.occurrence + '</p>';
+                html += '<p class="text-xs text-slate-500 mt-1">' + p.consequence + '</p>';
+                html += '</div>';
+            });
+        } else {
+            html += '<p class="text-slate-500 text-sm">No significant patterns detected</p>';
+        }
+        
+        html += '</div>';
+        html += '</div>';
+        
+        html += '</div>'; // End grid
+        
+        // Recommendations
+        html += '<div class="glass rounded-xl p-6 border border-yellow-500/20">';
+        html += '<h4 class="font-semibold text-white mb-4 flex items-center gap-2">';
+        html += '<i data-lucide="lightbulb" class="w-5 h-5 text-yellow-400"></i>';
+        html += 'Actionable Recommendations';
+        html += '</h4>';
+        html += '<ul class="space-y-2">';
+        
+        if (analysis.recommendations) {
+            analysis.recommendations.forEach(function(r) {
+                html += '<li class="flex items-start gap-3 text-sm text-slate-300">';
+                html += '<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0"></i>';
+                html += '<span>' + r + '</span>';
+                html += '</li>';
+            });
+        }
+        
+        html += '</ul>';
+        html += '</div>';
+        
+        // Learning Resources
+        html += '<div class="glass rounded-xl p-6">';
+        html += '<h4 class="font-semibold text-white mb-4 flex items-center gap-2">';
+        html += '<i data-lucide="book-open" class="w-5 h-5 text-violet-400"></i>';
+        html += 'Recommended Learning';
+        html += '</h4>';
+        html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">';
+        
+        if (analysis.learning_resources && analysis.learning_resources.length > 0) {
+            analysis.learning_resources.forEach(function(r) {
+                html += '<div class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg">';
+                html += '<i data-lucide="external-link" class="w-4 h-4 text-slate-500"></i>';
+                html += '<span class="text-sm text-slate-300">' + r + '</span>';
+                html += '</div>';
+            });
+        } else {
+            html += '<p class="text-slate-500 text-sm col-span-2">Continue practicing your current strategy</p>';
+        }
+        
+        html += '</div>';
+        html += '</div>';
+        
+        // Projected Improvement
+        html += '<div class="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">';
+        html += '<p class="text-sm text-emerald-400">';
+        html += '<i data-lucide="trending-up" class="w-4 h-4 inline mr-2"></i>';
+        html += (analysis.projected_improvement || 'Consistent practice will lead to steady improvement');
+        html += '</p>';
+        html += '</div>';
+        
+        html += '</div>'; // End container
+        
+        resultDiv.innerHTML = html;
         lucide.createIcons();
         loadTradeAnalysisHistory();
         
     } catch (err) {
         loadingDiv.classList.add('hidden');
         resultDiv.classList.remove('hidden');
-        resultDiv.innerHTML = `
-            <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
-                <p>Error: ${err.message}</p>
-            </div>
-        `;
+        resultDiv.innerHTML = '<div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400"><p>Error: ' + err.message + '</p></div>';
     }
 }
 
-// BLOG SECTION
+async function loadTradeAnalysisHistory() {
+    try {
+        const response = await apiCall('/trade-analyses');
+        const data = await response.json();
+        const container = document.getElementById('tradeAnalysisHistory');
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p class="text-slate-500 text-center py-8">No previous analyses</p>';
+            return;
+        }
+        
+        let html = '';
+        data.forEach(function(item) {
+            const date = new Date(item.created_at);
+            html += '<div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-700/50">';
+            html += '<div class="flex items-center gap-4">';
+            html += '<div class="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center">';
+            html += '<i data-lucide="file-text" class="w-5 h-5 text-violet-400"></i>';
+            html += '</div>';
+            html += '<div>';
+            html += '<div class="font-medium text-white">' + item.filename + '</div>';
+            html += '<div class="text-xs text-slate-400">' + item.trader_type + ' • Score: ' + item.trader_score + '</div>';
+            html += '</div>';
+            html += '</div>';
+            html += '<div class="text-right">';
+            html += '<div class="text-xs text-slate-500">' + date.toLocaleDateString() + '</div>';
+            html += '</div>';
+            html += '</div>';
+        });
+        
+        container.innerHTML = html;
+        lucide.createIcons();
+        
+    } catch (err) {
+        console.error('Failed to load history:', err);
+    }
+}
+
+function renderDiscipline(content) {
+    let html = '<div class="p-8 max-w-4xl mx-auto fade-in">';
+    html += '<div class="flex items-center justify-between mb-8">';
+    html += '<div>';
+    html += '<h2 class="text-3xl font-bold text-white mb-1">Discipline Score</h2>';
+    html += '<p class="text-slate-400">Track your trading discipline metrics</p>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '<div class="glass rounded-xl p-12 text-center">';
+    html += '<div class="w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-2xl shadow-blue-500/20">';
+    html += '<span class="text-5xl font-bold text-white">87</span>';
+    html += '</div>';
+    html += '<h3 class="text-2xl font-bold text-white mb-2">Disciplined Trader</h3>';
+    html += '<p class="text-slate-400 max-w-md mx-auto">You are showing strong discipline in your trading approach. Keep following your process and risk management rules.</p>';
+    
+    html += '<div class="grid grid-cols-3 gap-6 mt-12 max-w-2xl mx-auto">';
+    html += '<div class="p-4 bg-slate-800/50 rounded-lg">';
+    html += '<div class="text-2xl font-bold text-emerald-400 mb-1">95%</div>';
+    html += '<div class="text-xs text-slate-500 uppercase tracking-wider">Plan Adherence</div>';
+    html += '</div>';
+    html += '<div class="p-4 bg-slate-800/50 rounded-lg">';
+    html += '<div class="text-2xl font-bold text-blue-400 mb-1">88%</div>';
+    html += '<div class="text-xs text-slate-500 uppercase tracking-wider">Risk Management</div>';
+    html += '</div>';
+    html += '<div class="p-4 bg-slate-800/50 rounded-lg">';
+    html += '<div class="text-2xl font-bold text-orange-400 mb-1">78%</div>';
+    html += '<div class="text-xs text-slate-500 uppercase tracking-wider">Emotional Control</div>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '</div>';
+    html += '</div>';
+    
+    content.innerHTML = html;
+}
+
+function renderMentor(content) {
+    let html = '<div class="p-8 max-w-4xl mx-auto h-[calc(100vh-2rem)] flex flex-col fade-in">';
+    html += '<div class="flex items-center justify-between mb-6">';
+    html += '<div>';
+    html += '<h2 class="text-3xl font-bold text-white mb-1">AI Mentor</h2>';
+    html += '<p class="text-slate-400">Your personal trading psychology coach</p>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '<div class="glass rounded-xl flex-1 flex flex-col overflow-hidden">';
+    html += '<div id="chatHistory" class="flex-1 overflow-y-auto p-6 space-y-4">';
+    html += '<div class="flex gap-3">';
+    html += '<div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">';
+    html += '<i data-lucide="bot" class="w-5 h-5 text-white"></i>';
+    html += '</div>';
+    html += '<div class="bg-slate-800 rounded-2xl rounded-tl-sm px-5 py-3 max-w-[80%]">';
+    html += '<p class="text-slate-200 text-sm leading-relaxed">Hello! I am your AI trading mentor. I am here to help you with trading psychology, risk management, and maintaining discipline. What would you like to discuss today?</p>';
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '<div class="p-4 border-t border-slate-800 bg-slate-900/50">';
+    html += '<div class="flex gap-3">';
+    html += '<input type="text" id="mentorInput" placeholder="Ask about trading psychology, risk management, or your trading plan..." ';
+    html += 'class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-5 py-3 text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" ';
+    html += 'onkeypress="if(event.key===\'Enter\') askMentor()">';
+    html += '<button onclick="askMentor()" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-xl text-white font-medium transition-colors flex items-center gap-2">';
+    html += '<i data-lucide="send" class="w-4 h-4"></i>';
+    html += '</button>';
+    html += '</div>';
+    html += '<div class="flex gap-2 mt-3 overflow-x-auto pb-1">';
+    html += '<button onclick="quickAsk(\'How do I control FOMO?\')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">How do I control FOMO?</button>';
+    html += '<button onclick="quickAsk(\'What is proper risk management?\')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">Risk management tips</button>';
+    html += '<button onclick="quickAsk(\'How to review losing trades?\')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">Review losing trades</button>';
+    html += '<button onclick="quickAsk(\'Trading plan checklist\')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">Trading plan checklist</button>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '</div>';
+    html += '</div>';
+    
+    content.innerHTML = html;
+}
+
+function quickAsk(message) {
+    document.getElementById('mentorInput').value = message;
+    askMentor();
+}
+
+async function askMentor() {
+    const input = document.getElementById('mentorInput');
+    const message = input.value.trim();
+    if (!message) return;
+    
+    const chat = document.getElementById('chatHistory');
+    
+    // Add user message
+    let userHtml = '<div class="flex gap-3 flex-row-reverse">';
+    userHtml += '<div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">';
+    userHtml += '<i data-lucide="user" class="w-5 h-5 text-slate-300"></i>';
+    userHtml += '</div>';
+    userHtml += '<div class="bg-blue-600 rounded-2xl rounded-tr-sm px-5 py-3 max-w-[80%]">';
+    userHtml += '<p class="text-white text-sm leading-relaxed">' + message + '</p>';
+    userHtml += '</div>';
+    userHtml += '</div>';
+    
+    chat.innerHTML += userHtml;
+    
+    input.value = '';
+    chat.scrollTop = chat.scrollHeight;
+    lucide.createIcons();
+    
+    // Show typing indicator
+    const typingId = 'typing-' + Date.now();
+    let typingHtml = '<div id="' + typingId + '" class="flex gap-3">';
+    typingHtml += '<div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">';
+    typingHtml += '<i data-lucide="bot" class="w-5 h-5 text-white"></i>';
+    typingHtml += '</div>';
+    typingHtml += '<div class="bg-slate-800 rounded-2xl rounded-tl-sm px-5 py-3">';
+    typingHtml += '<div class="flex gap-1">';
+    typingHtml += '<div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce"></div>';
+    typingHtml += '<div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>';
+    typingHtml += '<div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>';
+    typingHtml += '</div>';
+    typingHtml += '</div>';
+    typingHtml += '</div>';
+    
+    chat.innerHTML += typingHtml;
+    chat.scrollTop = chat.scrollHeight;
+    
+    try {
+        const response = await apiCall('/mentorship/personalized?message=' + encodeURIComponent(message), {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'message=' + encodeURIComponent(message) + '&context_type=general'
+        });
+        
+        const data = await response.json();
+        
+        // Remove typing indicator
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+        
+        let responseHtml = '<div class="flex gap-3">';
+        responseHtml += '<div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">';
+        responseHtml += '<i data-lucide="bot" class="w-5 h-5 text-white"></i>';
+        responseHtml += '</div>';
+        responseHtml += '<div class="bg-slate-800 rounded-2xl rounded-tl-sm px-5 py-3 max-w-[80%]">';
+        
+        if (data.personalized_response) {
+            responseHtml += '<p class="text-slate-200 text-sm leading-relaxed">' + data.personalized_response + '</p>';
+            if (data.identified_pattern) {
+                responseHtml += '<div class="mt-2 pt-2 border-t border-slate-700">';
+                responseHtml += '<p class="text-xs text-violet-400">Pattern: ' + data.identified_pattern + '</p>';
+                responseHtml += '</div>';
+            }
+            if (data.actionable_steps && data.actionable_steps.length > 0) {
+                responseHtml += '<ul class="mt-2 space-y-1">';
+                data.actionable_steps.forEach(function(step) {
+                    responseHtml += '<li class="text-xs text-slate-400 flex items-center gap-2">';
+                    responseHtml += '<i data-lucide="check" class="w-3 h-3 text-emerald-400"></i>';
+                    responseHtml += step;
+                    responseHtml += '</li>';
+                });
+                responseHtml += '</ul>';
+            }
+        } else {
+            responseHtml += '<p class="text-slate-200 text-sm leading-relaxed">' + (data.response || data.fallback_response || 'I am here to help with your trading journey.') + '</p>';
+        }
+        
+        responseHtml += '</div>';
+        responseHtml += '</div>';
+        
+        chat.innerHTML += responseHtml;
+        
+    } catch (err) {
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+        
+        let errorHtml = '<div class="flex gap-3">';
+        errorHtml += '<div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">';
+        errorHtml += '<i data-lucide="alert-circle" class="w-5 h-5 text-red-400"></i>';
+        errorHtml += '</div>';
+        errorHtml += '<div class="bg-red-500/10 border border-red-500/20 rounded-2xl rounded-tl-sm px-5 py-3 max-w-[80%]">';
+        errorHtml += '<p class="text-red-400 text-sm">Sorry, I am having trouble connecting. Please try again.</p>';
+        errorHtml += '</div>';
+        errorHtml += '</div>';
+        
+        chat.innerHTML += errorHtml;
+    }
+    
+    lucide.createIcons();
+    chat.scrollTop = chat.scrollHeight;
+}
+
 function renderBlog(content) {
-    content.innerHTML = `
-        <div class="p-8 max-w-6xl mx-auto fade-in">
-            <div class="flex items-center justify-between mb-8">
-                <div>
-                    <h2 class="text-3xl font-bold text-white mb-1">Trading Blog</h2>
-                    <p class="text-slate-400">Insights, strategies, and market analysis</p>
-                </div>
-                <div class="flex gap-2">
-                    <input type="text" id="blogSearch" placeholder="Search articles..." 
-                        class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white text-sm"
-                        onkeypress="if(event.key==='Enter') searchBlog()">
-                    <button onclick="searchBlog()" class="px-4 py-2 bg-blue-500 rounded-lg text-white text-sm">
-                        <i data-lucide="search" class="w-4 h-4"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Categories -->
-            <div class="flex gap-2 mb-6 overflow-x-auto pb-2" id="blogCategories">
-                <button onclick="filterBlog('all')" class="px-4 py-2 bg-blue-500 rounded-full text-white text-sm whitespace-nowrap">All</button>
-                <button onclick="filterBlog('strategy')" class="px-4 py-2 bg-slate-800 rounded-full text-slate-300 text-sm whitespace-nowrap">Strategy</button>
-                <button onclick="filterBlog('psychology')" class="px-4 py-2 bg-slate-800 rounded-full text-slate-300 text-sm whitespace-nowrap">Psychology</button>
-                <button onclick="filterBlog('risk-management')" class="px-4 py-2 bg-slate-800 rounded-full text-slate-300 text-sm whitespace-nowrap">Risk Management</button>
-                <button onclick="filterBlog('technical-analysis')" class="px-4 py-2 bg-slate-800 rounded-full text-slate-300 text-sm whitespace-nowrap">Technical Analysis</button>
-            </div>
-            
-            <!-- Posts Grid -->
-            <div id="blogPosts" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <p class="text-slate-500 col-span-3 text-center py-12">Loading articles...</p>
-            </div>
-        </div>
-    `;
+    let html = '<div class="p-8 max-w-6xl mx-auto fade-in">';
+    html += '<div class="flex items-center justify-between mb-8">';
+    html += '<div>';
+    html += '<h2 class="text-3xl font-bold text-white mb-1">Trading Blog</h2>';
+    html += '<p class="text-slate-400">Insights, strategies, and market analysis</p>';
+    html += '</div>';
+    html += '<div class="flex gap-2">';
+    html += '<input type="text" id="blogSearch" placeholder="Search articles..." ';
+    html += 'class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white text-sm" ';
+    html += 'onkeypress="if(event.key===\'Enter\') searchBlog()">';
+    html += '<button onclick="searchBlog()" class="px-4 py-2 bg-blue-500 rounded-lg text-white text-sm">';
+    html += '<i data-lucide="search" class="w-4 h-4"></i>';
+    html += '</button>';
+    html += '</div>';
+    html += '</div>';
+    
+    // Categories
+    html += '<div class="flex gap-2 mb-6 overflow-x-auto pb-2" id="blogCategories">';
+    html += '<button onclick="filterBlog(\'all\')" class="px-4 py-2 bg-blue-500 rounded-full text-white text-sm whitespace-nowrap">All</button>';
+    html += '<button onclick="filterBlog(\'strategy\')" class="px-4 py-2 bg-slate-800 rounded-full text-slate-300 text-sm whitespace-nowrap">Strategy</button>';
+    html += '<button onclick="filterBlog(\'psychology\')" class="px-4 py-2 bg-slate-800 rounded-full text-slate-300 text-sm whitespace-nowrap">Psychology</button>';
+    html += '<button onclick="filterBlog(\'risk-management\')" class="px-4 py-2 bg-slate-800 rounded-full text-slate-300 text-sm whitespace-nowrap">Risk Management</button>';
+    html += '<button onclick="filterBlog(\'technical-analysis\')" class="px-4 py-2 bg-slate-800 rounded-full text-slate-300 text-sm whitespace-nowrap">Technical Analysis</button>';
+    html += '</div>';
+    
+    // Posts Grid
+    html += '<div id="blogPosts" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">';
+    html += '<p class="text-slate-500 col-span-3 text-center py-12">Loading articles...</p>';
+    html += '</div>';
+    
+    html += '</div>';
+    
+    content.innerHTML = html;
     loadBlogPosts();
 }
 
-async function loadBlogPosts(category = 'all', search = '') {
+async function loadBlogPosts(category, search) {
+    category = category || 'all';
+    search = search || '';
+    
     try {
-        let url = `/blog/posts?status=published&per_page=12`;
-        if (category !== 'all') url += `&category=${category}`;
-        if (search) url += `&search=${encodeURIComponent(search)}`;
+        let url = '/blog/posts?status=published&per_page=12';
+        if (category !== 'all') url += '&category=' + encodeURIComponent(category);
+        if (search) url += '&search=' + encodeURIComponent(search);
         
-        const response = await fetch(`${API_URL}${url}`);
+        const response = await fetch(API_URL + url);
         const data = await response.json();
         
         const container = document.getElementById('blogPosts');
@@ -285,125 +1478,189 @@ async function loadBlogPosts(category = 'all', search = '') {
             return;
         }
         
-        container.innerHTML = data.posts.map(post => `
-            <article class="glass rounded-xl overflow-hidden card-hover cursor-pointer" onclick="showBlogPost('${post.slug}')">
-                ${post.featured_image ? `
-                    <div class="h-48 bg-cover bg-center" style="background-image: url('${post.featured_image}')"></div>
-                ` : `
-                    <div class="h-48 bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center">
-                        <i data-lucide="image" class="w-12 h-12 text-slate-600"></i>
-                    </div>
-                `}
-                <div class="p-6">
-                    <div class="flex items-center gap-2 mb-3">
-                        <span class="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded">${post.category || 'General'}</span>
-                        <span class="text-xs text-slate-500">${new Date(post.published_at).toLocaleDateString()}</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-white mb-2 line-clamp-2">${post.title}</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">${post.excerpt}</p>
-                    <div class="flex items-center justify-between text-xs text-slate-500">
-                        <span class="flex items-center gap-1">
-                            <i data-lucide="eye" class="w-3 h-3"></i> ${post.view_count || 0} views
-                        </span>
-                        <span class="text-blue-400">Read more →</span>
-                    </div>
-                </div>
-            </article>
-        `).join('');
+        let html = '';
+        data.posts.forEach(function(post) {
+            const date = new Date(post.published_at);
+            
+            html += '<article class="glass rounded-xl overflow-hidden card-hover cursor-pointer" onclick="showBlogPost(\'' + post.slug + '\')">';
+            
+            if (post.featured_image) {
+                html += '<div class="h-48 bg-cover bg-center" style="background-image: url(\'' + post.featured_image + '\')"></div>';
+            } else {
+                html += '<div class="h-48 bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center">';
+                html += '<i data-lucide="image" class="w-12 h-12 text-slate-600"></i>';
+                html += '</div>';
+            }
+            
+            html += '<div class="p-6">';
+            html += '<div class="flex items-center gap-2 mb-3">';
+            html += '<span class="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded">' + (post.category || 'General') + '</span>';
+            html += '<span class="text-xs text-slate-500">' + date.toLocaleDateString() + '</span>';
+            html += '</div>';
+            html += '<h3 class="text-lg font-bold text-white mb-2 line-clamp-2">' + post.title + '</h3>';
+            html += '<p class="text-sm text-slate-400 line-clamp-3 mb-4">' + post.excerpt + '</p>';
+            html += '<div class="flex items-center justify-between text-xs text-slate-500">';
+            html += '<span class="flex items-center gap-1">';
+            html += '<i data-lucide="eye" class="w-3 h-3"></i> ' + (post.view_count || 0) + ' views';
+            html += '</span>';
+            html += '<span class="text-blue-400">Read more →</span>';
+            html += '</div>';
+            html += '</div>';
+            html += '</article>';
+        });
         
+        container.innerHTML = html;
         lucide.createIcons();
+        
     } catch (err) {
-        document.getElementById('blogPosts').innerHTML = `
-            <p class="text-red-400 col-span-3 text-center py-12">Error loading articles: ${err.message}</p>
-        `;
+        document.getElementById('blogPosts').innerHTML = '<p class="text-red-400 col-span-3 text-center py-12">Error loading articles: ' + err.message + '</p>';
     }
 }
 
-// ADMIN DASHBOARD
+function filterBlog(category) {
+    // Update active button
+    const buttons = document.querySelectorAll('#blogCategories button');
+    buttons.forEach(function(btn) {
+        if (btn.textContent.toLowerCase().includes(category.replace('-', ' ')) || (category === 'all' && btn.textContent === 'All')) {
+            btn.classList.remove('bg-slate-800', 'text-slate-300');
+            btn.classList.add('bg-blue-500', 'text-white');
+        } else {
+            btn.classList.remove('bg-blue-500', 'text-white');
+            btn.classList.add('bg-slate-800', 'text-slate-300');
+        }
+    });
+    
+    loadBlogPosts(category);
+}
+
+function searchBlog() {
+    const search = document.getElementById('blogSearch').value;
+    loadBlogPosts('all', search);
+}
+
+async function showBlogPost(slug) {
+    try {
+        const response = await fetch(API_URL + '/blog/post/' + slug);
+        const post = await response.json();
+        
+        if (!response.ok) {
+            throw new Error('Post not found');
+        }
+        
+        const content = document.getElementById('content');
+        const date = new Date(post.published_at);
+        
+        let html = '<div class="p-8 max-w-4xl mx-auto fade-in">';
+        html += '<button onclick="showPage(\'blog\')" class="mb-6 flex items-center gap-2 text-slate-400 hover:text-white transition-colors">';
+        html += '<i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Blog';
+        html += '</button>';
+        
+        if (post.featured_image) {
+            html += '<div class="h-64 rounded-xl bg-cover bg-center mb-8" style="background-image: url(\'' + post.featured_image + '\')"></div>';
+        }
+        
+        html += '<div class="flex items-center gap-2 mb-4">';
+        html += '<span class="px-3 py-1 bg-blue-500/20 text-blue-400 text-sm rounded">' + (post.category || 'General') + '</span>';
+        html += '<span class="text-slate-500 text-sm">' + date.toLocaleDateString() + '</span>';
+        html += '</div>';
+        
+        html += '<h1 class="text-4xl font-bold text-white mb-6">' + post.title + '</h1>';
+        
+        if (post.tags && post.tags.length > 0) {
+            html += '<div class="flex gap-2 mb-8">';
+            post.tags.forEach(function(tag) {
+                html += '<span class="px-2 py-1 bg-slate-800 text-slate-400 text-xs rounded">' + tag + '</span>';
+            });
+            html += '</div>';
+        }
+        
+        html += '<div class="prose prose-invert max-w-none">';
+        html += '<div class="text-slate-300 leading-relaxed">' + post.content + '</div>';
+        html += '</div>';
+        
+        html += '</div>';
+        
+        content.innerHTML = html;
+        lucide.createIcons();
+        
+    } catch (err) {
+        alert('Error loading post: ' + err.message);
+    }
+}
+
 function renderAdmin(content) {
     if (!currentUser.is_admin) {
-        content.innerHTML = `
-            <div class="p-8 text-center">
-                <i data-lucide="lock" class="w-16 h-16 text-red-400 mx-auto mb-4"></i>
-                <h2 class="text-2xl font-bold text-white mb-2">Access Denied</h2>
-                <p class="text-slate-400">You don't have permission to view this page</p>
-            </div>
-        `;
+        let html = '<div class="p-8 text-center">';
+        html += '<i data-lucide="lock" class="w-16 h-16 text-red-400 mx-auto mb-4"></i>';
+        html += '<h2 class="text-2xl font-bold text-white mb-2">Access Denied</h2>';
+        html += '<p class="text-slate-400">You do not have permission to view this page</p>';
+        html += '</div>';
+        content.innerHTML = html;
         lucide.createIcons();
         return;
     }
     
-    content.innerHTML = `
-        <div class="p-8 max-w-7xl mx-auto fade-in">
-            <div class="flex items-center justify-between mb-8">
-                <div>
-                    <h2 class="text-3xl font-bold text-white mb-1">Admin Dashboard</h2>
-                    <p class="text-slate-400">Manage your platform</p>
-                </div>
-            </div>
-            
-            <!-- Stats Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" id="adminStats">
-                <div class="metric-card rounded-xl p-6">
-                    <div class="text-slate-400 text-sm mb-1">Total Users</div>
-                    <div class="text-3xl font-bold text-white">-</div>
-                </div>
-                <div class="metric-card rounded-xl p-6">
-                    <div class="text-slate-400 text-sm mb-1">Total Trades</div>
-                    <div class="text-3xl font-bold text-white">-</div>
-                </div>
-                <div class="metric-card rounded-xl p-6">
-                    <div class="text-slate-400 text-sm mb-1">Blog Posts</div>
-                    <div class="text-3xl font-bold text-white">-</div>
-                </div>
-                <div class="metric-card rounded-xl p-6">
-                    <div class="text-slate-400 text-sm mb-1">Avg Trader Score</div>
-                    <div class="text-3xl font-bold text-white">-</div>
-                </div>
-            </div>
-            
-            <!-- Quick Actions -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                <div class="glass rounded-xl p-6">
-                    <h3 class="font-semibold text-white mb-4">Content Management</h3>
-                    <div class="space-y-2">
-                        <button onclick="showAdminSection('blog-editor')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">
-                            <i data-lucide="file-plus" class="w-4 h-4 inline mr-2"></i> New Blog Post
-                        </button>
-                        <button onclick="showAdminSection('media')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">
-                            <i data-lucide="image" class="w-4 h-4 inline mr-2"></i> Media Library
-                        </button>
-                        <button onclick="showAdminSection('blog-posts')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">
-                            <i data-lucide="list" class="w-4 h-4 inline mr-2"></i> Manage Posts
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="glass rounded-xl p-6">
-                    <h3 class="font-semibold text-white mb-4">User Management</h3>
-                    <div class="space-y-2">
-                        <button onclick="showAdminSection('users')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">
-                            <i data-lucide="users" class="w-4 h-4 inline mr-2"></i> All Users
-                        </button>
-                        <button onclick="showAdminSection('analytics')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">
-                            <i data-lucide="bar-chart-2" class="w-4 h-4 inline mr-2"></i> Analytics
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="glass rounded-xl p-6">
-                    <h3 class="font-semibold text-white mb-4">Recent Activity</h3>
-                    <div id="recentActivity" class="space-y-3 text-sm">
-                        <p class="text-slate-500">Loading...</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Dynamic Admin Section -->
-            <div id="adminSection" class="glass rounded-xl p-6 hidden"></div>
-        </div>
-    `;
+    let html = '<div class="p-8 max-w-7xl mx-auto fade-in">';
+    html += '<div class="flex items-center justify-between mb-8">';
+    html += '<div>';
+    html += '<h2 class="text-3xl font-bold text-white mb-1">Admin Dashboard</h2>';
+    html += '<p class="text-slate-400">Manage your platform</p>';
+    html += '</div>';
+    html += '</div>';
     
+    // Stats Grid
+    html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" id="adminStats">';
+    html += '<div class="metric-card rounded-xl p-6"><div class="text-slate-400 text-sm mb-1">Total Users</div><div class="text-3xl font-bold text-white">-</div></div>';
+    html += '<div class="metric-card rounded-xl p-6"><div class="text-slate-400 text-sm mb-1">Total Trades</div><div class="text-3xl font-bold text-white">-</div></div>';
+    html += '<div class="metric-card rounded-xl p-6"><div class="text-slate-400 text-sm mb-1">Blog Posts</div><div class="text-3xl font-bold text-white">-</div></div>';
+    html += '<div class="metric-card rounded-xl p-6"><div class="text-slate-400 text-sm mb-1">Avg Trader Score</div><div class="text-3xl font-bold text-white">-</div></div>';
+    html += '</div>';
+    
+    // Quick Actions
+    html += '<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">';
+    
+    html += '<div class="glass rounded-xl p-6">';
+    html += '<h3 class="font-semibold text-white mb-4">Content Management</h3>';
+    html += '<div class="space-y-2">';
+    html += '<button onclick="showAdminSection(\'blog-editor\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">';
+    html += '<i data-lucide="file-plus" class="w-4 h-4 inline mr-2"></i> New Blog Post';
+    html += '</button>';
+    html += '<button onclick="showAdminSection(\'media\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">';
+    html += '<i data-lucide="image" class="w-4 h-4 inline mr-2"></i> Media Library';
+    html += '</button>';
+    html += '<button onclick="showAdminSection(\'blog-posts\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">';
+    html += '<i data-lucide="list" class="w-4 h-4 inline mr-2"></i> Manage Posts';
+    html += '</button>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '<div class="glass rounded-xl p-6">';
+    html += '<h3 class="font-semibold text-white mb-4">User Management</h3>';
+    html += '<div class="space-y-2">';
+    html += '<button onclick="showAdminSection(\'users\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">';
+    html += '<i data-lucide="users" class="w-4 h-4 inline mr-2"></i> All Users';
+    html += '</button>';
+    html += '<button onclick="showAdminSection(\'analytics\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">';
+    html += '<i data-lucide="bar-chart-2" class="w-4 h-4 inline mr-2"></i> Analytics';
+    html += '</button>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '<div class="glass rounded-xl p-6">';
+    html += '<h3 class="font-semibold text-white mb-4">Recent Activity</h3>';
+    html += '<div id="recentActivity" class="space-y-3 text-sm">';
+    html += '<p class="text-slate-500">Loading...</p>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '</div>';
+    
+    // Dynamic Admin Section
+    html += '<div id="adminSection" class="glass rounded-xl p-6 hidden"></div>';
+    
+    html += '</div>';
+    
+    content.innerHTML = html;
     loadAdminStats();
     lucide.createIcons();
 }
@@ -414,81 +1671,382 @@ async function loadAdminStats() {
         const data = await response.json();
         
         const statsDiv = document.getElementById('adminStats');
-        statsDiv.innerHTML = `
-            <div class="metric-card rounded-xl p-6">
-                <div class="text-slate-400 text-sm mb-1">Total Users</div>
-                <div class="text-3xl font-bold text-white">${data.users.total_users}</div>
-                <div class="text-xs text-emerald-400 mt-1">+${data.users.new_users_7d} this week</div>
-            </div>
-            <div class="metric-card rounded-xl p-6">
-                <div class="text-slate-400 text-sm mb-1">Total Trades</div>
-                <div class="text-3xl font-bold text-white">${data.trades.total_trades}</div>
-                <div class="text-xs text-slate-400 mt-1">${data.trades.trades_7d} this week</div>
-            </div>
-            <div class="metric-card rounded-xl p-6">
-                <div class="text-slate-400 text-sm mb-1">Blog Posts</div>
-                <div class="text-3xl font-bold text-white">${data.blog.published_posts}</div>
-                <div class="text-xs text-slate-400 mt-1">${data.blog.total_views} total views</div>
-            </div>
-            <div class="metric-card rounded-xl p-6">
-                <div class="text-slate-400 text-sm mb-1">Avg Trader Score</div>
-                <div class="text-3xl font-bold text-white">${Math.round(data.analyses.avg_trader_score || 0)}</div>
-                <div class="text-xs text-slate-400 mt-1">${data.analyses.total_analyses} analyses</div>
-            </div>
-        `;
+        let html = '';
+        
+        html += '<div class="metric-card rounded-xl p-6">';
+        html += '<div class="text-slate-400 text-sm mb-1">Total Users</div>';
+        html += '<div class="text-3xl font-bold text-white">' + (data.users.total_users || 0) + '</div>';
+        html += '<div class="text-xs text-emerald-400 mt-1">+' + (data.users.new_users_7d || 0) + ' this week</div>';
+        html += '</div>';
+        
+        html += '<div class="metric-card rounded-xl p-6">';
+        html += '<div class="text-slate-400 text-sm mb-1">Total Trades</div>';
+        html += '<div class="text-3xl font-bold text-white">' + (data.trades.total_trades || 0) + '</div>';
+        html += '<div class="text-xs text-slate-400 mt-1">' + (data.trades.trades_7d || 0) + ' this week</div>';
+        html += '</div>';
+        
+        html += '<div class="metric-card rounded-xl p-6">';
+        html += '<div class="text-slate-400 text-sm mb-1">Blog Posts</div>';
+        html += '<div class="text-3xl font-bold text-white">' + (data.blog.published_posts || 0) + '</div>';
+        html += '<div class="text-xs text-slate-400 mt-1">' + (data.blog.total_views || 0) + ' total views</div>';
+        html += '</div>';
+        
+        html += '<div class="metric-card rounded-xl p-6">';
+        html += '<div class="text-slate-400 text-sm mb-1">Avg Trader Score</div>';
+        html += '<div class="text-3xl font-bold text-white">' + Math.round(data.analyses.avg_trader_score || 0) + '</div>';
+        html += '<div class="text-xs text-slate-400 mt-1">' + (data.analyses.total_analyses || 0) + ' analyses</div>';
+        html += '</div>';
+        
+        statsDiv.innerHTML = html;
         
         // Recent activity
         const activityDiv = document.getElementById('recentActivity');
-        activityDiv.innerHTML = data.recent_activity.users.map(u => `
-            <div class="flex items-center gap-3 text-slate-400">
-                <i data-lucide="user-plus" class="w-4 h-4 text-emerald-400"></i>
-                <span>${u.name} joined</span>
-                <span class="text-xs ml-auto">${new Date(u.created_at).toLocaleDateString()}</span>
-            </div>
-        `).join('');
+        let activityHtml = '';
+        
+        if (data.recent_activity && data.recent_activity.users) {
+            data.recent_activity.users.forEach(function(u) {
+                const date = new Date(u.created_at);
+                activityHtml += '<div class="flex items-center gap-3 text-slate-400">';
+                activityHtml += '<i data-lucide="user-plus" class="w-4 h-4 text-emerald-400"></i>';
+                activityHtml += '<span>' + u.name + ' joined</span>';
+                activityHtml += '<span class="text-xs ml-auto">' + date.toLocaleDateString() + '</span>';
+                activityHtml += '</div>';
+            });
+        }
+        
+        activityDiv.innerHTML = activityHtml || '<p class="text-slate-500">No recent activity</p>';
         
         lucide.createIcons();
+        
     } catch (err) {
         console.error('Failed to load admin stats:', err);
     }
 }
 
-// Update showPage function to include new pages
-async function showPage(page) {
-    const content = document.getElementById('content');
+function showAdminSection(section) {
+    const container = document.getElementById('adminSection');
+    container.classList.remove('hidden');
     
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    if (event && event.target) {
-        event.target.closest('.nav-btn')?.classList.add('active');
-    } else {
-        document.querySelector(`[onclick="showPage('${page}')"]`)?.classList.add('active');
+    if (section === 'blog-editor') {
+        renderBlogEditor(container);
+    } else if (section === 'blog-posts') {
+        renderBlogPostsList(container);
+    } else if (section === 'users') {
+        renderUsersList(container);
+    } else if (section === 'media') {
+        renderMediaLibrary(container);
     }
+}
 
-    if (page === 'dashboard') {
-        await renderDashboard(content);
-    } else if (page === 'journal') {
-        renderJournal(content);
-    } else if (page === 'analysis') {
-        renderChartAnalysis(content);
-    } else if (page === 'trade-analysis') {
-        renderTradeAnalysis(content);
-    } else if (page === 'discipline') {
-        renderDiscipline(content);
-    } else if (page === 'mentor') {
-        renderMentor(content);
-    } else if (page === 'blog') {
-        renderBlog(content);
-    } else if (page === 'admin') {
-        renderAdmin(content);
-    }
+function renderBlogEditor(container) {
+    let html = '<div class="flex items-center justify-between mb-6">';
+    html += '<h3 class="text-lg font-semibold text-white">New Blog Post</h3>';
+    html += '<button onclick="document.getElementById(\'adminSection\').classList.add(\'hidden\')" class="text-slate-400 hover:text-white">';
+    html += '<i data-lucide="x" class="w-5 h-5"></i>';
+    html += '</button>';
+    html += '</div>';
     
-    // Show admin nav if user is admin
-    if (currentUser.is_admin) {
-        document.getElementById('admin-nav')?.classList.remove('hidden');
-    }
+    html += '<form onsubmit="saveBlogPost(event)" class="space-y-4">';
+    html += '<div>';
+    html += '<label class="block text-sm font-medium text-slate-400 mb-2">Title</label>';
+    html += '<input type="text" name="title" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="Post title">';
+    html += '</div>';
     
+    html += '<div class="grid grid-cols-2 gap-4">';
+    html += '<div>';
+    html += '<label class="block text-sm font-medium text-slate-400 mb-2">Category</label>';
+    html += '<select name="category" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">';
+    html += '<option value="strategy">Strategy</option>';
+    html += '<option value="psychology">Psychology</option>';
+    html += '<option value="risk-management">Risk Management</option>';
+    html += '<option value="technical-analysis">Technical Analysis</option>';
+    html += '<option value="news">News</option>';
+    html += '</select>';
+    html += '</div>';
+    html += '<div>';
+    html += '<label class="block text-sm font-medium text-slate-400 mb-2">Status</label>';
+    html += '<select name="status" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">';
+    html += '<option value="draft">Draft</option>';
+    html += '<option value="published">Published</option>';
+    html += '</select>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '<div>';
+    html += '<label class="block text-sm font-medium text-slate-400 mb-2">Content</label>';
+    html += '<textarea name="content" rows="10" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="Write your post content here..."></textarea>';
+    html += '</div>';
+    
+    html += '<div>';
+    html += '<label class="block text-sm font-medium text-slate-400 mb-2">Excerpt</label>';
+    html += '<textarea name="excerpt" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="Brief summary of the post"></textarea>';
+    html += '</div>';
+    
+    html += '<div>';
+    html += '<label class="block text-sm font-medium text-slate-400 mb-2">Tags (comma separated)</label>';
+    html += '<input type="text" name="tags" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="forex, trading, strategy">';
+    html += '</div>';
+    
+    html += '<div class="flex gap-3">';
+    html += '<button type="submit" class="px-6 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium">Save Post</button>';
+    html += '<button type="button" onclick="document.getElementById(\'adminSection\').classList.add(\'hidden\')" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium">Cancel</button>';
+    html += '</div>';
+    
+    html += '</form>';
+    
+    container.innerHTML = html;
     lucide.createIcons();
 }
+
+async function saveBlogPost(e) {
+    e.preventDefault();
+    const form = e.target;
+    const btn = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    
+    try {
+        const formData = new URLSearchParams();
+        formData.append('title', form.title.value);
+        formData.append('content', form.content.value);
+        formData.append('category', form.category.value);
+        formData.append('status', form.status.value);
+        if (form.excerpt.value) formData.append('excerpt', form.excerpt.value);
+        if (form.tags.value) formData.append('tags', form.tags.value);
+        
+        const response = await apiCall('/admin/blog/posts', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData.toString()
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(getErrorMessage(data));
+        }
+        
+        alert('Post saved successfully!');
+        document.getElementById('adminSection').classList.add('hidden');
+        loadAdminStats();
+        
+    } catch (err) {
+        alert('Error: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Save Post';
+    }
+}
+
+async function renderBlogPostsList(container) {
+    container.innerHTML = '<p class="text-slate-500">Loading posts...</p>';
+    
+    try {
+        const response = await fetch(API_URL + '/blog/posts?status=published&per_page=50');
+        const data = await response.json();
+        
+        let html = '<div class="flex items-center justify-between mb-6">';
+        html += '<h3 class="text-lg font-semibold text-white">Manage Posts</h3>';
+        html += '<button onclick="document.getElementById(\'adminSection\').classList.add(\'hidden\')" class="text-slate-400 hover:text-white">';
+        html += '<i data-lucide="x" class="w-5 h-5"></i>';
+        html += '</button>';
+        html += '</div>';
+        
+        if (!data.posts || data.posts.length === 0) {
+            html += '<p class="text-slate-500">No posts found</p>';
+            container.innerHTML = html;
+            return;
+        }
+        
+        html += '<div class="space-y-3">';
+        data.posts.forEach(function(post) {
+            const date = new Date(post.published_at);
+            html += '<div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">';
+            html += '<div>';
+            html += '<div class="font-medium text-white">' + post.title + '</div>';
+            html += '<div class="text-xs text-slate-400">' + date.toLocaleDateString() + ' • ' + (post.view_count || 0) + ' views</div>';
+            html += '</div>';
+            html += '<div class="flex gap-2">';
+            html += '<button onclick="deleteBlogPost(' + post.id + ')" class="px-3 py-1 bg-red-500/20 text-red-400 rounded text-sm hover:bg-red-500/30">Delete</button>';
+            html += '</div>';
+            html += '</div>';
+        });
+        html += '</div>';
+        
+        container.innerHTML = html;
+        lucide.createIcons();
+        
+    } catch (err) {
+        container.innerHTML = '<p class="text-red-400">Error loading posts: ' + err.message + '</p>';
+    }
+}
+
+async function deleteBlogPost(postId) {
+    if (!confirm('Are you sure you want to delete this post?')) return;
+    
+    try {
+        const response = await apiCall('/admin/blog/posts/' + postId, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            alert('Post deleted');
+            renderBlogPostsList(document.getElementById('adminSection'));
+        } else {
+            throw new Error('Failed to delete');
+        }
+        
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function renderUsersList(container) {
+    container.innerHTML = '<p class="text-slate-500">Loading users...</p>';
+    
+    try {
+        const response = await apiCall('/admin/users');
+        const data = await response.json();
+        
+        let html = '<div class="flex items-center justify-between mb-6">';
+        html += '<h3 class="text-lg font-semibold text-white">All Users</h3>';
+        html += '<button onclick="document.getElementById(\'adminSection\').classList.add(\'hidden\')" class="text-slate-400 hover:text-white">';
+        html += '<i data-lucide="x" class="w-5 h-5"></i>';
+        html += '</button>';
+        html += '</div>';
+        
+        if (!data.users || data.users.length === 0) {
+            html += '<p class="text-slate-500">No users found</p>';
+            container.innerHTML = html;
+            return;
+        }
+        
+        html += '<div class="space-y-3">';
+        data.users.forEach(function(user) {
+            const date = new Date(user.created_at);
+            html += '<div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">';
+            html += '<div class="flex items-center gap-3">';
+            html += '<div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">';
+            html += '<i data-lucide="user" class="w-5 h-5 text-blue-400"></i>';
+            html += '</div>';
+            html += '<div>';
+            html += '<div class="font-medium text-white">' + user.name + '</div>';
+            html += '<div class="text-xs text-slate-400">' + user.email + '</div>';
+            html += '</div>';
+            html += '</div>';
+            html += '<div class="text-right">';
+            html += '<div class="text-xs text-slate-400">' + date.toLocaleDateString() + '</div>';
+            if (user.is_admin) {
+                html += '<span class="text-xs text-emerald-400">Admin</span>';
+            }
+            html += '</div>';
+            html += '</div>';
+        });
+        html += '</div>';
+        
+        container.innerHTML = html;
+        lucide.createIcons();
+        
+    } catch (err) {
+        container.innerHTML = '<p class="text-red-400">Error loading users: ' + err.message + '</p>';
+    }
+}
+
+function renderMediaLibrary(container) {
+    let html = '<div class="flex items-center justify-between mb-6">';
+    html += '<h3 class="text-lg font-semibold text-white">Media Library</h3>';
+    html += '<div class="flex gap-2">';
+    html += '<input type="file" id="mediaUpload" class="hidden" onchange="uploadMedia(this)">';
+    html += '<button onclick="document.getElementById(\'mediaUpload\').click()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white text-sm">';
+    html += '<i data-lucide="upload" class="w-4 h-4 inline mr-2"></i>Upload';
+    html += '</button>';
+    html += '<button onclick="document.getElementById(\'adminSection\').classList.add(\'hidden\')" class="text-slate-400 hover:text-white">';
+    html += '<i data-lucide="x" class="w-5 h-5"></i>';
+    html += '</button>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '<div id="mediaGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">';
+    html += '<p class="text-slate-500 col-span-full">Loading media...</p>';
+    html += '</div>';
+    
+    container.innerHTML = html;
+    loadMediaFiles();
+    lucide.createIcons();
+}
+
+async function loadMediaFiles() {
+    try {
+        const response = await apiCall('/admin/media');
+        const data = await response.json();
+        const container = document.getElementById('mediaGrid');
+        
+        if (!data.media || data.media.length === 0) {
+            container.innerHTML = '<p class="text-slate-500 col-span-full">No media files</p>';
+            return;
+        }
+        
+        let html = '';
+        data.media.forEach(function(file) {
+            const isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(file.file_type.toLowerCase());
+            
+            html += '<div class="aspect-square bg-slate-800 rounded-lg overflow-hidden relative group cursor-pointer" onclick="copyMediaUrl(\'' + file.url + '\')">';
+            
+            if (isImage) {
+                html += '<img src="' + file.url + '" class="w-full h-full object-cover" alt="' + (file.alt_text || '') + '">';
+            } else {
+                html += '<div class="w-full h-full flex items-center justify-center bg-slate-700">';
+                html += '<i data-lucide="file" class="w-8 h-8 text-slate-500"></i>';
+                html += '</div>';
+            }
+            
+            html += '<div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">';
+            html += '<span class="text-white text-xs">Click to copy URL</span>';
+            html += '</div>';
+            html += '</div>';
+        });
+        
+        container.innerHTML = html;
+        lucide.createIcons();
+        
+    } catch (err) {
+        document.getElementById('mediaGrid').innerHTML = '<p class="text-red-400 col-span-full">Error loading media</p>';
+    }
+}
+
+async function uploadMedia(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await apiCall('/admin/media/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('Media uploaded: ' + data.url);
+            loadMediaFiles();
+        } else {
+            throw new Error(data.error || 'Upload failed');
+        }
+        
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+function copyMediaUrl(url) {
+    navigator.clipboard.writeText(API_URL + url).then(function() {
+        alert('URL copied to clipboard');
+    });
+}
+
+lucide.createIcons();
+</script>
+</body>
+</html>
