@@ -1,1 +1,0 @@
-# Paystack integration placeholder
