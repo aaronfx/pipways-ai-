@@ -6,7 +6,7 @@
     <title>Pipways - Institutional Trader Development</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    
+
     <!-- Editor.js and plugins - Using specific versions for stability -->
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.28.2/dist/editorjs.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.7.0/dist/bundle.umd.min.js"></script>
@@ -18,55 +18,55 @@
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@2.2.1/dist/bundle.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@2.5.3/dist/bundle.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@1.3.0/dist/bundle.umd.min.js"></script>
-    
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
+
         * { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        
+
         .gradient-text {
             background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        
+
         .glass {
             background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+
         .glass-strong {
             background: rgba(15, 23, 42, 0.95);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
-        
+
         .btn-primary {
             background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
             transition: all 0.3s ease;
         }
-        
+
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 40px -10px rgba(59, 130, 246, 0.5);
         }
-        
+
         .sidebar-link {
             transition: all 0.2s ease;
         }
-        
+
         .sidebar-link:hover, .sidebar-link.active {
             background: rgba(59, 130, 246, 0.1);
             color: #60a5fa;
         }
-        
+
         .nav-btn.active {
             background: rgba(59, 130, 246, 0.2);
             color: #60a5fa;
         }
-        
+
         /* Editor.js Critical Styles - MUST HAVE */
         .codex-editor {
             background: #1e293b;
@@ -74,29 +74,29 @@
             min-height: 400px;
             position: relative;
         }
-        
+
         /* Force editor to be visible */
         .codex-editor__redactor {
             padding-bottom: 100px !important;
             min-height: 300px !important;
         }
-        
+
         .ce-block {
             padding: 0.5em 0;
         }
-        
+
         .ce-block__content {
             max-width: 100%;
             position: relative;
         }
-        
+
         .ce-paragraph {
             color: #e2e8f0;
             font-size: 16px;
             line-height: 1.6;
             padding: 0.5em 0;
         }
-        
+
         /* Toolbar must be visible */
         .ce-toolbar {
             position: absolute;
@@ -105,25 +105,25 @@
             top: 0;
             z-index: 10;
         }
-        
+
         .ce-toolbar__content {
             max-width: 100%;
         }
-        
+
         .ce-toolbar__actions {
             right: 10px;
             display: flex;
             align-items: center;
         }
-        
+
         .ce-toolbar__plus {
             color: #94a3b8;
         }
-        
+
         .ce-toolbar__plus:hover {
             color: #60a5fa;
         }
-        
+
         /* Inline toolbar */
         .ce-inline-toolbar {
             background: #1e293b;
@@ -132,20 +132,20 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             z-index: 100;
         }
-        
+
         .ce-inline-toolbar__buttons {
             display: flex;
         }
-        
+
         .ce-inline-tool {
             color: #e2e8f0;
             padding: 8px;
         }
-        
+
         .ce-inline-tool:hover {
             background: #334155;
         }
-        
+
         /* Popover/Toolbox */
         .ce-popover {
             background: #1e293b;
@@ -154,19 +154,19 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             color: #e2e8f0;
         }
-        
+
         .ce-popover__item {
             color: #e2e8f0;
         }
-        
+
         .ce-popover__item:hover {
             background: #334155;
         }
-        
+
         .ce-popover__item-icon {
             background: #334155;
         }
-        
+
         /* Conversion toolbar */
         .ce-conversion-toolbar {
             background: #1e293b;
@@ -174,59 +174,59 @@
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
-        
+
         .ce-conversion-tool {
             color: #e2e8f0;
         }
-        
+
         .ce-conversion-tool:hover {
             background: #334155;
         }
-        
+
         .ce-conversion-tool__icon {
             background: #334155;
         }
-        
+
         /* Block selection */
         .ce-block--selected .ce-block__content {
             background: rgba(59, 130, 246, 0.1);
             border-radius: 4px;
         }
-        
+
         /* Header styles */
         .ce-header {
             color: #f8fafc;
             font-weight: 600;
             padding: 0.5em 0;
         }
-        
+
         h1.ce-header { font-size: 2em; }
         h2.ce-header { font-size: 1.75em; }
         h3.ce-header { font-size: 1.5em; }
         h4.ce-header { font-size: 1.25em; }
-        
+
         /* List styles */
         .cdx-list {
             color: #e2e8f0;
             padding-left: 1.5em;
         }
-        
+
         .cdx-list__item {
             padding: 0.3em 0;
         }
-        
+
         /* Quote styles */
         .cdx-quote {
             border-left: 3px solid #60a5fa;
             padding-left: 1em;
             margin: 1em 0;
         }
-        
+
         .cdx-quote__text {
             color: #e2e8f0;
             font-style: italic;
         }
-        
+
         /* Code styles */
         .cdx-code {
             background: #0f172a;
@@ -237,17 +237,17 @@
             color: #e2e8f0;
             overflow-x: auto;
         }
-        
+
         /* Image styles */
         .cdx-image {
             margin: 1em 0;
         }
-        
+
         .cdx-image__picture img {
             max-width: 100%;
             border-radius: 8px;
         }
-        
+
         /* Delimiter */
         .ce-delimiter {
             text-align: center;
@@ -256,7 +256,7 @@
             letter-spacing: 0.5em;
             padding: 1em 0;
         }
-        
+
         /* Placeholder */
         .ce-paragraph[data-placeholder]:empty::before {
             content: attr(data-placeholder);
@@ -264,49 +264,49 @@
             font-style: italic;
             pointer-events: none;
         }
-        
+
         /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
         }
-        
+
         ::-webkit-scrollbar-track {
             background: #0f172a;
         }
-        
+
         ::-webkit-scrollbar-thumb {
             background: #334155;
             border-radius: 3px;
         }
-        
+
         /* Mobile optimizations */
         @media (max-width: 1024px) {
             .ce-toolbar__actions {
                 right: 5px;
             }
         }
-        
+
         @media screen and (max-width: 768px) {
             input, select, textarea {
                 font-size: 16px;
             }
-            
+
             .codex-editor {
                 min-height: 300px;
             }
         }
-        
+
         /* Modal animation */
         .modal-enter {
             animation: modalFadeIn 0.3s ease;
         }
-        
+
         @keyframes modalFadeIn {
             from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
         }
-        
+
         /* Loading state */
         .editor-loading {
             display: flex;
@@ -315,7 +315,7 @@
             min-height: 300px;
             color: #64748b;
         }
-        
+
         /* Error state */
         .editor-error {
             padding: 2em;
@@ -323,6 +323,7 @@
             color: #ef4444;
         }
     </style>
+<base target="_blank">
 </head>
 <body class="bg-slate-950 text-slate-200 antialiased overflow-x-hidden">
     <!-- Auth Screen -->
@@ -335,12 +336,12 @@
                 <h1 class="text-2xl md:text-3xl font-bold gradient-text mb-2">Pipways</h1>
                 <p class="text-slate-400 text-sm md:text-base">Institutional Trader Development</p>
             </div>
-            
+
             <div id="auth-tabs" class="flex gap-2 mb-6 p-1 bg-slate-800/50 rounded-lg">
                 <button onclick="showAuthTab('login')" id="tab-login" class="flex-1 py-2.5 rounded-md bg-blue-500 text-white font-medium text-sm transition-all">Sign In</button>
                 <button onclick="showAuthTab('register')" id="tab-register" class="flex-1 py-2.5 rounded-md text-slate-400 hover:text-white font-medium text-sm transition-all">Register</button>
             </div>
-            
+
             <!-- Login Form -->
             <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
@@ -355,7 +356,7 @@
                     Sign In
                 </button>
             </form>
-            
+
             <!-- Register Form -->
             <form id="register-form" onsubmit="handleRegister(event)" class="hidden space-y-4">
                 <div>
@@ -375,9 +376,9 @@
                     Create Account
                 </button>
             </form>
-            
+
             <div id="auth-error" class="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm hidden"></div>
-            
+
             <div class="mt-6 p-4 bg-slate-800/30 rounded-lg border border-slate-700/50">
                 <p class="text-xs text-slate-500 font-medium mb-2 uppercase tracking-wider">Demo Credentials</p>
                 <div class="text-xs text-slate-400 space-y-1 font-mono">
@@ -419,7 +420,7 @@
                     <i data-lucide="x" class="w-6 h-6"></i>
                 </button>
             </div>
-            
+
             <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
                 <button onclick="showPage('dashboard')" class="nav-btn sidebar-link active w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
                     <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
@@ -458,7 +459,7 @@
                     <span>Admin</span>
                 </button>
             </nav>
-            
+
             <div class="p-4 border-t border-slate-800 space-y-3">
                 <div class="bg-slate-800/50 rounded-lg p-3 md:p-4">
                     <div class="flex items-center justify-between mb-2">
@@ -484,20 +485,20 @@
     </div>
 
     <!-- Blog Editor Modal -->
-    <div id="blog-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-50 overflow-y-auto">
+    <div id="blog-editor-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-50 overflow-y-auto">
         <div class="min-h-screen px-4 py-4 md:py-8">
             <div class="max-w-6xl mx-auto bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden modal-enter">
                 <!-- Header -->
                 <div class="flex justify-between items-center p-4 md:p-6 border-b border-slate-800 bg-slate-800/50">
-                    <h3 class="text-lg md:text-xl font-bold text-white flex items-center gap-2" id="modal-title">
+                    <h3 class="text-lg md:text-xl font-bold text-white flex items-center gap-2">
                         <i data-lucide="file-text" class="w-5 h-5 text-blue-400"></i>
-                        <span>New Blog Post</span>
+                        <span id="editor-modal-title">New Blog Post</span>
                     </h3>
                     <button onclick="closeBlogEditor()" class="text-slate-400 hover:text-white transition-colors p-2 hover:bg-slate-800 rounded-lg">
                         <i data-lucide="x" class="w-6 h-6"></i>
                     </button>
                 </div>
-                
+
                 <!-- Body -->
                 <div class="p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                     <!-- Main Content -->
@@ -506,7 +507,7 @@
                             <label class="block text-sm font-medium text-slate-400 mb-2">Title</label>
                             <input type="text" id="blog-title" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-lg" placeholder="Post title">
                         </div>
-                        
+
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-slate-400 mb-2">Category</label>
@@ -527,21 +528,18 @@
                                 </select>
                             </div>
                         </div>
-                        
+
                         <div>
                             <label class="block text-sm font-medium text-slate-400 mb-2">Content</label>
-                            <div id="editorjs" class="bg-slate-800 border border-slate-700 rounded-lg min-h-[400px] relative">
-                                <!-- Editor.js will mount here -->
-                            </div>
-                            <div id="editor-status" class="text-xs text-slate-500 mt-2 hidden"></div>
+                            <div id="editorjs" class="bg-slate-800 border border-slate-700 rounded-lg min-h-[400px]"></div>
                         </div>
-                        
+
                         <div>
                             <label class="block text-sm font-medium text-slate-400 mb-2">Excerpt</label>
                             <textarea id="blog-excerpt" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none resize-none" placeholder="Brief summary of the post"></textarea>
                         </div>
                     </div>
-                    
+
                     <!-- Sidebar -->
                     <div class="space-y-4">
                         <!-- SEO -->
@@ -581,7 +579,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- AI Assistant -->
                         <div class="bg-gradient-to-br from-violet-900/30 to-blue-900/30 rounded-lg p-4 border border-violet-700/30">
                             <h4 class="font-medium text-white mb-4 flex items-center gap-2">
@@ -608,7 +606,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Footer -->
                 <div class="flex flex-col sm:flex-row justify-end gap-3 p-4 md:p-6 border-t border-slate-800 bg-slate-800/30">
                     <button onclick="closeBlogEditor()" class="w-full sm:w-auto px-6 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all order-3 sm:order-1">Cancel</button>
@@ -630,8 +628,9 @@
     </div>
 
     <script>
+
         // API Configuration
-        const API_BASE = 'https://pipways-api-nhem.onrender.com';
+        const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8000' : 'https://pipways-api-nhem.onrender.com';
         let currentUser = null;
         let blogEditor = null;
         let currentEditingPostId = null;
@@ -641,24 +640,24 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
-            
+
             // Check for existing token
             const token = localStorage.getItem('token');
             if (token) {
                 validateToken(token);
             }
-            
+
             // Setup character counters
             document.getElementById('blog-meta-title')?.addEventListener('input', updateCharCounters);
             document.getElementById('blog-meta-desc')?.addEventListener('input', updateCharCounters);
-            
+
             // Close modal on escape
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     closeBlogEditor();
                 }
             });
-            
+
             // Check if Editor.js loaded
             if (typeof EditorJS === 'undefined') {
                 console.error('Editor.js failed to load from CDN');
@@ -673,7 +672,7 @@
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('mobile-overlay');
             const icon = document.getElementById('mobile-menu-icon');
-            
+
             if (mobileMenuOpen) {
                 sidebar.classList.remove('-translate-x-full');
                 overlay.classList.remove('hidden');
@@ -690,7 +689,7 @@
         function showAuthTab(tab) {
             const loginBtn = document.getElementById('tab-login');
             const registerBtn = document.getElementById('tab-register');
-            
+
             if (tab === 'login') {
                 loginBtn.className = 'flex-1 py-2.5 rounded-md bg-blue-500 text-white font-medium text-sm transition-all';
                 registerBtn.className = 'flex-1 py-2.5 rounded-md text-slate-400 hover:text-white font-medium text-sm transition-all';
@@ -698,7 +697,7 @@
                 loginBtn.className = 'flex-1 py-2.5 rounded-md text-slate-400 hover:text-white font-medium text-sm transition-all';
                 registerBtn.className = 'flex-1 py-2.5 rounded-md bg-blue-500 text-white font-medium text-sm transition-all';
             }
-            
+
             document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
             document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
             document.getElementById('auth-error').classList.add('hidden');
@@ -707,15 +706,15 @@
         async function handleLogin(e) {
             e.preventDefault();
             const formData = new FormData(e.target);
-            
+
             try {
                 const response = await fetch(`${API_BASE}/auth/login`, {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     localStorage.setItem('token', data.access_token);
                     currentUser = data;
@@ -731,15 +730,15 @@
         async function handleRegister(e) {
             e.preventDefault();
             const formData = new FormData(e.target);
-            
+
             try {
                 const response = await fetch(`${API_BASE}/auth/register`, {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     localStorage.setItem('token', data.access_token);
                     currentUser = data;
@@ -763,7 +762,7 @@
                 const response = await fetch(`${API_BASE}/trades`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                
+
                 if (response.ok) {
                     currentUser = { token };
                     showApp();
@@ -778,11 +777,11 @@
         function showApp() {
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
-            
+
             if (currentUser?.is_admin) {
                 document.getElementById('admin-nav').classList.remove('hidden');
             }
-            
+
             showPage('dashboard');
         }
 
@@ -794,24 +793,24 @@
             document.getElementById('login-form').reset();
             document.getElementById('register-form').reset();
             showAuthTab('login');
-            
+
             if (mobileMenuOpen) toggleMobileMenu();
         }
 
         // Navigation
         function showPage(page) {
             if (mobileMenuOpen) toggleMobileMenu();
-            
+
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            
+
             if (event?.target?.closest('.nav-btn')) {
                 event.target.closest('.nav-btn').classList.add('active');
             }
-            
+
             const content = document.getElementById('content');
-            
+
             switch(page) {
                 case 'dashboard':
                     renderDashboard(content);
@@ -838,7 +837,7 @@
                     renderAdmin(content);
                     break;
             }
-            
+
             lucide.createIcons();
         }
 
@@ -850,7 +849,7 @@
                         <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">Dashboard</h2>
                         <p class="text-slate-400 text-sm md:text-base">Welcome back, ${currentUser?.name || 'Trader'}</p>
                     </div>
-                    
+
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
                         <div class="glass rounded-xl p-4 md:p-6">
                             <div class="flex items-center justify-between mb-3 md:mb-4">
@@ -862,7 +861,7 @@
                             <p class="text-slate-400 text-xs md:text-sm">Total P&L</p>
                             <p class="text-xl md:text-2xl font-bold text-white">+2,450 pips</p>
                         </div>
-                        
+
                         <div class="glass rounded-xl p-4 md:p-6">
                             <div class="flex items-center justify-between mb-3 md:mb-4">
                                 <div class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-violet-500/20 flex items-center justify-center">
@@ -873,7 +872,7 @@
                             <p class="text-slate-400 text-xs md:text-sm">Win Rate</p>
                             <p class="text-xl md:text-2xl font-bold text-white">68.5%</p>
                         </div>
-                        
+
                         <div class="glass rounded-xl p-4 md:p-6">
                             <div class="flex items-center justify-between mb-3 md:mb-4">
                                 <div class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center">
@@ -884,7 +883,7 @@
                             <p class="text-slate-400 text-xs md:text-sm">Risk Score</p>
                             <p class="text-xl md:text-2xl font-bold text-white">7.2/10</p>
                         </div>
-                        
+
                         <div class="glass rounded-xl p-4 md:p-6">
                             <div class="flex items-center justify-between mb-3 md:mb-4">
                                 <div class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-amber-500/20 flex items-center justify-center">
@@ -896,7 +895,7 @@
                             <p class="text-xl md:text-2xl font-bold text-white">3 losses</p>
                         </div>
                     </div>
-                    
+
                     <div class="glass rounded-xl p-4 md:p-6">
                         <h3 class="text-lg font-semibold text-white mb-4">Recent Activity</h3>
                         <div class="space-y-3 md:space-y-4">
@@ -1014,7 +1013,7 @@
                         </button>
                         ` : ''}
                     </div>
-                    
+
                     <div id="blog-posts-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                         <div class="col-span-full text-center py-12">
                             <div class="w-12 h-12 mx-auto mb-4 rounded-lg bg-slate-800 flex items-center justify-center animate-pulse">
@@ -1025,7 +1024,7 @@
                     </div>
                 </div>
             `;
-            
+
             loadBlogPosts();
             lucide.createIcons();
         }
@@ -1034,9 +1033,9 @@
             try {
                 const response = await fetch(`${API_BASE}/posts?per_page=12&status=published`);
                 const data = await response.json();
-                
+
                 const container = document.getElementById('blog-posts-container');
-                
+
                 if (!data.posts || data.posts.length === 0) {
                     container.innerHTML = `
                         <div class="col-span-full text-center py-12">
@@ -1050,7 +1049,7 @@
                     lucide.createIcons();
                     return;
                 }
-                
+
                 container.innerHTML = data.posts.map(post => `
                     <article class="glass rounded-xl overflow-hidden hover:border-blue-500/50 transition-all group cursor-pointer" onclick="${currentUser?.is_admin ? `editBlogPost(${post.id})` : ''}">
                         ${post.featured_image ? `
@@ -1082,7 +1081,7 @@
                         </div>
                     </article>
                 `).join('');
-                
+
                 lucide.createIcons();
             } catch (error) {
                 console.error('Error loading posts:', error);
@@ -1114,14 +1113,14 @@
                 lucide.createIcons();
                 return;
             }
-            
+
             container.innerHTML = `
                 <div class="p-4 md:p-8 max-w-7xl mx-auto">
                     <div class="mb-6 md:mb-8">
                         <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">Admin Dashboard</h2>
                         <p class="text-slate-400 text-sm md:text-base">Manage your platform</p>
                     </div>
-                    
+
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
                         <div class="glass rounded-xl p-4 md:p-6">
                             <p class="text-slate-400 text-xs md:text-sm mb-1">Total Users</p>
@@ -1140,7 +1139,7 @@
                             <p class="text-2xl md:text-3xl font-bold text-white" id="stat-score">-</p>
                         </div>
                     </div>
-                    
+
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                         <div class="glass rounded-xl p-4 md:p-6">
                             <h3 class="text-base md:text-lg font-semibold text-white mb-4">Content Management</h3>
@@ -1163,7 +1162,7 @@
                                 </button>
                             </div>
                         </div>
-                        
+
                         <div class="glass rounded-xl p-4 md:p-6">
                             <h3 class="text-base md:text-lg font-semibold text-white mb-4">User Management</h3>
                             <div class="space-y-2 md:space-y-3">
@@ -1177,7 +1176,7 @@
                                 </button>
                             </div>
                         </div>
-                        
+
                         <div class="glass rounded-xl p-4 md:p-6">
                             <h3 class="text-base md:text-lg font-semibold text-white mb-4">Recent Activity</h3>
                             <div id="recent-activity" class="text-slate-400 text-sm">Loading...</div>
@@ -1185,7 +1184,7 @@
                     </div>
                 </div>
             `;
-            
+
             loadAdminStats();
             lucide.createIcons();
         }
@@ -1196,12 +1195,12 @@
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                 });
                 const data = await response.json();
-                
+
                 const usersEl = document.getElementById('stat-users');
                 const tradesEl = document.getElementById('stat-trades');
                 const postsEl = document.getElementById('stat-posts');
                 const scoreEl = document.getElementById('stat-score');
-                
+
                 if (usersEl) usersEl.textContent = data.users?.total_users || 0;
                 if (tradesEl) tradesEl.textContent = data.trades?.total_trades || 0;
                 if (postsEl) postsEl.textContent = data.blog?.total_posts || 0;
@@ -1215,54 +1214,59 @@
         // Blog Editor Functions
         function openBlogEditor(postId = null) {
             currentEditingPostId = postId;
-            
-            document.getElementById('modal-title').innerHTML = `
-                <i data-lucide="file-text" class="w-5 h-5 text-blue-400"></i>
-                <span>${postId ? 'Edit Blog Post' : 'New Blog Post'}</span>
-            `;
-            
-            const modal = document.getElementById('blog-modal');
+
+            document.getElementById('editor-modal-title').textContent = postId ? 'Edit Blog Post' : 'New Blog Post';
+
+            const modal = document.getElementById('blog-editor-modal');
             modal.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
-            
+
             resetBlogForm();
-            
+
             // Small delay to ensure DOM is ready
             setTimeout(() => {
-                initEditor();
+                initBlogEditor();
             }, 100);
-            
+
             if (postId) {
                 loadPostForEdit(postId);
             }
-            
+
             lucide.createIcons();
         }
 
-        function initEditor() {
+        function closeBlogEditor() {
+            const modal = document.getElementById('blog-editor-modal');
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+            resetBlogForm();
+            currentEditingPostId = null;
+        }
+
+        function initBlogEditor() {
             // Check if Editor.js is available
             if (typeof EditorJS === 'undefined') {
                 console.error('Editor.js not loaded!');
                 showEditorError('Editor failed to load. Please refresh the page.');
                 return;
             }
-            
+
             // If already initialized, just clear it
             if (blogEditor) {
                 blogEditor.clear();
                 return;
             }
-            
+
             const editorElement = document.getElementById('editorjs');
             if (!editorElement) {
                 console.error('Editor holder element not found!');
                 return;
             }
-            
+
             // Show loading state
             editorElement.innerHTML = '<div class="editor-loading"><i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i> Loading editor...</div>';
             lucide.createIcons();
-            
+
             try {
                 blogEditor = new EditorJS({
                     holder: 'editorjs',
@@ -1313,12 +1317,11 @@
                         },
                         delimiter: Delimiter
                     },
-                    placeholder: 'Write your post content here... Click the + button to add headings, lists, images, and more',
-                    autofocus: false, // Don't autofocus on mobile
+                    placeholder: 'Write your post content here... Click + to add headings, lists, images, and more',
+                    autofocus: false,
                     onReady: () => {
                         console.log('Editor.js is ready!');
                         editorInitialized = true;
-                        document.getElementById('editor-status')?.classList.add('hidden');
                     },
                     onChange: () => {
                         console.log('Content changed');
@@ -1342,14 +1345,6 @@
             }
         }
 
-        function closeBlogEditor() {
-            const modal = document.getElementById('blog-modal');
-            modal.classList.add('hidden');
-            document.body.style.overflow = '';
-            resetBlogForm();
-            currentEditingPostId = null;
-        }
-
         function resetBlogForm() {
             document.getElementById('blog-title').value = '';
             document.getElementById('blog-category').value = 'Strategy';
@@ -1363,9 +1358,9 @@
             document.getElementById('ai-topic').value = '';
             document.getElementById('ai-keywords').value = '';
             document.getElementById('seo-score-container')?.classList.add('hidden');
-            
+
             updateCharCounters();
-            
+
             if (blogEditor) {
                 blogEditor.clear();
             }
@@ -1377,7 +1372,7 @@
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                 });
                 const post = await response.json();
-                
+
                 document.getElementById('blog-title').value = post.title || '';
                 document.getElementById('blog-category').value = post.category || 'Strategy';
                 document.getElementById('blog-status').value = post.status || 'draft';
@@ -1387,9 +1382,9 @@
                 document.getElementById('blog-keyword').value = post.focus_keyword || '';
                 document.getElementById('blog-tags').value = post.tags ? post.tags.join(', ') : '';
                 document.getElementById('blog-image').value = post.featured_image || '';
-                
+
                 updateCharCounters();
-                
+
                 if (post.content_json && blogEditor) {
                     await blogEditor.render(post.content_json);
                 }
@@ -1402,13 +1397,9 @@
         function updateCharCounters() {
             const titleEl = document.getElementById('blog-meta-title');
             const descEl = document.getElementById('blog-meta-desc');
-            
-            if (titleEl) {
-                document.getElementById('meta-title-count').textContent = titleEl.value.length;
-            }
-            if (descEl) {
-                document.getElementById('meta-desc-count').textContent = descEl.value.length;
-            }
+
+            if (titleEl) document.getElementById('meta-title-count').textContent = titleEl.value.length;
+            if (descEl) document.getElementById('meta-desc-count').textContent = descEl.value.length;
         }
 
         async function saveBlogPost(status) {
@@ -1417,9 +1408,9 @@
                     showToast('Editor not initialized', 'error');
                     return;
                 }
-                
+
                 const content = await blogEditor.save();
-                
+
                 const formData = new FormData();
                 formData.append('title', document.getElementById('blog-title').value);
                 formData.append('content_json', JSON.stringify(content));
@@ -1431,23 +1422,27 @@
                 formData.append('featured_image', document.getElementById('blog-image').value);
                 formData.append('category', document.getElementById('blog-category').value);
                 formData.append('status', status);
-                
+
                 const url = currentEditingPostId 
                     ? `${API_BASE}/admin/posts/${currentEditingPostId}`
                     : `${API_BASE}/admin/posts`;
                 const method = currentEditingPostId ? 'PUT' : 'POST';
-                
+
                 const response = await fetch(url, {
                     method: method,
                     body: formData,
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     showToast(`Post ${currentEditingPostId ? 'updated' : 'created'} successfully!`, 'success');
                     closeBlogEditor();
+                    // Refresh blog posts if on blog page
+                    if (document.getElementById('blog-posts-container')) {
+                        loadBlogPosts();
+                    }
                 } else {
                     showToast(result.error || 'Error saving post', 'error');
                 }
@@ -1462,22 +1457,22 @@
             const originalHTML = btn.innerHTML;
             btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Generating...';
             btn.disabled = true;
-            
+
             try {
                 const formData = new FormData();
                 formData.append('topic', document.getElementById('ai-topic').value);
                 formData.append('keywords', document.getElementById('ai-keywords').value);
                 formData.append('audience', document.getElementById('ai-audience').value);
                 formData.append('tone', document.getElementById('ai-tone').value);
-                
+
                 const response = await fetch(`${API_BASE}/admin/ai-generate`, {
                     method: 'POST',
                     body: formData,
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success && result.content) {
                     const content = result.content;
                     document.getElementById('blog-title').value = content.title || '';
@@ -1485,11 +1480,11 @@
                     document.getElementById('blog-meta-desc').value = content.meta_description || '';
                     document.getElementById('blog-keyword').value = content.focus_keyword || '';
                     document.getElementById('blog-excerpt').value = content.excerpt || '';
-                    
+
                     if (content.content_blocks && blogEditor) {
                         await blogEditor.render({ blocks: content.content_blocks });
                     }
-                    
+
                     updateCharCounters();
                     showToast('AI content generated! Review before publishing.', 'success');
                 }
@@ -1509,27 +1504,27 @@
                     showToast('Editor not initialized', 'error');
                     return;
                 }
-                
+
                 const content = await blogEditor.save();
-                
+
                 const formData = new FormData();
                 formData.append('content_json', JSON.stringify(content));
                 formData.append('title', document.getElementById('blog-title').value);
                 formData.append('meta_description', document.getElementById('blog-meta-desc').value);
                 formData.append('focus_keyword', document.getElementById('blog-keyword').value);
-                
+
                 const response = await fetch(`${API_BASE}/admin/analyze-seo`, {
                     method: 'POST',
                     body: formData,
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     const container = document.getElementById('seo-score-container');
                     const value = document.getElementById('seo-score-value');
-                    
+
                     container.classList.remove('hidden');
                     value.textContent = result.seo_score;
                     value.className = 'text-3xl font-bold ' + 
@@ -1547,9 +1542,9 @@
             const toast = document.getElementById('toast');
             const toastMessage = document.getElementById('toast-message');
             const toastIcon = document.getElementById('toast-icon');
-            
+
             toastMessage.textContent = message;
-            
+
             if (type === 'error') {
                 toastIcon.setAttribute('data-lucide', 'alert-circle');
                 toastIcon.classList.remove('text-emerald-400');
@@ -1559,11 +1554,11 @@
                 toastIcon.classList.remove('text-red-400');
                 toastIcon.classList.add('text-emerald-400');
             }
-            
+
             lucide.createIcons();
-            
+
             toast.classList.remove('translate-y-20', 'opacity-0');
-            
+
             setTimeout(() => {
                 toast.classList.add('translate-y-20', 'opacity-0');
             }, 3000);
