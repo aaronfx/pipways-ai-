@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipways Admin Blog Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Editor.js and plugins -->
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/paragraph@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/code@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/image@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@latest"></script>
+    <script src="./editor.js"></script> <!-- Custom editor config -->
+    <style>
+        /* Same styles as index.html */
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200 antialiased">
+    <div class="p-8 max-w-7xl mx-auto">
+        <div class="flex items-center justify-between mb-8">
+            <h1 class="text-3xl font-bold text-white">Blog Admin Panel</h1>
+            <button onclick="createNewPost()" class="btn-primary px-6 py-2.5 rounded-lg text-white font-medium flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i> New Post
+            </button>
+        </div>
+        
+        <div class="mb-6">
+            <input id="postSearch" oninput="loadAdminPosts()" class="w-full max-w-md bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white" placeholder="Search posts...">
+        </div>
+        
+        <div id="postList" class="space-y-4 mb-8"></div>
+        
+        <div id="postEditor" class="hidden glass-strong rounded-2xl p-8">
+            <h2 class="text-2xl font-bold text-white mb-6">Edit Post</h2>
+            <form id="postForm" onsubmit="savePost(event)">
+                <input type="hidden" name="post_id">
+                
+                <!-- Post Content Section -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-white mb-4">Content</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Title</label>
+                            <input name="title" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Slug (auto-generated)</label>
+                            <input name="slug" readonly class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-2">Category</label>
+                                <select name="category" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                                    <option value="">Select category</option>
+                                    <option value="strategy">Strategy</option>
+                                    <option value="psychology">Psychology</option>
+                                    <option value="risk-management">Risk Management</option>
+                                    <option value="technical-analysis">Technical Analysis</option>
+                                    <option value="news">News</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-2">Status</label>
+                                <select name="status" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                                    <option value="draft">Draft</option>
+                                    <option value="scheduled">Scheduled</option>
+                                    <option value="published">Published</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="scheduledAtSection" class="hidden">
+                            <label class="block text-sm text-slate-400 mb-2">Scheduled Date</label>
+                            <input name="scheduled_at" type="datetime-local" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Tags (comma separated)</label>
+                            <input name="tags" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Excerpt</label>
+                            <textarea name="excerpt" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Content Editor</label>
+                            <div id="editorjs" class="border border-slate-700 rounded-lg bg-white text-black p-4"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- SEO Panel -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-white mb-4">SEO Settings</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Meta Title (max 70 chars)</label>
+                            <input name="meta_title" maxlength="70" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                            <p class="text-xs text-slate-500 mt-1">Characters: <span id="metaTitleCount">0</span>/70</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Meta Description (max 160 chars)</label>
+                            <textarea name="meta_description" rows="3" maxlength="160" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white"></textarea>
+                            <p class="text-xs text-slate-500 mt-1">Characters: <span id="metaDescCount">0</span>/160</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Focus Keyword</label>
+                            <input name="focus_keyword" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Meta Keywords (comma separated)</label>
+                            <input name="meta_keywords" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Canonical URL</label>
+                            <input name="canonical_url" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Images -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-white mb-4">Images</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Featured Image</label>
+                            <input name="featured_image" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="URL from media library">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">OpenGraph Image</label>
+                            <input name="og_image" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="URL from media library">
+                        </div>
+                        <button type="button" onclick="openMediaLibrary()" class="px-4 py-2 bg-slate-700 rounded text-white">Browse Media</button>
+                    </div>
+                </div>
+                
+                <!-- AI Tools -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-white mb-4">AI Assistant</h3>
+                    <div class="space-y-4">
+                        <input id="aiTopic" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="Topic for AI generation">
+                        <input id="aiKeywords" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="Keywords">
+                        <button type="button" onclick="generateAIContent()" class="px-4 py-2 bg-violet-500 rounded text-white">Generate Content</button>
+                    </div>
+                </div>
+                
+                <!-- SEO Score -->
+                <div class="mb-8">
+                    <button type="button" onclick="checkSEOScore()" class="px-4 py-2 bg-blue-500 rounded text-white">Check SEO Score</button>
+                    <div id="seoScore" class="mt-4"></div>
+                </div>
+                
+                <!-- Internal Links -->
+                <div class="mb-8">
+                    <button type="button" onclick="getLinkSuggestions()" class="px-4 py-2 bg-green-500 rounded text-white">Suggest Internal Links</button>
+                    <div id="linkSuggestions" class="mt-4 space-y-2"></div>
+                </div>
+                
+                <div class="flex gap-4">
+                    <button type="submit" class="px-6 py-2.5 bg-blue-500 rounded-lg text-white font-medium">Save Post</button>
+                    <button type="button" onclick="closeEditor()" class="px-6 py-2.5 bg-slate-700 rounded-lg text-white font-medium">Cancel</button>
+                    <button type="button" onclick="deletePost()" class="px-6 py-2.5 bg-red-500 rounded-lg text-white font-medium hidden" id="deleteBtn">Delete</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Media Library Modal -->
+        <div id="mediaModal" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center">
+            <div class="glass-strong rounded-2xl p-8 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-white">Media Library</h3>
+                    <button onclick="closeMediaLibrary()" class="text-slate-400">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <input type="file" id="mediaUploadInput" class="hidden" onchange="uploadMediaFile()">
+                <button onclick="document.getElementById('mediaUploadInput').click()" class="mb-4 px-4 py-2 bg-blue-500 rounded text-white">Upload New</button>
+                <div id="mediaGrid" class="grid grid-cols-4 gap-4"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+const API_URL = 'https://pipways-api-nhem.onrender.com';
+let authToken = localStorage.getItem('pipways_token');
+let editor;
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadAdminPosts();
+    lucide.createIcons();
+    
+    // Init Editor.js when editor opens
+    // Config in editor.js
+    
+    // Character counters
+    const metaTitle = document.querySelector('[name="meta_title"]');
+    if (metaTitle) {
+        metaTitle.addEventListener('input', () => {
+            document.getElementById('metaTitleCount').textContent = metaTitle.value.length;
+        });
+    }
+    
+    const metaDesc = document.querySelector('[name="meta_description"]');
+    if (metaDesc) {
+        metaDesc.addEventListener('input', () => {
+            document.getElementById('metaDescCount').textContent = metaDesc.value.length;
+        });
+    }
+    
+    // Show scheduled field
+    const statusSelect = document.querySelector('[name="status"]');
+    statusSelect.addEventListener('change', () => {
+        document.getElementById('scheduledAtSection').classList.toggle('hidden', statusSelect.value !== 'scheduled');
+    });
+});
+
+async function loadAdminPosts() {
+    const search = document.getElementById('postSearch').value;
+    try {
+        const response = await fetch(API_URL + '/blog/posts?page=1&per_page=50&status=all' + (search ? '&search=' + search : ''), {
+            headers: {'Authorization': 'Bearer ' + authToken}
+        });
+        const data = await response.json();
+        
+        let html = '';
+        data.posts.forEach(p => {
+            html += '<div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">';
+            html += '<div onclick="editPost(' + p.id + ')">';
+            html += '<div class="font-medium text-white">' + p.title + '</div>';
+            html += '<div class="text-xs text-slate-400">' + (p.status || 'draft') + ' • ' + (p.view_count || 0) + ' views</div>';
+            html += '</div>';
+            html += '<button onclick="deletePost(' + p.id + ')" class="text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>';
+            html += '</div>';
+        });
+        
+        document.getElementById('postList').innerHTML = html || '<p class="text-slate-500">No posts</p>';
+        lucide.createIcons();
+    } catch (err) {
+        alert('Error loading posts');
+    }
+}
+
+function createNewPost() {
+    document.getElementById('postEditor').classList.remove('hidden');
+    document.getElementById('postForm').reset();
+    document.getElementById('deleteBtn').classList.add('hidden');
+    if (editor) editor.destroy();
+    initEditor();
+}
+
+async function editPost(id) {
+    try {
+        const response = await fetch(API_URL + '/blog/post/' + id, {
+            headers: {'Authorization': 'Bearer ' + authToken}
+        });
+        const post = await response.json();
+        
+        const form = document.getElementById('postForm');
+        form.post_id.value = id;
+        form.title.value = post.title;
+        form.slug.value = post.slug;
+        form.category.value = post.category || '';
+        form.status.value = post.status;
+        form.tags.value = (post.tags || []).join(', ');
+        form.excerpt.value = post.excerpt || '';
+        form.meta_title.value = post.meta_title || '';
+        form.meta_description.value = post.meta_description || '';
+        form.focus_keyword.value = post.focus_keyword || '';
+        form.meta_keywords.value = post.meta_keywords || '';
+        form.canonical_url.value = post.canonical_url || '';
+        form.featured_image.value = post.featured_image || '';
+        form.og_image.value = post.og_image || '';
+        if (post.scheduled_at) form.scheduled_at.value = new Date(post.scheduled_at).toISOString().slice(0,16);
+        
+        document.getElementById('scheduledAtSection').classList.toggle('hidden', post.status !== 'scheduled');
+        
+        document.getElementById('postEditor').classList.remove('hidden');
+        document.getElementById('deleteBtn').classList.remove('hidden');
+        
+        if (editor) editor.destroy();
+        initEditor(post.content_json);
+        
+        // Update counters
+        document.getElementById('metaTitleCount').textContent = (post.meta_title || '').length;
+        document.getElementById('metaDescCount').textContent = (post.meta_description || '').length;
+        
+    } catch (err) {
+        alert('Error loading post');
+    }
+}
+
+async function savePost(e) {
+    e.preventDefault();
+    const form = e.target;
+    
+    try {
+        const content = await editor.save();
+        const formData = new URLSearchParams();
+        formData.append('title', form.title.value);
+        formData.append('content_json', JSON.stringify(content));
+        formData.append('excerpt', form.excerpt.value);
+        formData.append('featured_image', form.featured_image.value);
+        formData.append('meta_title', form.meta_title.value);
+        formData.append('meta_description', form.meta_description.value);
+        formData.append('meta_keywords', form.meta_keywords.value);
+        formData.append('focus_keyword', form.focus_keyword.value);
+        formData.append('canonical_url', form.canonical_url.value);
+        formData.append('og_image', form.og_image.value);
+        formData.append('category', form.category.value);
+        formData.append('tags', form.tags.value);
+        formData.append('status', form.status.value);
+        if (form.status.value === 'scheduled') formData.append('scheduled_at', form.scheduled_at.value);
+        
+        const endpoint = form.post_id.value ? '/blog/admin/posts/' + form.post_id.value : '/blog/admin/posts';
+        const method = form.post_id.value ? 'PUT' : 'POST';
+        
+        const response = await fetch(API_URL + endpoint, {
+            method: method,
+            headers: {
+                'Authorization': 'Bearer ' + authToken,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData.toString()
+        });
+        
+        const data = await response.json();
+        if (response.ok) {
+            alert('Post saved');
+            closeEditor();
+            loadAdminPosts();
+        } else {
+            throw new Error(data.detail || 'Save failed');
+        }
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function deletePost(id = document.querySelector('[name="post_id"]').value) {
+    if (!confirm('Delete post?')) return;
+    try {
+        const response = await fetch(API_URL + '/blog/admin/posts/' + id, {
+            method: 'DELETE',
+            headers: {'Authorization': 'Bearer ' + authToken}
+        });
+        if (response.ok) {
+            alert('Deleted');
+            closeEditor();
+            loadAdminPosts();
+        } else {
+            throw new Error('Delete failed');
+        }
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+function closeEditor() {
+    document.getElementById('postEditor').classList.add('hidden');
+    if (editor) editor.destroy();
+}
+
+async function generateAIContent() {
+    const topic = document.getElementById('aiTopic').value;
+    const keywords = document.getElementById('aiKeywords').value;
+    if (!topic) return alert('Enter topic');
+    
+    try {
+        const formData = new URLSearchParams();
+        formData.append('topic', topic);
+        if (keywords) formData.append('keywords', keywords);
+        formData.append('audience', 'traders');
+        formData.append('tone', 'professional');
+        
+        const response = await fetch(API_URL + '/blog/admin/ai-generate', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + authToken,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData.toString()
+        });
+        
+        const data = await response.json();
+        if (response.ok) {
+            // Populate form
+            const form = document.getElementById('postForm');
+            form.title.value = data.title;
+            form.meta_title.value = data.meta_title;
+            form.meta_description.value = data.meta_description;
+            form.focus_keyword.value = data.focus_keyword;
+            form.excerpt.value = data.excerpt;
+            
+            if (editor) editor.render(data.content);
+        } else {
+            throw new Error('Generation failed');
+        }
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function checkSEOScore() {
+    try {
+        const content = await editor.save();
+        const form = document.getElementById('postForm');
+        const data = {
+            content_json: content,
+            title: form.title.value,
+            meta_description: form.meta_description.value,
+            focus_keyword: form.focus_keyword.value
+        };
+        
+        const response = await fetch(API_URL + '/blog/admin/seo-score', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + authToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const scoreData = await response.json();
+        let html = '<div class="p-4 bg-slate-800 rounded">';
+        html += '<div class="text-lg font-bold">SEO Score: ' + scoreData.score + '/100</div>';
+        if (scoreData.suggestions.length > 0) {
+            html += '<ul class="list-disc pl-4 mt-2 text-red-400">';
+            scoreData.suggestions.forEach(s => html += '<li>' + s + '</li>');
+            html += '</ul>';
+        } else {
+            html += '<p class="text-green-400">Good job! No suggestions.</p>';
+        }
+        html += '</div>';
+        
+        document.getElementById('seoScore').innerHTML = html;
+    } catch (err) {
+        alert('Error checking SEO');
+    }
+}
+
+async function getLinkSuggestions() {
+    try {
+        const content = await editor.save();
+        const response = await fetch(API_URL + '/blog/admin/link-suggestions', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + authToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({content_json: content})
+        });
+        
+        const data = await response.json();
+        let html = '<div class="space-y-2">';
+        data.suggestions.forEach(s => {
+            html += '<div class="p-2 bg-slate-800 rounded flex justify-between items-center">';
+            html += '<span>' + s.title + '</span>';
+            html += '<button onclick="insertLink(\'' + s.slug + '\', \'' + s.title + '\')" class="text-blue-400">Insert</button>';
+            html += '</div>';
+        });
+        html += '</div>';
+        
+        document.getElementById('linkSuggestions').innerHTML = html;
+    } catch (err) {
+        alert('Error getting suggestions');
+    }
+}
+
+function insertLink(slug, title) {
+    // Insert as paragraph with link
+    editor.blocks.insert('paragraph', {text: `<a href="/blog/${slug}">${title}</a>`});
+}
+
+function openMediaLibrary() {
+    document.getElementById('mediaModal').classList.remove('hidden');
+    loadMedia();
+}
+
+function closeMediaLibrary() {
+    document.getElementById('mediaModal').classList.add('hidden');
+}
+
+async function loadMedia() {
+    try {
+        const response = await fetch(API_URL + '/media/?per_page=50', {
+            headers: {'Authorization': 'Bearer ' + authToken}
+        });
+        const data = await response.json();
+        
+        let html = '';
+        data.media.forEach(m => {
+            const isImage = ['jpg', 'jpeg', 'png', 'webp'].includes(m.file_type);
+            html += '<div class="aspect-square bg-slate-800 rounded overflow-hidden cursor-pointer" onclick="selectMedia(\'' + m.url + '\')">';
+            if (isImage) {
+                html += '<img src="' + API_URL + m.url + '" class="w-full h-full object-cover">';
+            } else {
+                html += '<div class="h-full flex items-center justify-center">' + m.original_name + '</div>';
+            }
+            html += '</div>';
+        });
+        
+        document.getElementById('mediaGrid').innerHTML = html;
+    } catch (err) {
+        alert('Error loading media');
+    }
+}
+
+function selectMedia(url) {
+    // For featured or og, or insert in editor
+    const activeField = document.activeElement.name; // If in input
+    if (activeField === 'featured_image' || activeField === 'og_image') {
+        document.querySelector(`[name="${activeField}"]`).value = url;
+    } else {
+        // Insert in editor as image block
+        editor.blocks.insert('image', {file: {url: url}});
+    }
+    closeMediaLibrary();
+}
+
+async function uploadMediaFile() {
+    const file = document.getElementById('mediaUploadInput').files[0];
+    if (!file) return;
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch(API_URL + '/media/upload', {
+            method: 'POST',
+            headers: {'Authorization': 'Bearer ' + authToken},
+            body: formData
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            loadMedia();
+        } else {
+            alert('Upload failed');
+        }
+    } catch (err) {
+        alert('Error uploading');
+    }
+}
+</script>
+</body>
+</html>
