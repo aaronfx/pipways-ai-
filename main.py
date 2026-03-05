@@ -1,30 +1,3 @@
-# Add these imports at the TOP of your existing main.py, after other imports
-from dependencies import get_db, get_current_user, get_current_admin  # Replace existing definitions
-from blog_routes import blog_router
-from media_routes import media_router
-
-# Add these lines near the end of your file, BEFORE if __name__ == "__main__":
-# Include blog and media routers
-app.include_router(blog_router, prefix="/blog")
-app.include_router(media_router, prefix="/media")
-
-# Also add this to your startup event to create the media_files table
-# Add inside your existing @app.on_event("startup") function:
-
-await conn.execute("""
-    CREATE TABLE IF NOT EXISTS media_files (
-        id SERIAL PRIMARY KEY,
-        filename VARCHAR(255) NOT NULL,
-        original_name VARCHAR(255) NOT NULL,
-        file_path TEXT NOT NULL,
-        file_type VARCHAR(50) NOT NULL,
-        file_size INTEGER NOT NULL,
-        mime_type VARCHAR(100),
-        alt_text VARCHAR(255),
-        uploaded_by INTEGER REFERENCES users(id),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-""")
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, status, Form, Query, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,7 +20,14 @@ from typing import Optional, List, Dict, Any
 from pathlib import Path
 import shutil
 
-# Create app FIRST before any imports that might fail
+# Import dependencies FIRST (before blog_routes to avoid circular import)
+from dependencies import get_db, get_current_user, get_current_admin
+
+# Import new routers and tools - ONLY for blog system
+from blog_routes import blog_router
+from media_routes import media_router
+import ai_blog_tools  # AI tools for blog
+
 app = FastAPI(title="Pipways API")
 
 # CORS
@@ -94,41 +74,6 @@ ALLOWED_TRADE_FILE_TYPES = {
     'image/jpeg': '.jpg',
     'image/webp': '.webp'
 }
-
-# Dependencies (defined here instead of separate file to avoid import issues)
-async def get_db():
-    """Database connection dependency"""
-    if not DATABASE_URL:
-        raise HTTPException(status_code=500, detail="DATABASE_URL not configured")
-    
-    conn = await asyncpg.connect(DATABASE_URL, ssl="require")
-    try:
-        yield conn
-    finally:
-        await conn.close()
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Extract current user from JWT token"""
-    token = credentials.credentials
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        return email
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-async def get_current_admin(
-    credentials: HTTPAuthorizationCredentials = Depends(security), 
-    conn=Depends(get_db)
-):
-    """Verify user is admin"""
-    email = await get_current_user(credentials)
-    user = await conn.fetchrow("SELECT is_admin FROM users WHERE email = $1", email)
-    if not user or not user['is_admin']:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return email
 
 # Password hashing
 def get_password_hash(password: str) -> str:
@@ -317,8 +262,7 @@ async def analyze_trader_performance(trade_data: Dict, user_id: int) -> Dict:
 
 Trading Data: {json.dumps(trade_data, indent=2)}
 
-Provide your analysis in this exact JSON format:
-{{
+Provide your analysis in this exact JSON format: {{
     "trader_type": "scalper/day_trader/swing_trader/position_trader",
     "trader_type_confidence": 85,
     "trader_score": 78,
@@ -431,8 +375,7 @@ User History: {json.dumps(user_history, indent=2, default=str)}
 
 Current Question/Context: {context.get('message', 'General guidance')}
 
-Provide response in this JSON format:
-{{
+Provide response in this JSON format: {{
     "personalized_response": "Specific advice addressing their patterns...",
     "identified_pattern": "Reference to their specific recurring issue",
     "actionable_steps": ["Step 1", "Step 2", "Step 3"],
@@ -1026,7 +969,7 @@ async def get_trade_analysis_detail(
             SELECT * FROM trade_analysis_uploads 
             WHERE id = $1 AND user_id = $2
         """, analysis_id, user["id"])
-        
+
         if not analysis:
             raise HTTPException(status_code=404, detail="Analysis not found")
         
@@ -1308,17 +1251,14 @@ try:
 except Exception as e:
     print(f"⚠️ Zoom Webinar module not loaded: {e}")
 
-# Import and include blog routers AFTER app is created
-try:
-    from blog_routes import blog_router
-    from media_routes import media_router
-    import ai_blog_tools  # AI tools for blog
-    
-    app.include_router(blog_router)
-    app.include_router(media_router)
-    print("✅ Blog and media modules loaded successfully")
-except Exception as e:
-    print(f"⚠️ Blog modules not loaded: {e}")
+# Redirect /webinars to the webinar app
+@app.get("/webinars", response_class=HTMLResponse)
+async def webinar_app_root():
+    return FileResponse("static/webinars/index.html")
+
+# Include upgraded blog and media routers - ONLY addition for blog system
+app.include_router(blog_router)
+app.include_router(media_router)
 
 if __name__ == "__main__":
     import uvicorn
