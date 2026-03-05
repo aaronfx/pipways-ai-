@@ -12,22 +12,10 @@ from dependencies import get_db, get_current_admin
 
 media_router = APIRouter(tags=["media"])
 
-# Upload directories
+# Upload directories - defined but created at runtime
 UPLOAD_DIR = Path("uploads")
 IMAGES_DIR = UPLOAD_DIR / "images"
 DOCUMENTS_DIR = UPLOAD_DIR / "documents"
-
-# Create directories if they don't exist (with error handling)
-try:
-    IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-except (FileExistsError, OSError):
-    # Directory might exist as a file or have permission issues
-    pass
-
-try:
-    DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
-except (FileExistsError, OSError):
-    pass
 
 ALLOWED_IMAGE_TYPES = {
     'image/jpeg': '.jpg',
@@ -47,6 +35,17 @@ ALLOWED_DOCUMENT_TYPES = {
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
+def ensure_directories():
+    """Ensure upload directories exist"""
+    try:
+        UPLOAD_DIR.mkdir(exist_ok=True)
+        IMAGES_DIR.mkdir(exist_ok=True)
+        DOCUMENTS_DIR.mkdir(exist_ok=True)
+    except Exception:
+        # If we can't create directories, continue anyway
+        # (might be created already or permission issues handled elsewhere)
+        pass
+
 @media_router.post("/upload")
 async def upload_media(
     file: UploadFile = File(...),
@@ -56,9 +55,8 @@ async def upload_media(
 ):
     """Upload media file (images or documents)"""
     try:
-        # Ensure directories exist
-        IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-        DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
+        # Ensure directories exist at runtime
+        ensure_directories()
         
         # Validate file size
         contents = await file.read()
