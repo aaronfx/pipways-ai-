@@ -6,7 +6,6 @@ from datetime import datetime
 import json
 import re
 import uuid
-import asyncpg
 
 # Import from dependencies (not main) to avoid circular import
 from dependencies import get_db, get_current_admin, get_current_user
@@ -124,7 +123,7 @@ async def get_blog_posts(
         offset = (page - 1) * per_page
         params = []
         where_clauses = []
-        
+
         if status:
             where_clauses.append(f"status = ${len(params)+1}")
             params.append(status)
@@ -188,14 +187,13 @@ async def get_blog_post_api(
     """Get single blog post by slug (API version)"""
     try:
         post = await conn.fetchrow("""
-            SELECT 
-                p.*, u.name as author_name
+            SELECT p.*, u.name as author_name 
             FROM blog_posts p
             LEFT JOIN users u ON p.author_id = u.id
-            WHERE p.slug = $1 AND p.status = 'published' 
+            WHERE p.slug = $1 AND p.status = 'published'
             AND (p.published_at <= NOW() OR p.published_at IS NULL)
         """, slug)
-        
+
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
         
@@ -233,14 +231,13 @@ async def get_blog_post_html(
     """Server-rendered blog post for SEO"""
     try:
         post = await conn.fetchrow("""
-            SELECT 
-                p.*, u.name as author_name
+            SELECT p.*, u.name as author_name 
             FROM blog_posts p
             LEFT JOIN users u ON p.author_id = u.id
-            WHERE p.slug = $1 AND p.status = 'published' 
+            WHERE p.slug = $1 AND p.status = 'published'
             AND (p.published_at <= NOW() OR p.published_at IS NULL)
         """, slug)
-        
+
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
         
@@ -303,17 +300,14 @@ async def get_blog_post_html(
     <title>{post['meta_title'] or post['title']}</title>
     <meta name="description" content="{post['meta_description'] or post['excerpt'] or ''}">
     <meta name="keywords" content="{post['meta_keywords'] or ''}">
-    <meta name="author" content="{post.get('author_name', 'Pipways Team')}">
+    <link rel="canonical" href="{post['canonical_url'] or f'{base_url}/blog/{slug}'}">
     
     <!-- Open Graph -->
-    <meta property="og:type" content="article">
     <meta property="og:title" content="{post['meta_title'] or post['title']}">
     <meta property="og:description" content="{post['meta_description'] or post['excerpt'] or ''}">
     <meta property="og:image" content="{post['og_image'] or post['featured_image'] or ''}">
     <meta property="og:url" content="{base_url}/blog/{slug}">
-    <meta property="article:published_time" content="{post['published_at'].isoformat() if post['published_at'] else ''}">
-    <meta property="article:modified_time" content="{post['updated_at'].isoformat() if post.get('updated_at') else ''}">
-    <meta property="article:section" content="{post['category'] or ''}">
+    <meta property="og:type" content="article">
     
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
@@ -321,143 +315,81 @@ async def get_blog_post_html(
     <meta name="twitter:description" content="{post['meta_description'] or post['excerpt'] or ''}">
     <meta name="twitter:image" content="{post['og_image'] or post['featured_image'] or ''}">
     
-    <!-- Structured Data -->
-    <script type="application/ld+json">{json.dumps(schema)}</script>
+    <!-- Schema.org JSON-LD -->
+    <script type="application/ld+json">
+    {json.dumps(schema, default=str)}
+    </script>
     
     <style>
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: #f8f9fa;
-        }}
-        .container {{ max-width: 800px; margin: 0 auto; padding: 20px; }}
-        article {{ background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-        .blog-header {{ margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #e9ecef; }}
-        .blog-title {{ font-size: 2.5rem; font-weight: 700; color: #1a1a1a; margin-bottom: 15px; line-height: 1.2; }}
-        .blog-meta {{ color: #6c757d; font-size: 0.9rem; margin-bottom: 20px; }}
-        .blog-meta span {{ margin-right: 20px; }}
-        .featured-image {{ width: 100%; height: 400px; object-fit: cover; border-radius: 8px; margin-bottom: 30px; }}
-        .blog-content {{ font-size: 1.125rem; line-height: 1.8; }}
-        .blog-content h2 {{ font-size: 1.8rem; margin: 40px 0 20px; color: #1a1a1a; }}
-        .blog-content h3 {{ font-size: 1.4rem; margin: 30px 0 15px; color: #333; }}
-        .blog-content p {{ margin-bottom: 20px; }}
-        .blog-content ul, .blog-content ol {{ margin-bottom: 20px; padding-left: 30px; }}
-        .blog-content li {{ margin-bottom: 10px; }}
-        .blog-content blockquote {{ 
-            border-left: 4px solid #007bff; 
-            padding-left: 20px; 
-            margin: 30px 0; 
-            font-style: italic;
-            color: #555;
-        }}
-        .blog-content img {{ max-width: 100%; height: auto; border-radius: 4px; }}
-        .blog-content figure {{ margin: 30px 0; }}
-        .blog-content figcaption {{ 
-            text-align: center; 
-            color: #6c757d; 
-            font-size: 0.9rem; 
-            margin-top: 10px; 
-        }}
-        .blog-content pre {{ 
-            background: #f8f9fa; 
-            padding: 20px; 
-            border-radius: 4px; 
-            overflow-x: auto;
-            margin: 20px 0;
-        }}
-        .blog-content code {{ font-family: 'Monaco', 'Menlo', monospace; font-size: 0.9rem; }}
-        .blog-content table {{ 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin: 20px 0; 
-        }}
-        .blog-content th, .blog-content td {{ 
-            border: 1px solid #dee2e6; 
-            padding: 12px; 
-            text-align: left; 
-        }}
-        .blog-content th {{ background: #f8f9fa; font-weight: 600; }}
-        .tags {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; }}
-        .tag {{ 
-            display: inline-block; 
-            background: #e9ecef; 
-            padding: 5px 15px; 
-            border-radius: 20px; 
-            margin-right: 10px; 
-            font-size: 0.875rem;
-            color: #495057;
-        }}
-        .social-share {{ margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px; }}
-        .social-share h3 {{ margin-bottom: 15px; }}
-        .share-buttons {{ display: flex; gap: 10px; }}
-        .share-btn {{ 
-            padding: 10px 20px; 
-            border-radius: 4px; 
-            text-decoration: none; 
-            color: white; 
-            font-weight: 500;
-        }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; }}
+        .blog-header {{ margin-bottom: 30px; }}
+        .blog-title {{ font-size: 2.5em; margin-bottom: 10px; }}
+        .blog-meta {{ color: #666; font-size: 0.9em; margin-bottom: 20px; }}
+        .blog-meta span {{ margin-right: 15px; }}
+        .featured-image {{ width: 100%; max-height: 400px; object-fit: cover; border-radius: 8px; margin-bottom: 30px; }}
+        .blog-content {{ font-size: 1.1em; }}
+        .blog-heading {{ margin-top: 40px; margin-bottom: 20px; }}
+        .blog-paragraph {{ margin-bottom: 20px; }}
+        .blog-list {{ margin-bottom: 20px; }}
+        .blog-quote {{ border-left: 4px solid #007bff; padding-left: 20px; margin: 20px 0; font-style: italic; }}
+        .blog-figure {{ margin: 30px 0; }}
+        .blog-image {{ max-width: 100%; border-radius: 8px; }}
+        .tags {{ margin-top: 30px; }}
+        .tag {{ display: inline-block; background: #f0f0f0; padding: 5px 15px; border-radius: 20px; margin-right: 10px; margin-bottom: 10px; font-size: 0.9em; }}
+        .social-share {{ margin-top: 40px; padding-top: 30px; border-top: 1px solid #eee; }}
+        .share-buttons {{ display: flex; gap: 10px; margin-top: 15px; }}
+        .share-btn {{ padding: 10px 20px; border-radius: 5px; text-decoration: none; color: white; }}
         .share-twitter {{ background: #1da1f2; }}
         .share-linkedin {{ background: #0077b5; }}
         .share-facebook {{ background: #4267B2; }}
-        .related-posts {{ margin-top: 40px; }}
-        .related-posts h2 {{ margin-bottom: 20px; }}
-        .related-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }}
-        .related-post {{ background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+        .related-posts {{ margin-top: 50px; padding-top: 30px; border-top: 2px solid #eee; }}
+        .related-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 20px; }}
+        .related-post {{ border: 1px solid #eee; border-radius: 8px; overflow: hidden; }}
         .related-post img {{ width: 100%; height: 150px; object-fit: cover; }}
-        .related-post h3 {{ padding: 15px; font-size: 1.1rem; }}
-        .related-post p {{ padding: 0 15px 15px; color: #6c757d; font-size: 0.9rem; }}
-        .reading-time {{ color: #28a745; font-weight: 500; }}
-        @media (max-width: 768px) {{
-            .container {{ padding: 10px; }}
-            article {{ padding: 20px; }}
-            .blog-title {{ font-size: 1.8rem; }}
-            .featured-image {{ height: 250px; }}
-        }}
+        .related-post h3 {{ padding: 15px; margin: 0; font-size: 1.1em; }}
+        .related-post p {{ padding: 0 15px 15px; margin: 0; color: #666; font-size: 0.9em; }}
+        .reading-time {{ color: #007bff; }}
+        @media (max-width: 600px) {{ .blog-title {{ font-size: 1.8em; }} }}
     </style>
 </head>
 <body>
-    <div class="container">
-        <article>
-            <header class="blog-header">
-                <h1 class="blog-title">{post['title']}</h1>
-                <div class="blog-meta">
-                    <span>By {post.get('author_name', 'Pipways Team')}</span>
-                    <span>{post['published_at'].strftime('%B %d, %Y') if post['published_at'] else 'Draft'}</span>
-                    <span class="reading-time">{post['reading_time'] or 5} min read</span>
-                    <span>{post['view_count'] or 0} views</span>
-                </div>
-                {f'<img src="{post["featured_image"]}" alt="{post["title"]}" class="featured-image">' if post['featured_image'] else ''}
-            </header>
-            
-            <div class="blog-content">
-                {content_html}
+    <article>
+        <header class="blog-header">
+            <h1 class="blog-title">{post['title']}</h1>
+            <div class="blog-meta">
+                <span>By {post.get('author_name', 'Pipways Team')}</span>
+                <span>{post['published_at'].strftime('%B %d, %Y') if post['published_at'] else 'Draft'}</span>
+                <span class="reading-time">{post['reading_time'] or 5} min read</span>
+                <span>{post['view_count'] or 0} views</span>
             </div>
-            
-            <div class="tags">
-                <strong>Tags:</strong>
-                {''.join([f'<span class="tag">{tag}</span>' for tag in (post['tags'] or [])])}
-            </div>
-            
-            <div class="social-share">
-                <h3>Share this article</h3>
-                <div class="share-buttons">
-                    <a href="https://twitter.com/intent/tweet?url={base_url}/blog/{slug}&text={post['title']}" target="_blank" class="share-btn share-twitter">Twitter</a>
-                    <a href="https://www.linkedin.com/shareArticle?mini=true&url={base_url}/blog/{slug}&title={post['title']}" target="_blank" class="share-btn share-linkedin">LinkedIn</a>
-                    <a href="https://www.facebook.com/sharer/sharer.php?u={base_url}/blog/{slug}" target="_blank" class="share-btn share-facebook">Facebook</a>
-                </div>
-            </div>
-        </article>
+            {f'<img src="{post["featured_image"]}" alt="{post["title"]}" class="featured-image">' if post['featured_image'] else ''}
+        </header>
         
-        <section class="related-posts">
-            <h2>Related Articles</h2>
-            <div class="related-grid">
-                {related_html}
+        <div class="blog-content">
+            {content_html}
+        </div>
+        
+        <div class="tags">
+            <strong>Tags:</strong>
+            {''.join([f'<span class="tag">{tag}</span>' for tag in (post['tags'] or [])])}
+        </div>
+        
+        <div class="social-share">
+            <h3>Share this article</h3>
+            <div class="share-buttons">
+                <a href="https://twitter.com/intent/tweet?url={base_url}/blog/{slug}&text={post['title']}" target="_blank" class="share-btn share-twitter">Twitter</a>
+                <a href="https://www.linkedin.com/shareArticle?mini=true&url={base_url}/blog/{slug}&title={post['title']}" target="_blank" class="share-btn share-linkedin">LinkedIn</a>
+                <a href="https://www.facebook.com/sharer/sharer.php?u={base_url}/blog/{slug}" target="_blank" class="share-btn share-facebook">Facebook</a>
             </div>
-        </section>
-    </div>
+        </div>
+    </article>
+    
+    <section class="related-posts">
+        <h2>Related Articles</h2>
+        <div class="related-grid">
+            {related_html}
+        </div>
+    </section>
 </body>
 </html>"""
         return HTMLResponse(content=html)
@@ -492,7 +424,7 @@ async def create_blog_post(
             content_data = json.loads(content_json)
         except json.JSONDecodeError:
             raise HTTPException(status_code=400, detail="Invalid content JSON")
-        
+
         # Create slug from title
         slug = re.sub(r'[^\w\s-]', '', title.lower()).strip()
         slug = re.sub(r'[-\s]+', '-', slug)
@@ -593,7 +525,7 @@ async def update_blog_post(
         # Build update dynamically
         updates = []
         params = []
-        
+
         content_data = None
         if content_json:
             try:
@@ -726,7 +658,7 @@ async def list_admin_posts(
         offset = (page - 1) * per_page
         params = []
         where_clauses = []
-        
+
         if status:
             where_clauses.append(f"status = ${len(params)+1}")
             params.append(status)
@@ -775,102 +707,99 @@ async def get_admin_post_detail(
     """Get full post details for admin editing"""
     try:
         post = await conn.fetchrow("""
-            SELECT p.*, u.name as author_name
+            SELECT p.*, u.name as author_name 
             FROM blog_posts p
             LEFT JOIN users u ON p.author_id = u.id
             WHERE p.id = $1
         """, post_id)
-        
+
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
         
-        return dict(post)
+        # Get link suggestions
+        content_json = post['content_json'] if post['content_json'] else {}
+        link_suggestions = await get_link_suggestions(content_json, conn)
+        
+        result = dict(post)
+        result['link_suggestions'] = link_suggestions
+        
+        return result
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @blog_router.post("/admin/ai-generate")
-async def ai_generate_post(
+async def ai_generate_blog_content(
     topic: str = Form(...),
     keywords: Optional[str] = Form(None),
-    audience: str = Form("traders"),
+    audience: str = Form("beginner"),
     tone: str = Form("professional"),
-    current_user: str = Depends(get_current_admin)
-):
-    """AI blog writer for admin"""
-    try:
-        generated = generate_blog_content(topic, keywords, audience, tone)
-        generated['ai_generated'] = True
-        return generated
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@blog_router.post("/admin/seo-score")
-async def get_seo_score_endpoint(
-    data: Dict = Body(...),
-    current_user: str = Depends(get_current_admin)
-):
-    """Calculate SEO score for post"""
-    try:
-        content_json = data.get('content_json', {})
-        title = data.get('title', '')
-        meta_description = data.get('meta_description', '')
-        focus_keyword = data.get('focus_keyword', '')
-        
-        score, suggestions = calculate_seo_score(content_json, title, meta_description, focus_keyword)
-        reading_time = calculate_reading_time(content_json)
-        
-        return {
-            "score": score, 
-            "suggestions": suggestions,
-            "reading_time": reading_time
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@blog_router.post("/admin/link-suggestions")
-async def get_internal_link_suggestions(
-    data: Dict = Body(...),
-    conn=Depends(get_db),
-    current_user: str = Depends(get_current_admin)
-):
-    """Get internal linking suggestions"""
-    try:
-        content_json = data.get('content_json', {})
-        suggestions = await get_link_suggestions(content_json, conn)
-        return {"suggestions": suggestions}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@blog_router.get("/admin/stats")
-async def get_blog_stats(
     current_user: str = Depends(get_current_admin),
     conn=Depends(get_db)
 ):
-    """Get blog statistics for admin dashboard"""
+    """Generate AI blog content"""
     try:
-        stats = await conn.fetchrow("""
-            SELECT 
-                COUNT(*) as total_posts,
-                COUNT(*) FILTER (WHERE status = 'published') as published_posts,
-                COUNT(*) FILTER (WHERE status = 'draft') as draft_posts,
-                COUNT(*) FILTER (WHERE status = 'scheduled') as scheduled_posts,
-                SUM(view_count) as total_views,
-                AVG(seo_score) as avg_seo_score
-            FROM blog_posts
-        """)
-        
-        recent_posts = await conn.fetch("""
-            SELECT id, title, slug, status, view_count, created_at
-            FROM blog_posts
-            ORDER BY created_at DESC
-            LIMIT 5
-        """)
-        
+        content = generate_blog_content(topic, keywords, audience, tone)
         return {
-            "stats": dict(stats) if stats else {},
-            "recent_posts": [dict(p) for p in recent_posts]
+            "success": True,
+            "content": content
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@blog_router.post("/admin/analyze-seo")
+async def analyze_seo_endpoint(
+    content_json: str = Form(...),
+    title: str = Form(...),
+    meta_description: Optional[str] = Form(""),
+    focus_keyword: Optional[str] = Form(""),
+    current_user: str = Depends(get_current_admin),
+    conn=Depends(get_db)
+):
+    """Analyze SEO score for content"""
+    try:
+        data = json.loads(content_json)
+        score, suggestions = calculate_seo_score(data, title, meta_description, focus_keyword)
+        return {
+            "success": True,
+            "seo_score": score,
+            "suggestions": suggestions
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@blog_router.get("/admin/link-suggestions")
+async def get_internal_link_suggestions(
+    content_json: str = Query(...),
+    current_user: str = Depends(get_current_admin),
+    conn=Depends(get_db)
+):
+    """Get internal link suggestions based on content"""
+    try:
+        data = json.loads(content_json)
+        suggestions = await get_link_suggestions(data, conn)
+        return {
+            "success": True,
+            "suggestions": suggestions
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@blog_router.get("/categories")
+async def get_blog_categories(conn=Depends(get_db)):
+    """Get all blog categories"""
+    try:
+        categories = await conn.fetch("SELECT * FROM blog_categories ORDER BY name")
+        return [dict(c) for c in categories]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@blog_router.get("/tags")
+async def get_blog_tags(conn=Depends(get_db)):
+    """Get all unique tags"""
+    try:
+        result = await conn.fetch("SELECT DISTINCT unnest(tags) as tag FROM blog_posts WHERE status = 'published'")
+        return [r['tag'] for r in result if r['tag']]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
