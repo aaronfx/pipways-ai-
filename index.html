@@ -7,17 +7,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- Editor.js and plugins -->
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/paragraph@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/image@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/code@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@latest"></script>
+    <!-- Editor.js and plugins - Using specific versions for stability -->
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.28.2/dist/editorjs.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.7.0/dist/bundle.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@1.8.0/dist/bundle.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/paragraph@2.10.0/dist/bundle.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/image@2.8.1/dist/bundle.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@2.5.0/dist/bundle.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/code@2.8.0/dist/bundle.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@2.2.1/dist/bundle.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@2.5.3/dist/bundle.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@1.3.0/dist/bundle.umd.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -53,10 +53,6 @@
             box-shadow: 0 10px 40px -10px rgba(59, 130, 246, 0.5);
         }
         
-        .btn-primary:active {
-            transform: translateY(0);
-        }
-        
         .sidebar-link {
             transition: all 0.2s ease;
         }
@@ -71,76 +67,202 @@
             color: #60a5fa;
         }
         
-        /* Editor.js Custom Styling */
+        /* Editor.js Critical Styles - MUST HAVE */
         .codex-editor {
             background: #1e293b;
             border-radius: 0.5rem;
-            min-height: 300px;
+            min-height: 400px;
+            position: relative;
         }
         
-        .ce-block__content, .ce-toolbar__content {
+        /* Force editor to be visible */
+        .codex-editor__redactor {
+            padding-bottom: 100px !important;
+            min-height: 300px !important;
+        }
+        
+        .ce-block {
+            padding: 0.5em 0;
+        }
+        
+        .ce-block__content {
+            max-width: 100%;
+            position: relative;
+        }
+        
+        .ce-paragraph {
+            color: #e2e8f0;
+            font-size: 16px;
+            line-height: 1.6;
+            padding: 0.5em 0;
+        }
+        
+        /* Toolbar must be visible */
+        .ce-toolbar {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .ce-toolbar__content {
             max-width: 100%;
         }
         
         .ce-toolbar__actions {
             right: 10px;
+            display: flex;
+            align-items: center;
         }
         
-        .ce-block--selected .ce-block__content {
-            background: #334155;
+        .ce-toolbar__plus {
+            color: #94a3b8;
         }
         
+        .ce-toolbar__plus:hover {
+            color: #60a5fa;
+        }
+        
+        /* Inline toolbar */
         .ce-inline-toolbar {
             background: #1e293b;
-            border-color: #334155;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 100;
         }
         
-        .ce-conversion-tool__icon, .ce-popover__item-icon {
+        .ce-inline-toolbar__buttons {
+            display: flex;
+        }
+        
+        .ce-inline-tool {
+            color: #e2e8f0;
+            padding: 8px;
+        }
+        
+        .ce-inline-tool:hover {
             background: #334155;
         }
         
-        .ce-popover, .ce-settings {
+        /* Popover/Toolbox */
+        .ce-popover {
             background: #1e293b;
-            border-color: #334155;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             color: #e2e8f0;
         }
         
-        .cdx-search-field {
-            border-color: #334155;
-        }
-        
-        .ce-popover__item:hover, .ce-conversion-tool:hover {
-            background: #334155;
-        }
-        
-        .cdx-button {
-            background: #334155;
-            border-color: #475569;
+        .ce-popover__item {
             color: #e2e8f0;
         }
         
-        .cdx-button:hover {
-            background: #475569;
+        .ce-popover__item:hover {
+            background: #334155;
         }
         
+        .ce-popover__item-icon {
+            background: #334155;
+        }
+        
+        /* Conversion toolbar */
+        .ce-conversion-toolbar {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .ce-conversion-tool {
+            color: #e2e8f0;
+        }
+        
+        .ce-conversion-tool:hover {
+            background: #334155;
+        }
+        
+        .ce-conversion-tool__icon {
+            background: #334155;
+        }
+        
+        /* Block selection */
+        .ce-block--selected .ce-block__content {
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 4px;
+        }
+        
+        /* Header styles */
         .ce-header {
             color: #f8fafc;
+            font-weight: 600;
+            padding: 0.5em 0;
         }
         
-        .codex-editor__redactor {
-            padding-bottom: 100px !important;
-        }
+        h1.ce-header { font-size: 2em; }
+        h2.ce-header { font-size: 1.75em; }
+        h3.ce-header { font-size: 1.5em; }
+        h4.ce-header { font-size: 1.25em; }
         
-        .ce-paragraph {
-            color: #e2e8f0;
-        }
-        
+        /* List styles */
         .cdx-list {
             color: #e2e8f0;
+            padding-left: 1.5em;
+        }
+        
+        .cdx-list__item {
+            padding: 0.3em 0;
+        }
+        
+        /* Quote styles */
+        .cdx-quote {
+            border-left: 3px solid #60a5fa;
+            padding-left: 1em;
+            margin: 1em 0;
         }
         
         .cdx-quote__text {
             color: #e2e8f0;
+            font-style: italic;
+        }
+        
+        /* Code styles */
+        .cdx-code {
+            background: #0f172a;
+            border-radius: 6px;
+            padding: 1em;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            color: #e2e8f0;
+            overflow-x: auto;
+        }
+        
+        /* Image styles */
+        .cdx-image {
+            margin: 1em 0;
+        }
+        
+        .cdx-image__picture img {
+            max-width: 100%;
+            border-radius: 8px;
+        }
+        
+        /* Delimiter */
+        .ce-delimiter {
+            text-align: center;
+            color: #475569;
+            font-size: 1.5em;
+            letter-spacing: 0.5em;
+            padding: 1em 0;
+        }
+        
+        /* Placeholder */
+        .ce-paragraph[data-placeholder]:empty::before {
+            content: attr(data-placeholder);
+            color: #64748b;
+            font-style: italic;
+            pointer-events: none;
         }
         
         /* Custom scrollbar */
@@ -158,30 +280,20 @@
             border-radius: 3px;
         }
         
-        ::-webkit-scrollbar-thumb:hover {
-            background: #475569;
-        }
-        
         /* Mobile optimizations */
         @media (max-width: 1024px) {
             .ce-toolbar__actions {
                 right: 5px;
             }
-            
-            .ce-popover {
-                max-width: 280px;
-            }
         }
         
-        /* Touch-friendly buttons */
-        button, select, input, textarea {
-            touch-action: manipulation;
-        }
-        
-        /* Prevent zoom on input focus for iOS */
         @media screen and (max-width: 768px) {
             input, select, textarea {
                 font-size: 16px;
+            }
+            
+            .codex-editor {
+                min-height: 300px;
             }
         }
         
@@ -195,26 +307,20 @@
             to { opacity: 1; transform: scale(1); }
         }
         
-        /* Slide-in animation for mobile menu */
-        .slide-in {
-            animation: slideIn 0.3s ease;
+        /* Loading state */
+        .editor-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            color: #64748b;
         }
         
-        @keyframes slideIn {
-            from { transform: translateX(-100%); }
-            to { transform: translateX(0); }
-        }
-        
-        /* Loading shimmer */
-        .shimmer {
-            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-        }
-        
-        @keyframes shimmer {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+        /* Error state */
+        .editor-error {
+            padding: 2em;
+            text-align: center;
+            color: #ef4444;
         }
     </style>
 </head>
@@ -424,7 +530,10 @@
                         
                         <div>
                             <label class="block text-sm font-medium text-slate-400 mb-2">Content</label>
-                            <div id="editorjs" class="bg-slate-800 border border-slate-700 rounded-lg min-h-[300px] md:min-h-[400px]"></div>
+                            <div id="editorjs" class="bg-slate-800 border border-slate-700 rounded-lg min-h-[400px] relative">
+                                <!-- Editor.js will mount here -->
+                            </div>
+                            <div id="editor-status" class="text-xs text-slate-500 mt-2 hidden"></div>
                         </div>
                         
                         <div>
@@ -527,6 +636,7 @@
         let blogEditor = null;
         let currentEditingPostId = null;
         let mobileMenuOpen = false;
+        let editorInitialized = false;
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
@@ -548,6 +658,13 @@
                     closeBlogEditor();
                 }
             });
+            
+            // Check if Editor.js loaded
+            if (typeof EditorJS === 'undefined') {
+                console.error('Editor.js failed to load from CDN');
+            } else {
+                console.log('Editor.js loaded successfully');
+            }
         });
 
         // Mobile Menu Toggle
@@ -678,16 +795,13 @@
             document.getElementById('register-form').reset();
             showAuthTab('login');
             
-            // Reset mobile menu
             if (mobileMenuOpen) toggleMobileMenu();
         }
 
         // Navigation
         function showPage(page) {
-            // Close mobile menu if open
             if (mobileMenuOpen) toggleMobileMenu();
             
-            // Update nav active state
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
@@ -1113,16 +1227,61 @@
             
             resetBlogForm();
             
-            if (!blogEditor) {
+            // Small delay to ensure DOM is ready
+            setTimeout(() => {
+                initEditor();
+            }, 100);
+            
+            if (postId) {
+                loadPostForEdit(postId);
+            }
+            
+            lucide.createIcons();
+        }
+
+        function initEditor() {
+            // Check if Editor.js is available
+            if (typeof EditorJS === 'undefined') {
+                console.error('Editor.js not loaded!');
+                showEditorError('Editor failed to load. Please refresh the page.');
+                return;
+            }
+            
+            // If already initialized, just clear it
+            if (blogEditor) {
+                blogEditor.clear();
+                return;
+            }
+            
+            const editorElement = document.getElementById('editorjs');
+            if (!editorElement) {
+                console.error('Editor holder element not found!');
+                return;
+            }
+            
+            // Show loading state
+            editorElement.innerHTML = '<div class="editor-loading"><i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i> Loading editor...</div>';
+            lucide.createIcons();
+            
+            try {
                 blogEditor = new EditorJS({
                     holder: 'editorjs',
                     tools: {
                         header: {
                             class: Header,
-                            config: { levels: [1, 2, 3, 4, 5, 6], defaultLevel: 2 }
+                            config: { 
+                                levels: [1, 2, 3, 4, 5, 6], 
+                                defaultLevel: 2 
+                            }
                         },
-                        list: { class: List, inlineToolbar: true },
-                        paragraph: { class: Paragraph, inlineToolbar: true },
+                        list: { 
+                            class: List, 
+                            inlineToolbar: true 
+                        },
+                        paragraph: { 
+                            class: Paragraph, 
+                            inlineToolbar: true 
+                        },
                         image: {
                             class: ImageTool,
                             config: {
@@ -1132,25 +1291,55 @@
                                 }
                             }
                         },
-                        quote: { class: Quote, inlineToolbar: true },
-                        code: { class: CodeTool },
-                        table: { class: Table, inlineToolbar: true },
+                        quote: { 
+                            class: Quote, 
+                            inlineToolbar: true 
+                        },
+                        code: { 
+                            class: CodeTool 
+                        },
+                        table: { 
+                            class: Table, 
+                            inlineToolbar: true 
+                        },
                         embed: {
                             class: Embed,
-                            config: { services: { youtube: true, twitter: true } }
+                            config: { 
+                                services: { 
+                                    youtube: true, 
+                                    twitter: true 
+                                } 
+                            }
                         },
                         delimiter: Delimiter
                     },
-                    placeholder: 'Write your post content here... Click + to add headings, lists, images, and more',
-                    autofocus: true
+                    placeholder: 'Write your post content here... Click the + button to add headings, lists, images, and more',
+                    autofocus: false, // Don't autofocus on mobile
+                    onReady: () => {
+                        console.log('Editor.js is ready!');
+                        editorInitialized = true;
+                        document.getElementById('editor-status')?.classList.add('hidden');
+                    },
+                    onChange: () => {
+                        console.log('Content changed');
+                    },
+                    onError: (error) => {
+                        console.error('Editor error:', error);
+                        showEditorError('Editor error: ' + error.message);
+                    }
                 });
+            } catch (error) {
+                console.error('Failed to initialize editor:', error);
+                showEditorError('Failed to initialize editor: ' + error.message);
             }
-            
-            if (postId) {
-                loadPostForEdit(postId);
+        }
+
+        function showEditorError(message) {
+            const editorElement = document.getElementById('editorjs');
+            if (editorElement) {
+                editorElement.innerHTML = `<div class="editor-error"><i data-lucide="alert-circle" class="w-8 h-8 mb-2"></i><p>${message}</p></div>`;
+                lucide.createIcons();
             }
-            
-            lucide.createIcons();
         }
 
         function closeBlogEditor() {
@@ -1201,7 +1390,7 @@
                 
                 updateCharCounters();
                 
-                if (post.content_json) {
+                if (post.content_json && blogEditor) {
                     await blogEditor.render(post.content_json);
                 }
             } catch (error) {
@@ -1224,6 +1413,11 @@
 
         async function saveBlogPost(status) {
             try {
+                if (!blogEditor) {
+                    showToast('Editor not initialized', 'error');
+                    return;
+                }
+                
                 const content = await blogEditor.save();
                 
                 const formData = new FormData();
@@ -1292,7 +1486,7 @@
                     document.getElementById('blog-keyword').value = content.focus_keyword || '';
                     document.getElementById('blog-excerpt').value = content.excerpt || '';
                     
-                    if (content.content_blocks) {
+                    if (content.content_blocks && blogEditor) {
                         await blogEditor.render({ blocks: content.content_blocks });
                     }
                     
@@ -1311,6 +1505,11 @@
 
         async function analyzeBlogSEO() {
             try {
+                if (!blogEditor) {
+                    showToast('Editor not initialized', 'error');
+                    return;
+                }
+                
                 const content = await blogEditor.save();
                 
                 const formData = new FormData();
