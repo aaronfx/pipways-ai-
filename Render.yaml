@@ -14,7 +14,11 @@ services:
           name: pipways-db
           property: connectionString
       - key: OPENROUTER_API_KEY
-        sync: false  # Set this manually in Render dashboard
+        sync: false
+    disk:
+      name: uploads
+      mountPath: /opt/render/project/src/uploads
+      sizeGB: 5
 
 databases:
   - name: pipways-db
