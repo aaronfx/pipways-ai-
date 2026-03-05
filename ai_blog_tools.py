@@ -1,150 +1,279 @@
+# ai_blog_tools.py
+import os
 import json
 import re
-from .main import openrouter_chat
-from typing import Dict, List, Tuple
-from .main import asyncpg
+import requests
+from typing import Dict, List, Tuple, Optional
+from datetime import datetime
 
-def generate_blog_content(topic: str, keywords: str, audience: str, tone: str) -> Dict:
-    prompt = f"""Generate an SEO-optimized blog post for a trading academy on the topic: {topic}.
-Keywords: {keywords}
-Target audience: {audience}
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
+def openrouter_chat(messages, model="anthropic/claude-3.5-sonnet", max_tokens=2000):
+    """Helper function to call OpenRouter API"""
+    if not OPENROUTER_API_KEY:
+        return None, "OpenRouter API key not configured"
+    
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://pipways.com",
+        "X-Title": "Pipways Trading Platform"
+    }
+    
+    data = {
+        "model": model,
+        "messages": messages,
+        "max_tokens": max_tokens
+    }
+    
+    try:
+        response = requests.post(
+            f"{OPENROUTER_BASE_URL}/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=60
+        )
+        response.raise_for_status()
+        result = response.json()
+        return result["choices"][0]["message"]["content"], None
+    except Exception as e:
+        return None, str(e)
+
+def generate_blog_content(topic: str, keywords: Optional[str], audience: str, tone: str) -> Dict:
+    """Generate AI blog content with Editor.js compatible structure"""
+    
+    prompt = f"""Create a comprehensive, SEO-optimized blog post about "{topic}" for {audience} traders.
+    
+Keywords to include: {keywords or 'trading, forex, risk management'}
 Tone: {tone}
 
-Output in Editor.js compatible JSON format:
+Generate the response in this exact JSON format:
 {{
-    "title": "Main Title",
-    "meta_title": "SEO Meta Title (max 70 chars)",
-    "meta_description": "SEO Meta Description (max 160 chars)",
-    "focus_keyword": "Primary keyword",
-    "excerpt": "Short excerpt",
-    "content": {{
-        "time": timestamp,
-        "blocks": [
-            {{"id": "unique_id", "type": "header", "data": {{"text": "H1 Text", "level": 1}}}},
-            {{"id": "unique_id", "type": "paragraph", "data": {{"text": "Paragraph text"}}}},
-            // Include other blocks: list, quote, table, code, image (with placeholder url), embed (with example TradingView url), delimiter
-        ],
-        "version": "2.28.0"
-    }}
+    "title": "SEO Optimized H1 Title",
+    "meta_title": "Meta title under 70 chars",
+    "meta_description": "Compelling meta description under 160 chars",
+    "focus_keyword": "primary keyword",
+    "excerpt": "Brief summary for blog listing",
+    "content_blocks": [
+        {{"type": "header", "data": {{"level": 2, "text": "Introduction"}}}},
+        {{"type": "paragraph", "data": {{"text": "Opening paragraph..."}}}},
+        {{"type": "header", "data": {{"level": 2, "text": "Main Section"}}}},
+        {{"type": "header", "data": {{"level": 3, "text": "Subsection"}}}},
+        {{"type": "paragraph", "data": {{"text": "Content..."}}}},
+        {{"type": "list", "data": {{"style": "unordered", "items": ["Point 1", "Point 2"]}}}},
+        {{"type": "quote", "data": {{"text": "Inspirational trading quote", "caption": "Author"}}}},
+        {{"type": "header", "data": {{"level": 2, "text": "Conclusion"}}}}
+    ],
+    "suggested_internal_links": ["Risk Management", "Trading Psychology", "Technical Analysis"],
+    "reading_time": 5
 }}"""
 
     messages = [
-        {"role": "system", "content": "You are an expert trading content writer. Create structured, SEO-friendly content with proper heading hierarchy."},
-        {"role": "user", "content": prompt}
+        {
+            "role": "system",
+            "content": "You are an expert trading content writer and SEO specialist. Create engaging, educational content for forex traders. Always return valid JSON."
+        },
+        {
+            "role": "user",
+            "content": prompt
+        }
     ]
     
-    response, error = openrouter_chat(messages, max_tokens=3000)
+    response, error = openrouter_chat(messages, max_tokens=2500)
     
     if error:
-        raise Exception(error)
+        return {
+            "error": error,
+            "title": f"Guide to {topic}",
+            "content_blocks": [{"type": "paragraph", "data": {"text": "AI generation failed. Please write manually."}}]
+        }
     
     try:
+        # Extract JSON from response
         json_match = re.search(r'\{.*\}', response, re.DOTALL)
         if json_match:
             return json.loads(json_match.group())
-    except:
-        raise Exception("Failed to parse AI response")
+    except Exception as e:
+        pass
+    
+    # Fallback structure
+    return {
+        "title": f"Complete Guide to {topic}",
+        "meta_title": f"{topic} | Pipways Trading Academy",
+        "meta_description": f"Learn everything about {topic} in this comprehensive guide for {audience} traders.",
+        "focus_keyword": topic.lower(),
+        "excerpt": f"Master {topic} with our expert guide designed for {audience} traders.",
+        "content_blocks": [
+            {"type": "header", "data": {"level": 2, "text": "Introduction"}},
+            {"type": "paragraph", "data": {"text": response[:500] if response else "Content generation in progress..."}},
+            {"type": "header", "data": {"level": 2, "text": "Key Takeaways"}}
+        ],
+        "suggested_internal_links": [],
+        "reading_time": 3
+    }
 
-def calculate_reading_time(content_data: Dict) -> int:
-    text = ''
-    for block in content_data.get('blocks', []):
-        if block['type'] in ['header', 'paragraph', 'quote', 'list', 'code']:
-            if 'text' in block['data']:
-                text += block['data']['text'] + ' '
-            elif 'items' in block['data']:
-                text += ' '.join(block['data']['items']) + ' '
-            elif 'code' in block['data']:
-                text += block['data']['code'] + ' '
-    word_count = len(text.split())
-    return max(1, word_count // 200)
+def calculate_reading_time(content_json: Dict) -> int:
+    """Calculate reading time in minutes based on content blocks"""
+    if not content_json or 'blocks' not in content_json:
+        return 1
+    
+    total_words = 0
+    
+    for block in content_json.get('blocks', []):
+        block_type = block.get('type')
+        data = block.get('data', {})
+        
+        if block_type == 'paragraph':
+            total_words += len(data.get('text', '').split())
+        elif block_type == 'header':
+            total_words += len(data.get('text', '').split())
+        elif block_type == 'list':
+            items = data.get('items', [])
+            for item in items:
+                total_words += len(str(item).split())
+        elif block_type == 'quote':
+            total_words += len(data.get('text', '').split())
+    
+    # Average reading speed: 200 words per minute
+    reading_time = max(1, round(total_words / 200))
+    return reading_time
 
-def calculate_seo_score(content_data: Dict, title: str, meta_description: str, focus_keyword: str) -> Tuple[int, List[str]]:
+def calculate_seo_score(content_json: Dict, title: str, meta_description: str, focus_keyword: str) -> Tuple[int, List[str]]:
+    """Calculate SEO score and return suggestions"""
     score = 0
     suggestions = []
     
-    # Title checks
-    if not title:
-        suggestions.append("Add a title")
-    elif len(title) > 70:
-        suggestions.append("Title too long (max 70 chars)")
+    if not content_json or 'blocks' not in content_json:
+        return 0, ["No content to analyze"]
+    
+    blocks = content_json.get('blocks', [])
+    
+    # Check for H1 (should only be one, in title)
+    h1_count = sum(1 for b in blocks if b.get('type') == 'header' and b.get('data', {}).get('level') == 1)
+    if h1_count > 1:
+        suggestions.append("Remove extra H1 headings - only one H1 allowed")
+    elif h1_count == 0:
+        suggestions.append("Add an H1 heading for better SEO structure")
     else:
-        score += 20
-    if focus_keyword and focus_keyword.lower() in title.lower():
         score += 10
     
-    # Meta description
+    # Check for H2 headings
+    h2_count = sum(1 for b in blocks if b.get('type') == 'header' and b.get('data', {}).get('level') == 2)
+    if h2_count < 2:
+        suggestions.append(f"Add more H2 headings (found {h2_count}, need at least 2)")
+    else:
+        score += 15
+    
+    # Check for H3 headings
+    h3_count = sum(1 for b in blocks if b.get('type') == 'header' and b.get('data', {}).get('level') == 3)
+    if h3_count > 0:
+        score += 10
+    
+    # Check content length (word count)
+    total_words = 0
+    for block in blocks:
+        if block.get('type') == 'paragraph':
+            total_words += len(block.get('data', {}).get('text', '').split())
+    
+    if total_words < 300:
+        suggestions.append(f"Content too short ({total_words} words). Aim for 800+ words")
+    elif total_words < 600:
+        score += 10
+        suggestions.append(f"Consider expanding content (currently {total_words} words)")
+    else:
+        score += 20
+    
+    # Check meta description
     if not meta_description:
         suggestions.append("Add meta description")
-    elif len(meta_description) > 160:
-        suggestions.append("Meta description too long (max 160 chars)")
     elif len(meta_description) < 120:
-        suggestions.append("Meta description too short (ideal 120-160 chars)")
+        suggestions.append(f"Meta description too short ({len(meta_description)} chars). Aim for 120-160")
+    elif len(meta_description) > 160:
+        suggestions.append(f"Meta description too long ({len(meta_description)} chars). Max 160")
     else:
-        score += 20
+        score += 15
     
-    # Content length
-    full_text = ' '.join([b['data'].get('text', '') for b in content_data.get('blocks', []) if 'text' in b['data']])
-    word_count = len(full_text.split())
-    if word_count < 300:
-        suggestions.append("Content too short (aim for 300+ words)")
-    elif word_count > 2000:
-        score += 10
-    else:
-        score += 10
-    
-    # Headings
-    headings = [b for b in content_data.get('blocks', []) if b['type'] == 'header']
-    h1_count = sum(1 for h in headings if h['data']['level'] == 1)
-    h2_count = sum(1 for h in headings if h['data']['level'] == 2)
-    if h1_count != 1:
-        suggestions.append("Should have exactly one H1 heading")
-    else:
-        score += 10
-    if h2_count < 2:
-        suggestions.append("Add at least 2 H2 headings")
-    else:
-        score += 10
-    
-    # Keyword density
+    # Check focus keyword usage
     if focus_keyword:
-        density = full_text.lower().count(focus_keyword.lower()) / word_count * 100 if word_count > 0 else 0
-        if 0.5 <= density <= 2.5:
-            score += 10
+        content_text = ' '.join([
+            b.get('data', {}).get('text', '') 
+            for b in blocks 
+            if b.get('type') in ['paragraph', 'header']
+        ]).lower()
+        
+        keyword_count = content_text.count(focus_keyword.lower())
+        if keyword_count == 0:
+            suggestions.append(f"Focus keyword '{focus_keyword}' not found in content")
+        elif keyword_count < 2:
+            suggestions.append(f"Use focus keyword '{focus_keyword}' more frequently")
         else:
-            suggestions.append(f"Keyword density {density:.1f}% (ideal 0.5-2.5%)")
+            score += 15
+    else:
+        suggestions.append("Set a focus keyword for better SEO")
     
-    # Images alt text
-    images = [b for b in content_data.get('blocks', []) if b['type'] == 'image']
-    for img in images:
-        if not img['data'].get('alt'):
-            suggestions.append("Add alt text to images")
-            break
-    if images and all(img['data'].get('alt') for img in images):
-        score += 5
+    # Check for images
+    image_count = sum(1 for b in blocks if b.get('type') == 'image')
+    if image_count == 0:
+        suggestions.append("Add at least one image to improve engagement")
+    else:
+        score += 10
     
-    # Internal links (simple check for <a href="/blog/")
-    if '<a href="/blog/' not in full_text:
-        suggestions.append("Add internal links")
+    # Check for lists
+    list_count = sum(1 for b in blocks if b.get('type') == 'list')
+    if list_count == 0:
+        suggestions.append("Add bulleted or numbered lists for better readability")
     else:
         score += 5
     
-    return min(100, score), suggestions
+    # Ensure score is between 0-100
+    score = min(100, max(0, score))
+    
+    if score >= 80:
+        suggestions.insert(0, "Great job! Your post is well-optimized.")
+    elif score >= 60:
+        suggestions.insert(0, "Good start. Address the suggestions above to improve.")
+    else:
+        suggestions.insert(0, "Several SEO improvements needed. See suggestions below.")
+    
+    return score, suggestions
 
-async def get_link_suggestions(content_data: Dict, conn) -> List[Dict]:
-    # Extract keywords from content
-    full_text = ' '.join([b['data'].get('text', '') for b in content_data.get('blocks', []) if 'text' in b['data']])
-    keywords = re.findall(r'\b\w{5,}\b', full_text.lower())[:10]  # Top 10 long words
+async def get_link_suggestions(content_json: Dict, conn) -> List[Dict]:
+    """Analyze content and suggest internal links to existing blog posts"""
+    if not content_json or 'blocks' not in content_json:
+        return []
+    
+    # Extract text content
+    content_text = ' '.join([
+        b.get('data', {}).get('text', '') 
+        for b in content_json.get('blocks', []) 
+        if b.get('type') in ['paragraph', 'header']
+    ]).lower()
+    
+    # Get all published posts
+    posts = await conn.fetch("""
+        SELECT id, title, slug, category 
+        FROM blog_posts 
+        WHERE status = 'published'
+    """)
     
     suggestions = []
-    for kw in keywords:
-        posts = await conn.fetch("""
-            SELECT title, slug FROM blog_posts 
-            WHERE status = 'published' AND (title ILIKE $1 OR content_json::text ILIKE $1)
-            LIMIT 3
-        """, f"%{kw}%")
-        for p in posts:
-            suggestions.append({"title": p['title'], "slug": p['slug']})
     
-    # Deduplicate
-    unique = {s['slug']: s for s in suggestions}
-    return list(unique.values())
+    for post in posts:
+        title_lower = post['title'].lower()
+        category_lower = (post['category'] or '').lower()
+        
+        # Check if post title or category appears in content
+        if title_lower in content_text or category_lower in content_text:
+            # Check if already linked (simple check)
+            if post['slug'] not in content_text:
+                suggestions.append({
+                    "id": post['id'],
+                    "title": post['title'],
+                    "slug": post['slug'],
+                    "category": post['category'],
+                    "context": f"Consider linking to '{post['title']}' when discussing {post['category'] or 'this topic'}"
+                })
+    
+    # Limit to top 5 suggestions
+    return suggestions[:5]
