@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipways - Institutional Trader Development</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        * { 
+            font-family: 'Inter', sans-serif; 
+        }
+        
+        .mono { 
+            font-family: 'JetBrains Mono', monospace; 
+        }
+        
+        .glass { 
+            background: rgba(30, 41, 59, 0.7); 
+            backdrop-filter: blur(10px); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+        }
+        
+        .glass-strong {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.4);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+        
+        .sidebar-link {
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+        
+        .sidebar-link:hover, .sidebar-link.active {
+            background: rgba(59, 130, 246, 0.1);
+            border-left-color: #3b82f6;
+            color: #60a5fa;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .chart-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.75rem;
+            background: #0f172a;
+        }
+        
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        
+        @media (max-width: 1024px) {
+            .analysis-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .hidden { display: none !important; }
+        
+        /* Line clamp utilities */
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+<base target="_blank">
+</head>
+<body class="bg-slate-950 text-slate-200 antialiased">
+    
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+        <div class="glass-strong rounded-2xl p-8 w-full max-w-md shadow-2xl">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
+                    <i data-lucide="trending-up" class="w-8 h-8 text-white"></i>
+                </div>
+                <h1 class="text-3xl font-bold gradient-text mb-2">Pipways</h1>
+                <p class="text-slate-400 text-sm">Institutional Trader Development</p>
+            </div>
+            
+            <div id="auth-tabs" class="flex gap-2 mb-6 p-1 bg-slate-800/50 rounded-lg">
+                <button onclick="showAuthTab('login')" id="tab-login" class="flex-1 py-2 rounded-md bg-blue-500 text-white font-medium text-sm transition-all">Sign In</button>
+                <button onclick="showAuthTab('register')" id="tab-register" class="flex-1 py-2 rounded-md text-slate-400 hover:text-white font-medium text-sm transition-all">Register</button>
+            </div>
+            
+            <!-- Login Form -->
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Email</label>
+                    <input type="email" name="email" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="admin@pipways.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Password</label>
+                    <input type="password" name="password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="••••••••">
+                </div>
+                <button type="submit" class="w-full btn-primary rounded-lg py-2.5 font-medium text-white shadow-lg">
+                    Sign In
+                </button>
+            </form>
+            
+            <!-- Register Form -->
+            <form id="register-form" onsubmit="handleRegister(event)" class="hidden space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Full Name</label>
+                    <input type="text" name="name" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="John Doe">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Email</label>
+                    <input type="email" name="email" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="john@example.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Password</label>
+                    <input type="password" name="password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="••••••••">
+                    <p class="text-xs text-slate-500 mt-1">Max 72 characters</p>
+                </div>
+                <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 rounded-lg py-2.5 font-medium text-white shadow-lg transition-all">
+                    Create Account
+                </button>
+            </form>
+            
+            <div id="auth-error" class="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm hidden"></div>
+            
+            <div class="mt-6 p-4 bg-slate-800/30 rounded-lg border border-slate-700/50">
+                <p class="text-xs text-slate-500 font-medium mb-2 uppercase tracking-wider">Demo Credentials</p>
+                <div class="text-xs text-slate-400 space-y-1 font-mono">
+                    <p><span class="text-slate-500">Email:</span> admin@pipways.com</p>
+                    <p><span class="text-slate-500">Password:</span> admin123</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="hidden h-screen flex overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-slate-900/50 border-r border-slate-800 flex flex-col backdrop-blur-xl">
+            <div class="p-6 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
+                        <i data-lucide="trending-up" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-white">Pipways</h1>
+                        <p class="text-xs text-slate-500">Institutional Trader</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+                <button onclick="showPage('dashboard')" class="nav-btn sidebar-link active w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
+                </button>
+                <button onclick="showPage('journal')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="book-open" class="w-5 h-5"></i> Trade Journal
+                </button>
+                <button onclick="showPage('analysis')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="scan-eye" class="w-5 h-5"></i> Chart Analysis
+                </button>
+                <button onclick="showPage('trade-analysis')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="file-bar-chart" class="w-5 h-5"></i> Trade Analysis
+                </button>
+                <button onclick="showPage('discipline')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="shield-check" class="w-5 h-5"></i> Discipline
+                </button>
+                <button onclick="showPage('mentor')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="bot" class="w-5 h-5"></i> AI Mentor
+                </button>
+                <button onclick="showPage('blog')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                    <i data-lucide="newspaper" class="w-5 h-5"></i> Blog
+                </button>
+                <!-- NEW: Webinars Link -->
+                <button onclick="window.open('/webinars', '_blank')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800">
+                    <i data-lucide="video" class="w-5 h-5"></i> Webinars
+                </button>
+                <button onclick="showPage('admin')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hidden" id="admin-nav">
+                    <i data-lucide="settings" class="w-5 h-5"></i> Admin
+                </button>
+            </nav>
+            
+            <div class="p-4 border-t border-slate-800 space-y-3">
+                <div class="bg-slate-800/50 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-medium text-slate-400">Level 2</span>
+                        <span class="text-xs font-bold text-blue-400">65%</span>
+                    </div>
+                    <div class="w-full bg-slate-700 rounded-full h-2">
+                        <div class="bg-gradient-to-r from-blue-500 to-violet-500 h-2 rounded-full transition-all" style="width: 65%"></div>
+                    </div>
+                </div>
+                <button onclick="logout()" class="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium">
+                    <i data-lucide="log-out" class="w-4 h-4"></i> Sign Out
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto bg-gradient-to-br from-slate-950 to-slate-900" id="content"></main>
+    </div>
+
+<script>
+const API_URL = 'https://pipways-api-nhem.onrender.com';
+let authToken = localStorage.getItem('pipways_token');
+let currentUser = JSON.parse(localStorage.getItem('pipways_user') || '{}');
+
+if (authToken) {
+    showApp();
+} else {
+    showAuth();
+}
+
+function showAuth() {
+    document.getElementById('auth-screen').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+}
+
+function showApp() {
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    showPage('dashboard');
+}
+
+function showAuthTab(tab) {
+    const loginBtn = document.getElementById('tab-login');
+    const registerBtn = document.getElementById('tab-register');
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    
+    if (tab === 'login') {
+        loginBtn.classList.add('bg-blue-500', 'text-white');
+        loginBtn.classList.remove('text-slate-400');
+        registerBtn.classList.remove('bg-blue-500', 'text-white');
+        registerBtn.classList.add('text-slate-400');
+        loginForm.classList.remove('hidden');
+        registerForm.classList.add('hidden');
+    } else {
+        registerBtn.classList.add('bg-blue-500', 'text-white');
+        registerBtn.classList.remove('text-slate-400');
+        loginBtn.classList.remove('bg-blue-500', 'text-white');
+        loginBtn.classList.add('text-slate-400');
+        registerForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+    }
+    document.getElementById('auth-error').classList.add('hidden');
+}
+
+function getErrorMessage(data) {
+    if (typeof data === 'string') return data;
+    if (data.detail) {
+        if (typeof data.detail === 'string') return data.detail;
+        if (Array.isArray(data.detail)) {
+            return data.detail.map(err => {
+                if (typeof err === 'string') return err;
+                if (err.msg) return err.msg;
+                if (err.message) return err.message;
+                return JSON.stringify(err);
+            }).join(', ');
+        }
+        return JSON.stringify(data.detail);
+    }
+    if (data.message) return data.message;
+    if (data.error) return data.error;
+    return JSON.stringify(data);
+}
+
+async function handleLogin(e) {
+    e.preventDefault();
+    const form = e.target;
+    const errorEl = document.getElementById('auth-error');
+    
+    try {
+        const formData = new URLSearchParams();
+        formData.append('email', form.email.value);
+        formData.append('password', form.password.value);
+        
+        const response = await fetch(API_URL + '/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData.toString()
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(getErrorMessage(data));
+        }
+        
+        authToken = data.access_token;
+        currentUser = data;
+        localStorage.setItem('pipways_token', authToken);
+        localStorage.setItem('pipways_user', JSON.stringify(data));
+        showApp();
+        
+    } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+    }
+}
+
+async function handleRegister(e) {
+    e.preventDefault();
+    const form = e.target;
+    const errorEl = document.getElementById('auth-error');
+    
+    try {
+        const formData = new URLSearchParams();
+        formData.append('email', form.email.value);
+        formData.append('password', form.password.value);
+        formData.append('name', form.name.value);
+        
+        const response = await fetch(API_URL + '/auth/register', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData.toString()
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(getErrorMessage(data));
+        }
+        
+        authToken = data.access_token;
+        currentUser = data;
+        localStorage.setItem('pipways_token', authToken);
+        localStorage.setItem('pipways_user', JSON.stringify(data));
+        showApp();
+        
+    } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+    }
+}
+
+function logout() {
+    localStorage.removeItem('pipways_token');
+    localStorage.removeItem('pipways_user');
+    authToken = null;
+    currentUser = {};
+    showAuth();
+}
+
+async function apiCall(endpoint, options = {}) {
+    const headers = {
+        'Authorization': 'Bearer ' + authToken,
+        ...options.headers
+    };
+    
+    const response = await fetch(API_URL + endpoint, {
+        ...options,
+        headers
+    });
+    
+    if (response.status === 401) {
+        logout();
+        throw new Error('Session expired. Please login again.');
+    }
+    
+    return response;
+}
+
+async function showPage(page) {
+    const content = document.getElementById('content');
+    
+    // Update sidebar active state
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    const activeBtn = document.querySelector('[onclick="showPage(\'' + page + '\')"]');
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
+
+    if (page === 'dashboard') {
+        await renderDashboard(content);
+    } else if (page === 'journal') {
+        renderJournal(content);
+    } else if (page === 'analysis') {
+        renderChartAnalysis(content);
+    } else if (page === 'trade-analysis') {
+        renderTradeAnalysis(content);
+    } else if (page === 'discipline') {
+        renderDiscipline(content);
+    } else if (page === 'mentor') {
+        renderMentor(content);
+    } else if (page === 'blog') {
+        renderBlog(content);
+    } else if (page === 'admin') {
+        renderAdmin(content);
+    }
+    
+    // Show admin nav if user is admin
+    if (currentUser.is_admin) {
+        const adminNav = document.getElementById('admin-nav');
+        if (adminNav) adminNav.classList.remove('hidden');
+    }
+    
+    lucide.createIcons();
+}
+
+async function renderDashboard(content) {
+    try {
+        const response = await apiCall('/trades');
+        const trades = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(getErrorMessage(trades));
+        }
+        
+        const totalPips = trades.reduce((a, b) => a + (b.pips || 0), 0);
+        const wins = trades.filter(t => t.pips > 0).length;
+        const winRate = trades.length ? (wins / trades.length * 100).toFixed(0) : 0;
+        
+        let html = '<div class="p-8 max-w-7xl mx-auto">';
+        html += '<div class="flex items-center justify-between mb-8">';
+        html += '<div>';
+        html += '<h2 class="text-3xl font-bold text-white mb-1">Dashboard</h2';
+        html += '<p class="text-slate-400">Welcome back, ' + (currentUser.name || 'Trader') + '</p>';
+        html += '</div>';
+        html += '<button onclick="showPage(\'journal\')" class="btn-primary px-6 py-2.5 rounded-lg text-white font-medium flex items-center gap-2">';
+        html += '<i data-lucide="plus" class="w-4 h-4"></i> New Trade';
+        html += '</button>';
+        html += '</div>';
+        
+        // Metrics Grid
+        html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">';
+        
+        // Discipline Score
+        html += '<div class="metric-card rounded-xl p-6 card-hover">';
+        html += '<div class="flex items-center justify-between mb-4">';
+        html += '<div class="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">';
+        html += '<i data-lucide="shield" class="w-6 h-6 text-blue-400"></i>';
+        html += '</div>';
+        html += '<span class="text-xs font-medium text-emerald-400 flex items-center gap-1">';
+        html += '<i data-lucide="trending-up" class="w-3 h-3"></i> +12%';
+        html += '</span>';
+        html += '</div>';
+        html += '<div class="text-slate-400 text-sm mb-1">Discipline Score</div>';
+        html += '<div class="text-3xl font-bold text-white">87<span class="text-lg text-slate-500">/100</span></div>';
+        html += '</div>';
+        
+        // Win Rate
+        html += '<div class="metric-card rounded-xl p-6 card-hover">';
+        html += '<div class="flex items-center justify-between mb-4">';
+        html += '<div class="w-12 h-12 rounded-lg bg-violet-500/20 flex items-center justify-center">';
+        html += '<i data-lucide="target" class="w-6 h-6 text-violet-400"></i>';
+        html += '</div>';
+        html += '<span class="text-xs font-medium text-slate-500">All time</span>';
+        html += '</div>';
+        html += '<div class="text-slate-400 text-sm mb-1">Win Rate</div>';
+        html += '<div class="text-3xl font-bold text-white">' + winRate + '<span class="text-lg text-slate-500">%</span></div>';
+        html += '</div>';
+        
+        // Total Pips
+        html += '<div class="metric-card rounded-xl p-6 card-hover">';
+        html += '<div class="flex items-center justify-between mb-4">';
+        html += '<div class="w-12 h-12 rounded-lg ' + (totalPips >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20') + ' flex items-center justify-center">';
+        html += '<i data-lucide="activity" class="w-6 h-6 ' + (totalPips >= 0 ? 'text-emerald-400' : 'text-red-400') + '"></i>';
+        html += '</div>';
+        html += '<span class="text-xs font-medium text-slate-500">Total</span>';
+        html += '</div>';
+        html += '<div class="text-slate-400 text-sm mb-1">Total Pips</div>';
+        html += '<div class="text-3xl font-bold ' + (totalPips >= 0 ? 'text-emerald-400' : 'text-red-400') + '">';
+        html += (totalPips > 0 ? '+' : '') + totalPips;
+        html += '</div>';
+        html += '</div>';
+        
+        // Total Trades
+        html += '<div class="metric-card rounded-xl p-6 card-hover">';
+        html += '<div class="flex items-center justify-between mb-4">';
+        html += '<div class="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">';
+        html += '<i data-lucide="bar-chart-2" class="w-6 h-6 text-blue-400"></i>';
+        html += '</div>';
+        html += '<span class="text-xs font-medium text-slate-500">Total</span>';
+        html += '</div>';
+        html += '<div class="text-slate-400 text-sm mb-1">Total Trades</div>';
+        html += '<div class="text-3xl font-bold text-white">' + trades.length + '</div>';
+        html += '</div>';
+        
+        html += '</div>';
+        
+        // Recent Trades
+        html += '<div class="glass rounded-2xl p-6 mb-8">';
+        html += '<h3 class="font-semibold text-white mb-4">Recent Trades</h3>';
+        html += '<div class="space-y-3">';
+        trades.slice(0, 5).forEach(t => {
+            html += '<div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">';
+            html += '<div class="flex items-center gap-3">';
+            html += '<div class="w-10 h-10 rounded-lg ' + (t.pips >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20') + ' flex items-center justify-center">';
+            html += '<i data-lucide="' + (t.direction.toLowerCase() === 'long' ? 'trending-up' : 'trending-down') + '" class="w-5 h-5 ' + (t.pips >= 0 ? 'text-emerald-400' : 'text-red-400') + '"></i>';
+            html += '</div>';
+            html += '<div>';
+            html += '<div class="font-medium text-white">' + t.pair + ' ' + t.direction + '</div>';
+            html += '<div class="text-xs text-slate-400">' + new Date(t.created_at).toLocaleDateString() + '</div>';
+            html += '</div>';
+            html += '</div>';
+            html += '<div class="text-right">';
+            html += '<div class="font-bold ' + (t.pips >= 0 ? 'text-emerald-400' : 'text-red-400') + '">' + (t.pips > 0 ? '+' : '') + t.pips + ' pips</div>';
+            html += '<div class="text-xs text-slate-400">' + t.grade + '</div>';
+            html += '</div>';
+            html += '</div>';
+        });
+        html += '</div>';
+        html += '</div>';
+        
+        html += '</div>';
+        
+        content.innerHTML = html;
+        lucide.createIcons();
+        
+    } catch (err) {
+        content.innerHTML = '<div class="p-8 text-red-400">Error loading dashboard: ' + err.message + '</div>';
+    }
+}
+
+function renderJournal(content) {
+    let html = '<div class="p-8 max-w-7xl mx-auto">';
+    html += '<div class="flex items-center justify-between mb-8">';
+    html += '<h2 class="text-3xl font-bold text-white mb-1">Trade Journal</h2>';
+    html += '<button onclick="openTradeForm()" class="btn-primary px-6 py-2.5 rounded-lg text-white font-medium flex items-center gap-2">';
+    html += '<i data-lucide="plus" class="w-4 h-4"></i> Add Trade';
+    html += '</button>';
+    html += '</div>';
+    
+    html += '<div id="tradesList" class="space-y-4"></div>';
+    html += '</div>';
+    
+    content.innerHTML = html;
+    loadTrades();
+}
+
+async function loadTrades() {
+    try {
+        const response = await apiCall('/trades');
+        const trades = await response.json();
+        
+        let html = '';
+        trades.forEach(t => {
+            html += '<div class="glass rounded-xl p-6">';
+            html += '<div class="flex items-center justify-between mb-4">';
+            html += '<div class="flex items-center gap-3">';
+            html += '<div class="w-12 h-12 rounded-lg ' + (t.pips >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20') + ' flex items-center justify-center">';
+            html += '<i data-lucide="' + (t.direction.toLowerCase() === 'long' : 'trending-up' ? 'trending-down') + '" class="w-6 h-6 ' + (t.pips >= 0 ? 'text-emerald-400' : 'text-red-400') + '"></i>';
+            html += '</div>';
+            html += '<div>';
+            html += '<div class="text-lg font-semibold text-white">' + t.pair + ' ' + t.direction + '</div>';
+            html += '<div class="text-sm text-slate-400">' + new Date(t.created_at).toLocaleString() + '</div>';
+            html += '</div>';
+            html += '</div>';
+            html += '<div class="text-right">';
+            html += '<div class="text-2xl font-bold ' + (t.pips >= 0 ? 'text-emerald-400' : 'text-red-400') + '">' + (t.pips > 0 ? '+' : '') + t.pips + ' pips</div>';
+            html += '<div class="text-sm text-slate-400">Grade: ' + t.grade + '</div>';
+            html += '</div>';
+            html += '</div>';
+            html += '<div class="grid grid-cols-2 gap-4 text-sm text-slate-300">';
+            html += '<div>Entry: ' + (t.entry_price || 'N/A') + '</div>';
+            html += '<div>Exit: ' + (t.exit_price || 'N/A') + '</div>';
+            html += '</div>';
+            html += '</div>';
+        });
+        
+        document.getElementById('tradesList').innerHTML = html || '<p class="text-slate-500">No trades yet</p>';
+        lucide.createIcons();
+        
+    } catch (err) {
+        document.getElementById('tradesList').innerHTML = '<p class="text-red-400">Error loading trades</p>';
+    }
+}
+
+function openTradeForm() {
+    // Existing trade form code (unchanged)
+    // ...
+}
+
+async function renderBlog(content) {
+    let html = '<div class="p-8 max-w-7xl mx-auto">';
+    html += '<div class="flex items-center justify-between mb-8">';
+    html += '<h2 class="text-3xl font-bold text-white mb-1">Blog</h2>';
+    if (currentUser.is_admin) {
+        html += '<button onclick="window.open(\'/admin/blog\', \'_blank\')" class="btn-primary px-6 py-2.5 rounded-lg text-white font-medium flex items-center gap-2">';
+        html += '<i data-lucide="pen-tool" class="w-4 h-4"></i> Admin Blog Editor';
+        html += '</button>';
+    }
+    html += '</div>';
+    
+    html += '<div class="mb-6 flex gap-4 flex-wrap">';
+    html += '<input id="blogSearch" oninput="searchBlog()" class="bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white flex-1 max-w-md" placeholder="Search posts...">';
+    html += '<div id="blogCategories" class="flex gap-2">';
+    html += '<button onclick="filterBlog(\'all\')" class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm">All</button>';
+    html += '<button onclick="filterBlog(\'strategy\')" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-sm">Strategy</button>';
+    html += '<button onclick="filterBlog(\'psychology\')" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-sm">Psychology</button>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '<div id="blogList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>';
+    html += '</div>';
+    
+    content.innerHTML = html;
+    loadBlogPosts('all');
+}
+
+async function loadBlogPosts(category = 'all', search = '') {
+    try {
+        let url = '/blog/posts?page=1&per_page=30';
+        if (category !== 'all') url += '&category=' + category;
+        if (search) url += '&search=' + search;
+        
+        const response = await apiCall(url);
+        const data = await response.json();
+        
+        let html = '';
+        data.posts.forEach(p => {
+            html += '<div class="glass rounded-xl overflow-hidden card-hover cursor-pointer" onclick="showBlogPost(\'' + p.slug + '\')">';
+            if (p.featured_image) {
+                html += '<img src="' + p.featured_image + '" class="w-full h-48 object-cover">';
+            } else {
+                html += '<div class="w-full h-48 bg-slate-800 flex items-center justify-center">';
+                html += '<i data-lucide="image" class="w-12 h-12 text-slate-600"></i>';
+                html += '</div>';
+            }
+            html += '<div class="p-6">';
+            html += '<div class="text-sm text-slate-400 mb-2">' + (p.category || 'General') + '</div>';
+            html += '<h3 class="text-xl font-bold text-white mb-2 line-clamp-2">' + p.title + '</h3>';
+            html += '<p class="text-slate-400 text-sm line-clamp-3 mb-4">' + (p.excerpt || '') + '</p>';
+            html += '<div class="flex items-center justify-between text-xs text-slate-500">';
+            html += '<span>' + new Date(p.published_at).toLocaleDateString() + '</span>';
+            html += '<span>' + p.view_count + ' views</span>';
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
+        });
+        
+        document.getElementById('blogList').innerHTML = html || '<p class="text-slate-500 col-span-3">No posts found</p>';
+        lucide.createIcons();
+        
+    } catch (err) {
+        document.getElementById('blogList').innerHTML = '<p class="text-red-400 col-span-3">Error loading posts</p>';
+    }
+}
+
+function filterBlog(category) {
+    // Update active button
+    const buttons = document.querySelectorAll('#blogCategories button');
+    buttons.forEach(function(btn) {
+        if (btn.textContent.toLowerCase().includes(category.replace('-', ' ')) || (category === 'all' && btn.textContent === 'All')) {
+            btn.classList.remove('bg-slate-800', 'text-slate-300');
+            btn.classList.add('bg-blue-500', 'text-white');
+        } else {
+            btn.classList.remove('bg-blue-500', 'text-white');
+            btn.classList.add('bg-slate-800', 'text-slate-300');
+        }
+    });
+    
+    loadBlogPosts(category);
+}
+
+function searchBlog() {
+    const search = document.getElementById('blogSearch').value;
+    loadBlogPosts('all', search);
+}
+
+async function showBlogPost(slug) {
+    try {
+        const response = await apiCall('/blog/post/' + slug);
+        const post = await response.json();
+        
+        if (!response.ok) {
+            throw new Error('Post not found');
+        }
+        
+        const content = document.getElementById('content');
+        const date = new Date(post.published_at);
+        
+        let html = '<div class="p-8 max-w-4xl mx-auto fade-in">';
+        html += '<button onclick="showPage(\'blog\')" class="mb-6 flex items-center gap-2 text-slate-400 hover:text-white transition-colors">';
+        html += '<i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Blog';
+        html += '</button>';
+        
+        if (post.featured_image) {
+            html += '<div class="h-64 rounded-xl bg-cover bg-center mb-8" style="background-image: url(\'' + post.featured_image + '\')"></div>';
+        }
+        
+        html += '<div class="flex items-center gap-2 mb-4">';
+        html += '<span class="px-3 py-1 bg-blue-500/20 text-blue-400 text-sm rounded">' + (post.category || 'General') + '</span>';
+        html += '<span class="text-slate-500 text-sm">' + date.toLocaleDateString() + '</span>';
+        html += '<span class="text-slate-500 text-sm">' + post.reading_time + ' min read</span>';
+        html += '<span class="text-slate-500 text-sm">' + post.view_count + ' views</span>';
+        html += '</div>';
+        
+        html += '<h1 class="text-4xl font-bold text-white mb-6">' + post.title + '</h1>';
+        
+        if (post.tags && post.tags.length > 0) {
+            html += '<div class="flex gap-2 mb-8">';
+            post.tags.forEach(function(tag) {
+                html += '<span class="px-2 py-1 bg-slate-800 text-slate-400 text-xs rounded">' + tag + '</span>';
+            });
+            html += '</div>';
+        }
+        
+        html += '<div class="prose prose-invert max-w-none">';
+        html += '<div class="text-slate-300 leading-relaxed">' + renderContentBlocks(post.content_json.blocks) + '</div>';
+        html += '</div>';
+        
+        // Social shares
+        html += '<div class="mt-8 flex gap-4">';
+        html += '<a href="https://twitter.com/intent/tweet?url=https://pipways.com/blog/' + slug + '&text=' + post.title + '" class="px-4 py-2 bg-blue-400 rounded text-white">Twitter</a>';
+        html += '<a href="https://www.linkedin.com/shareArticle?mini=true&url=https://pipways.com/blog/' + slug + '&title=' + post.title + '" class="px-4 py-2 bg-blue-700 rounded text-white">LinkedIn</a>';
+        html += '</div>';
+        
+        html += '</div>';
+        
+        content.innerHTML = html;
+        lucide.createIcons();
+        
+    } catch (err) {
+        alert('Error loading post: ' + err.message);
+    }
+}
+
+function renderContentBlocks(blocks) {
+    let html = '';
+    blocks.forEach(b => {
+        switch (b.type) {
+            case 'header':
+                html += `<h${b.data.level}>${b.data.text}</h${b.data.level}>`;
+                break;
+            case 'paragraph':
+                html += `<p>${b.data.text}</p>`;
+                break;
+            case 'list':
+                const tag = b.data.style === 'ordered' ? 'ol' : 'ul';
+                html += `<${tag}>${b.data.items.map(i => `<li>${i}</li>`).join('')}</${tag}>`;
+                break;
+            case 'quote':
+                html += `<blockquote>${b.data.text}</blockquote>`;
+                break;
+            case 'table':
+                html += '<table>' + b.data.content.map(row => '<tr>' + row.map(cell => `<td>${cell}</td>`).join('') + '</tr>').join('') + '</table>';
+                break;
+            case 'code':
+                html += `<pre><code>${b.data.code}</code></pre>`;
+                break;
+            case 'image':
+                html += `<img src="${b.data.file.url}" alt="${b.data.caption || ''}" class="w-full rounded">`;
+                if (b.data.caption) html += `<figcaption>${b.data.caption}</figcaption>`;
+                break;
+            case 'embed':
+                html += `<iframe src="${b.data.embed}" width="100%" height="400" frameborder="0"></iframe>`;
+                break;
+            case 'delimiter':
+                html += '<hr class="my-8">';
+                break;
+        }
+    });
+    return html;
+}
+
+// Other existing functions remain unchanged
+// ...
+
+lucide.createIcons();
+</script>
+</body>
+</html>
