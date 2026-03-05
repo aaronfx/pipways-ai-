@@ -11,3 +11,7 @@ beautifulsoup4==4.12.3
 python-multipart==0.0.9
 pydantic==2.6.1
 typing-extensions==4.9.0
+# Zoom Integration
+requests>=2.31.0
+
+# Keep your existing requirements, just add requests if not present
