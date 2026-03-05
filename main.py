@@ -1,7 +1,4 @@
-"""
-Pipways Trading Platform API
-Enhanced with SEO-friendly blog, media management, and optimized PDF processing
-"""
+""" Pipways Trading Platform API Enhanced with SEO-friendly blog, media management, and optimized PDF processing """
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Form, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -68,8 +65,8 @@ MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 ALLOWED_DOCUMENT_TYPES = {
-    "application/pdf", 
-    "text/csv", 
+    "application/pdf",
+    "text/csv",
     "application/vnd.ms-excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "text/html"
@@ -358,8 +355,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 def generate_slug(title: str) -> str:
     """Generate URL-friendly slug from title"""
-    slug = re.sub(r'[^\w\s-]', '', title.lower())
-    slug = re.sub(r'[-\s]+', '-', slug)
+    slug = re.sub(r'[^\w\s-]','', title.lower())
+    slug = re.sub(r'[-\s]+','-', slug)
     return slug[:200]
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -534,23 +531,27 @@ def analyze_trading_data(content: str, tables: List[pd.DataFrame]) -> Dict[str, 
     
     return analysis
 
-# FIXED: Authentication Endpoints - Now accept JSON instead of just form data
-@app.post("/auth/register", response_model=Token)
-async def register(user_data: UserCreate):
-    """Register new user with JSON body"""
+# FIXED: Authentication Endpoints - Using Form data like the old working code
+@app.post("/auth/register")
+async def register(
+    email: str = Form(...),
+    password: str = Form(...),
+    name: str = Form(...)
+):
+    """Register new user with form data (matches old working code)"""
     with get_db() as conn:
         cursor = conn.cursor()
         
         # Check if user exists
-        cursor.execute("SELECT id FROM users WHERE email = ?", (user_data.email,))
+        cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
         if cursor.fetchone():
             raise HTTPException(status_code=400, detail="Email already registered")
         
         # Create user
-        hashed_password = get_password_hash(user_data.password)
+        hashed_password = get_password_hash(password)
         cursor.execute(
             "INSERT INTO users (email, hashed_password, name) VALUES (?, ?, ?)",
-            (user_data.email, hashed_password, user_data.name)
+            (email, hashed_password, name)
         )
         conn.commit()
         user_id = cursor.lastrowid
@@ -567,18 +568,24 @@ async def register(user_data: UserCreate):
         return {
             "access_token": access_token,
             "token_type": "bearer",
-            "user": User(**user)
+            "user_id": user_id,
+            "email": email,
+            "name": name,
+            "is_admin": user.get("is_admin", False)
         }
 
-@app.post("/auth/login", response_model=Token)
-async def login(user_data: UserLogin):
-    """Login user with JSON body - accepts email and password"""
+@app.post("/auth/login")
+async def login(
+    email: str = Form(...),
+    password: str = Form(...)
+):
+    """Login user with form data (matches old working code)"""
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE email = ?", (user_data.email,))
+        cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
         user = cursor.fetchone()
         
-        if not user or not verify_password(user_data.password, user["hashed_password"]):
+        if not user or not verify_password(password, user["hashed_password"]):
             raise HTTPException(
                 status_code=401,
                 detail="Incorrect email or password",
@@ -593,7 +600,10 @@ async def login(user_data: UserLogin):
         return {
             "access_token": access_token,
             "token_type": "bearer",
-            "user": User(**dict(user))
+            "user_id": user["id"],
+            "name": user["name"],
+            "email": email,
+            "is_admin": user["is_admin"]
         }
 
 # Keep OAuth2 endpoint for Swagger UI compatibility
@@ -644,11 +654,8 @@ async def create_trade(
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            """INSERT INTO trades 
-               (user_id, pair, direction, pips, grade, entry_price, exit_price) 
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (current_user["id"], trade.pair.upper(), trade.direction, 
-             trade.pips, trade.grade, trade.entry_price, trade.exit_price)
+            """INSERT INTO trades (user_id, pair, direction, pips, grade, entry_price, exit_price) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (current_user["id"], trade.pair.upper(), trade.direction, trade.pips, trade.grade, trade.entry_price, trade.exit_price)
         )
         conn.commit()
         trade_id = cursor.lastrowid
