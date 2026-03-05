@@ -140,6 +140,7 @@
             overflow: hidden;
         }
     </style>
+<base target="_blank">
 </head>
 <body class="bg-slate-950 text-slate-200 antialiased">
     
@@ -243,6 +244,10 @@
                 </button>
                 <button onclick="showPage('blog')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
                     <i data-lucide="newspaper" class="w-5 h-5"></i> Blog
+                </button>
+                <!-- NEW: Webinars Link -->
+                <button onclick="window.open('/webinars', '_blank')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800">
+                    <i data-lucide="video" class="w-5 h-5"></i> Webinars
                 </button>
                 <button onclick="showPage('admin')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hidden" id="admin-nav">
                     <i data-lucide="settings" class="w-5 h-5"></i> Admin
@@ -627,6 +632,19 @@ async function renderDashboard(content) {
         html += '<div>';
         html += '<div class="font-medium text-white">Ask Mentor</div>';
         html += '<div class="text-xs text-slate-400">Trading psychology help</div>';
+        html += '</div>';
+        html += '</div>';
+        html += '</button>';
+        
+        // NEW: Live Webinars Quick Action
+        html += '<button onclick="window.open(\'/webinars\', \'_blank\')" class="w-full p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-red-500/50 hover:bg-slate-800 transition-all text-left group">';
+        html += '<div class="flex items-center gap-3">';
+        html += '<div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center group-hover:bg-red-500/30 transition-colors">';
+        html += '<i data-lucide="video" class="w-5 h-5 text-red-400"></i>';
+        html += '</div>';
+        html += '<div>';
+        html += '<div class="font-medium text-white">Live Webinars</div>';
+        html += '<div class="text-xs text-slate-400">Zoom trading sessions</div>';
         html += '</div>';
         html += '</div>';
         html += '</button>';
@@ -1619,6 +1637,7 @@ function renderAdmin(content) {
     // Quick Actions
     html += '<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">';
     
+    // UPDATED: Content Management with Webinars
     html += '<div class="glass rounded-xl p-6">';
     html += '<h3 class="font-semibold text-white mb-4">Content Management</h3>';
     html += '<div class="space-y-2">';
@@ -1630,6 +1649,10 @@ function renderAdmin(content) {
     html += '</button>';
     html += '<button onclick="showAdminSection(\'blog-posts\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">';
     html += '<i data-lucide="list" class="w-4 h-4 inline mr-2"></i> Manage Posts';
+    html += '</button>';
+    // NEW: Webinars Dashboard Link
+    html += '<button onclick="window.open(\'/webinars\', \'_blank\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">';
+    html += '<i data-lucide="video" class="w-4 h-4 inline mr-2"></i> Webinars Dashboard';
     html += '</button>';
     html += '</div>';
     html += '</div>';
