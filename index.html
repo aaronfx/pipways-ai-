@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pipways - Institutional Trader Development</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -125,6 +125,7 @@
         
         .hidden { display: none !important; }
         
+        /* Line clamp utilities */
         .line-clamp-2 {
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -138,223 +139,64 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
-
-        .mobile-sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 280px;
-            height: 100vh;
-            background: rgba(15, 23, 42, 0.98);
-            backdrop-filter: blur(20px);
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 50;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease;
-        }
-        
-        .mobile-sidebar.open {
-            transform: translateX(0);
-        }
-        
-        .sidebar-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 40;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-        }
-        
-        .sidebar-overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .mobile-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 30;
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-        
-        .mobile-nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            padding: 8px 12px;
-            color: #64748b;
-            transition: all 0.2s;
-        }
-        
-        .mobile-nav-item.active {
-            color: #3b82f6;
-        }
-        
-        .mobile-nav-item svg {
-            width: 24px;
-            height: 24px;
-        }
-        
-        .mobile-nav-item span {
-            font-size: 11px;
-            font-weight: 500;
-        }
-
-        .safe-bottom {
-            padding-bottom: calc(80px + env(safe-area-inset-bottom));
-        }
-        
-        @media (min-width: 1024px) {
-            .safe-bottom {
-                padding-bottom: 0;
-            }
-        }
-
-        .responsive-heading {
-            font-size: 1.5rem;
-            line-height: 2rem;
-        }
-        
-        @media (min-width: 640px) {
-            .responsive-heading {
-                font-size: 1.875rem;
-                line-height: 2.25rem;
-            }
-        }
-        
-        @media (min-width: 1024px) {
-            .responsive-heading {
-                font-size: 2.25rem;
-                line-height: 2.5rem;
-            }
-        }
-
-        input, select, button {
-            touch-action: manipulation;
-        }
-
-        .no-select {
-            -webkit-user-select: none;
-            user-select: none;
-        }
-
-        html {
-            scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch;
-        }
-        
-        .editor-toolbar {
-            display: flex;
-            gap: 0.5rem;
-            padding: 0.75rem;
-            background: rgba(30, 41, 59, 0.5);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            overflow-x: auto;
-        }
-        
-        .editor-btn {
-            padding: 0.5rem;
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            border-radius: 0.375rem;
-            color: #60a5fa;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .editor-btn:hover {
-            background: rgba(59, 130, 246, 0.2);
-        }
-        
-        .editor-textarea {
-            width: 100%;
-            min-height: 300px;
-            background: transparent;
-            border: none;
-            padding: 1rem;
-            color: #e2e8f0;
-            font-size: 0.875rem;
-            line-height: 1.6;
-            resize: vertical;
-        }
-        
-        .editor-textarea:focus {
-            outline: none;
-        }
-        
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-        }
-        .scrollbar-hide {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200 antialiased">
     
     <!-- Auth Screen -->
     <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-        <div class="glass-strong rounded-2xl p-6 sm:p-8 w-full max-w-md shadow-2xl mx-4">
-            <div class="text-center mb-6 sm:mb-8">
-                <div class="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
-                    <i data-lucide="trending-up" class="w-7 h-7 sm:w-8 sm:h-8 text-white"></i>
+        <div class="glass-strong rounded-2xl p-8 w-full max-w-md shadow-2xl">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
+                    <i data-lucide="trending-up" class="w-8 h-8 text-white"></i>
                 </div>
-                <h1 class="text-2xl sm:text-3xl font-bold gradient-text mb-2">Pipways</h1>
-                <p class="text-slate-400 text-xs sm:text-sm">Institutional Trader Development</p>
+                <h1 class="text-3xl font-bold gradient-text mb-2">Pipways</h1>
+                <p class="text-slate-400 text-sm">Institutional Trader Development</p>
             </div>
             
-            <div id="auth-tabs" class="flex gap-2 mb-4 sm:mb-6 p-1 bg-slate-800/50 rounded-lg">
+            <div id="auth-tabs" class="flex gap-2 mb-6 p-1 bg-slate-800/50 rounded-lg">
                 <button onclick="showAuthTab('login')" id="tab-login" class="flex-1 py-2 rounded-md bg-blue-500 text-white font-medium text-sm transition-all">Sign In</button>
                 <button onclick="showAuthTab('register')" id="tab-register" class="flex-1 py-2 rounded-md text-slate-400 hover:text-white font-medium text-sm transition-all">Register</button>
             </div>
             
             <!-- Login Form -->
-            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-3 sm:space-y-4">
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Email</label>
-                    <input type="email" name="email" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="admin@pipways.com">
+                    <input type="email" name="email" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="admin@pipways.com">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Password</label>
-                    <input type="password" name="password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="••••••••">
+                    <input type="password" name="password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="••••••••">
                 </div>
-                <button type="submit" class="w-full btn-primary rounded-lg py-3 font-medium text-white shadow-lg">
+                <button type="submit" class="w-full btn-primary rounded-lg py-2.5 font-medium text-white shadow-lg">
                     Sign In
                 </button>
             </form>
             
             <!-- Register Form -->
-            <form id="register-form" onsubmit="handleRegister(event)" class="hidden space-y-3 sm:space-y-4">
+            <form id="register-form" onsubmit="handleRegister(event)" class="hidden space-y-4">
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Full Name</label>
-                    <input type="text" name="name" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="John Doe">
+                    <input type="text" name="name" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="John Doe">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Email</label>
-                    <input type="email" name="email" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="john@example.com">
+                    <input type="email" name="email" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="john@example.com">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Password</label>
-                    <input type="password" name="password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="••••••••">
+                    <input type="password" name="password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="••••••••">
                     <p class="text-xs text-slate-500 mt-1">Max 72 characters</p>
                 </div>
-                <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 rounded-lg py-3 font-medium text-white shadow-lg transition-all">
+                <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 rounded-lg py-2.5 font-medium text-white shadow-lg transition-all">
                     Create Account
                 </button>
             </form>
             
             <div id="auth-error" class="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm hidden"></div>
             
-            <div class="mt-4 sm:mt-6 p-3 sm:p-4 bg-slate-800/30 rounded-lg border border-slate-700/50">
+            <div class="mt-6 p-4 bg-slate-800/30 rounded-lg border border-slate-700/50">
                 <p class="text-xs text-slate-500 font-medium mb-2 uppercase tracking-wider">Demo Credentials</p>
                 <div class="text-xs text-slate-400 space-y-1 font-mono">
                     <p><span class="text-slate-500">Email:</span> admin@pipways.com</p>
@@ -366,8 +208,8 @@
 
     <!-- Main App -->
     <div id="app" class="hidden h-screen flex overflow-hidden">
-        <!-- Desktop Sidebar -->
-        <aside class="hidden lg:flex w-64 bg-slate-900/50 border-r border-slate-800 flex-col backdrop-blur-xl">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-slate-900/50 border-r border-slate-800 flex flex-col backdrop-blur-xl">
             <div class="p-6 border-b border-slate-800">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
@@ -423,106 +265,8 @@
             </div>
         </aside>
 
-        <!-- Mobile Sidebar Overlay -->
-        <div id="sidebar-overlay" class="sidebar-overlay lg:hidden" onclick="closeMobileSidebar()"></div>
-        
-        <!-- Mobile Sidebar -->
-        <aside id="mobile-sidebar" class="mobile-sidebar lg:hidden flex flex-col">
-            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
-                        <i data-lucide="trending-up" class="w-5 h-5 text-white"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-lg font-bold text-white">Pipways</h1>
-                    </div>
-                </div>
-                <button onclick="closeMobileSidebar()" class="p-2 text-slate-400">
-                    <i data-lucide="x" class="w-6 h-6"></i>
-                </button>
-            </div>
-            
-            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
-                <button onclick="showPage('dashboard'); closeMobileSidebar()" class="nav-btn-mobile sidebar-link active w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
-                </button>
-                <button onclick="showPage('journal'); closeMobileSidebar()" class="nav-btn-mobile sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-                    <i data-lucide="book-open" class="w-5 h-5"></i> Trade Journal
-                </button>
-                <button onclick="showPage('analysis'); closeMobileSidebar()" class="nav-btn-mobile sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-                    <i data-lucide="scan-eye" class="w-5 h-5"></i> Chart Analysis
-                </button>
-                <button onclick="showPage('trade-analysis'); closeMobileSidebar()" class="nav-btn-mobile sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-                    <i data-lucide="file-bar-chart" class="w-5 h-5"></i> Trade Analysis
-                </button>
-                <button onclick="showPage('discipline'); closeMobileSidebar()" class="nav-btn-mobile sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-                    <i data-lucide="shield-check" class="w-5 h-5"></i> Discipline
-                </button>
-                <button onclick="showPage('mentor'); closeMobileSidebar()" class="nav-btn-mobile sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-                    <i data-lucide="bot" class="w-5 h-5"></i> AI Mentor
-                </button>
-                <button onclick="showPage('blog'); closeMobileSidebar()" class="nav-btn-mobile sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-                    <i data-lucide="newspaper" class="w-5 h-5"></i> Blog
-                </button>
-                <button onclick="showPage('admin'); closeMobileSidebar()" class="nav-btn-mobile sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hidden" id="admin-nav-mobile">
-                    <i data-lucide="settings" class="w-5 h-5"></i> Admin
-                </button>
-            </nav>
-            
-            <div class="p-4 border-t border-slate-800">
-                <button onclick="logout()" class="w-full flex items-center gap-2 px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium">
-                    <i data-lucide="log-out" class="w-5 h-5"></i> Sign Out
-                </button>
-            </div>
-        </aside>
-
         <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto bg-gradient-to-br from-slate-950 to-slate-900 safe-bottom lg:safe-bottom-0" id="content"></main>
-        
-        <!-- Mobile Header -->
-        <div class="lg:hidden fixed top-0 left-0 right-0 z-20 bg-slate-900/95 backdrop-blur-xl border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <button onclick="openMobileSidebar()" class="p-2 -ml-2 text-slate-300">
-                    <i data-lucide="menu" class="w-6 h-6"></i>
-                </button>
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
-                        <i data-lucide="trending-up" class="w-4 h-4 text-white"></i>
-                    </div>
-                    <span class="font-bold text-white">Pipways</span>
-                </div>
-            </div>
-            <div class="flex items-center gap-2">
-                <div class="text-right">
-                    <div class="text-xs font-medium text-white" id="mobile-user-name">Trader</div>
-                    <div class="text-xs text-slate-400">Level 2</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Mobile Bottom Navigation -->
-        <nav class="mobile-nav lg:hidden flex justify-around items-center py-2 px-4">
-            <button onclick="showPage('dashboard')" class="mobile-nav-item" id="mobile-nav-dashboard">
-                <i data-lucide="layout-dashboard"></i>
-                <span>Home</span>
-            </button>
-            <button onclick="showPage('journal')" class="mobile-nav-item" id="mobile-nav-journal">
-                <i data-lucide="book-open"></i>
-                <span>Journal</span>
-            </button>
-            <button onclick="showPage('analysis')" class="mobile-nav-item" id="mobile-nav-analysis">
-                <i data-lucide="scan-eye"></i>
-                <span>Chart</span>
-            </button>
-            <button onclick="showPage('mentor')" class="mobile-nav-item" id="mobile-nav-mentor">
-                <i data-lucide="bot"></i>
-                <span>Mentor</span>
-            </button>
-            <button onclick="showPage('more')" class="mobile-nav-item" id="mobile-nav-more">
-                <i data-lucide="grid-3x3"></i>
-                <span>More</span>
-            </button>
-        </nav>
+        <main class="flex-1 overflow-y-auto bg-gradient-to-br from-slate-950 to-slate-900" id="content"></main>
     </div>
 
 <script>
@@ -544,25 +288,7 @@ function showAuth() {
 function showApp() {
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
-    
-    const userNameEl = document.getElementById('mobile-user-name');
-    if (userNameEl && currentUser.name) {
-        userNameEl.textContent = currentUser.name;
-    }
-    
     showPage('dashboard');
-}
-
-function openMobileSidebar() {
-    document.getElementById('mobile-sidebar').classList.add('open');
-    document.getElementById('sidebar-overlay').classList.add('show');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeMobileSidebar() {
-    document.getElementById('mobile-sidebar').classList.remove('open');
-    document.getElementById('sidebar-overlay').classList.remove('show');
-    document.body.style.overflow = '';
 }
 
 function showAuthTab(tab) {
@@ -594,7 +320,7 @@ function getErrorMessage(data) {
     if (data.detail) {
         if (typeof data.detail === 'string') return data.detail;
         if (Array.isArray(data.detail)) {
-            return data.detail.map(function(err) {
+            return data.detail.map(err => {
                 if (typeof err === 'string') return err;
                 if (err.msg) return err.msg;
                 if (err.message) return err.message;
@@ -608,7 +334,6 @@ function getErrorMessage(data) {
     return JSON.stringify(data);
 }
 
-// UPDATED: Login with Form data (application/x-www-form-urlencoded)
 async function handleLogin(e) {
     e.preventDefault();
     const form = e.target;
@@ -621,9 +346,7 @@ async function handleLogin(e) {
         
         const response = await fetch(API_URL + '/auth/login', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: formData.toString()
         });
         
@@ -634,14 +357,9 @@ async function handleLogin(e) {
         }
         
         authToken = data.access_token;
-        currentUser = {
-            id: data.user_id,
-            name: data.name,
-            email: data.email,
-            is_admin: data.is_admin
-        };
+        currentUser = data;
         localStorage.setItem('pipways_token', authToken);
-        localStorage.setItem('pipways_user', JSON.stringify(currentUser));
+        localStorage.setItem('pipways_user', JSON.stringify(data));
         showApp();
         
     } catch (err) {
@@ -650,7 +368,6 @@ async function handleLogin(e) {
     }
 }
 
-// UPDATED: Register with Form data (application/x-www-form-urlencoded)
 async function handleRegister(e) {
     e.preventDefault();
     const form = e.target;
@@ -664,9 +381,7 @@ async function handleRegister(e) {
         
         const response = await fetch(API_URL + '/auth/register', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: formData.toString()
         });
         
@@ -677,14 +392,9 @@ async function handleRegister(e) {
         }
         
         authToken = data.access_token;
-        currentUser = {
-            id: data.user_id,
-            name: data.name,
-            email: data.email,
-            is_admin: data.is_admin
-        };
+        currentUser = data;
         localStorage.setItem('pipways_token', authToken);
-        localStorage.setItem('pipways_user', JSON.stringify(currentUser));
+        localStorage.setItem('pipways_user', JSON.stringify(data));
         showApp();
         
     } catch (err) {
@@ -701,8 +411,7 @@ function logout() {
     showAuth();
 }
 
-async function apiCall(endpoint, options) {
-    options = options || {};
+async function apiCall(endpoint, options = {}) {
     const headers = {
         'Authorization': 'Bearer ' + authToken,
         ...options.headers
@@ -721,28 +430,11 @@ async function apiCall(endpoint, options) {
     return response;
 }
 
-function updateMobileNav(page) {
-    document.querySelectorAll('.mobile-nav-item').forEach(function(item) {
-        item.classList.remove('active');
-    });
-    
-    const navMap = {
-        'dashboard': 'mobile-nav-dashboard',
-        'journal': 'mobile-nav-journal',
-        'analysis': 'mobile-nav-analysis',
-        'mentor': 'mobile-nav-mentor'
-    };
-    
-    if (navMap[page]) {
-        const el = document.getElementById(navMap[page]);
-        if (el) el.classList.add('active');
-    }
-}
-
 async function showPage(page) {
     const content = document.getElementById('content');
     
-    document.querySelectorAll('.nav-btn').forEach(function(btn) {
+    // Update sidebar active state
+    document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('active');
     });
     
@@ -750,10 +442,7 @@ async function showPage(page) {
     if (activeBtn) {
         activeBtn.classList.add('active');
     }
-    
-    updateMobileNav(page);
-    closeMobileSidebar();
-    
+
     if (page === 'dashboard') {
         await renderDashboard(content);
     } else if (page === 'journal') {
@@ -770,47 +459,15 @@ async function showPage(page) {
         renderBlog(content);
     } else if (page === 'admin') {
         renderAdmin(content);
-    } else if (page === 'more') {
-        renderMoreMenu(content);
     }
     
+    // Show admin nav if user is admin
     if (currentUser.is_admin) {
         const adminNav = document.getElementById('admin-nav');
-        const adminNavMobile = document.getElementById('admin-nav-mobile');
         if (adminNav) adminNav.classList.remove('hidden');
-        if (adminNavMobile) adminNavMobile.classList.remove('hidden');
     }
     
     lucide.createIcons();
-}
-
-function renderMoreMenu(content) {
-    let html = '<div class="p-4 pt-20 lg:pt-8 max-w-7xl mx-auto fade-in">';
-    html += '<h2 class="responsive-heading font-bold text-white mb-6">More Options</h2>';
-    html += '<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">';
-    
-    const menuItems = [
-        {page: 'trade-analysis', icon: 'file-bar-chart', label: 'Trade Analysis'},
-        {page: 'discipline', icon: 'shield-check', label: 'Discipline'},
-        {page: 'blog', icon: 'newspaper', label: 'Blog'},
-        {page: 'admin', icon: 'settings', label: 'Admin', admin: true}
-    ];
-    
-    menuItems.forEach(function(item) {
-        if (item.admin && !currentUser.is_admin) return;
-        
-        html += '<button onclick="showPage(\'' + item.page + '\')" class="glass rounded-xl p-4 sm:p-6 text-center card-hover">';
-        html += '<div class="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 rounded-xl bg-blue-500/20 flex items-center justify-center">';
-        html += '<i data-lucide="' + item.icon + '" class="w-6 h-6 sm:w-7 sm:h-7 text-blue-400"></i>';
-        html += '</div>';
-        html += '<span class="text-sm sm:text-base font-medium text-white">' + item.label + '</span>';
-        html += '</button>';
-    });
-    
-    html += '</div>';
-    html += '</div>';
-    
-    content.innerHTML = html;
 }
 
 async function renderDashboard(content) {
@@ -822,79 +479,85 @@ async function renderDashboard(content) {
             throw new Error(getErrorMessage(trades));
         }
         
-        const totalPips = trades.reduce(function(a, b) { return a + (b.pips || 0); }, 0);
-        const wins = trades.filter(function(t) { return t.pips > 0; }).length;
+        const totalPips = trades.reduce((a, b) => a + (b.pips || 0), 0);
+        const wins = trades.filter(t => t.pips > 0).length;
         const winRate = trades.length ? (wins / trades.length * 100).toFixed(0) : 0;
         
-        let html = '<div class="p-4 pt-20 lg:pt-8 max-w-7xl mx-auto">';
-        
-        html += '<div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">';
+        let html = '<div class="p-8 max-w-7xl mx-auto">';
+        html += '<div class="flex items-center justify-between mb-8">';
         html += '<div>';
-        html += '<h2 class="responsive-heading font-bold text-white mb-1">Dashboard</h2>';
-        html += '<p class="text-slate-400 text-sm">Welcome back, ' + (currentUser.name || 'Trader') + '</p>';
+        html += '<h2 class="text-3xl font-bold text-white mb-1">Dashboard</h2>';
+        html += '<p class="text-slate-400">Welcome back, ' + (currentUser.name || 'Trader') + '</p>';
         html += '</div>';
-        html += '<button onclick="showPage(\'journal\')" class="btn-primary px-4 sm:px-6 py-2.5 rounded-lg text-white font-medium flex items-center justify-center gap-2 text-sm sm:text-base">';
+        html += '<button onclick="showPage(\'journal\')" class="btn-primary px-6 py-2.5 rounded-lg text-white font-medium flex items-center gap-2">';
         html += '<i data-lucide="plus" class="w-4 h-4"></i> New Trade';
         html += '</button>';
         html += '</div>';
         
-        html += '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">';
+        // Metrics Grid
+        html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">';
         
-        html += '<div class="metric-card rounded-xl p-4 sm:p-6 card-hover">';
-        html += '<div class="flex items-center justify-between mb-2 sm:mb-4">';
-        html += '<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">';
-        html += '<i data-lucide="shield" class="w-5 h-5 sm:w-6 sm:h-6 text-blue-400"></i>';
+        // Discipline Score
+        html += '<div class="metric-card rounded-xl p-6 card-hover">';
+        html += '<div class="flex items-center justify-between mb-4">';
+        html += '<div class="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">';
+        html += '<i data-lucide="shield" class="w-6 h-6 text-blue-400"></i>';
         html += '</div>';
         html += '<span class="text-xs font-medium text-emerald-400 flex items-center gap-1">';
         html += '<i data-lucide="trending-up" class="w-3 h-3"></i> +12%';
         html += '</span>';
         html += '</div>';
-        html += '<div class="text-slate-400 text-xs sm:text-sm mb-1">Discipline Score</div>';
-        html += '<div class="text-2xl sm:text-3xl font-bold text-white">87<span class="text-sm sm:text-lg text-slate-500">/100</span></div>';
+        html += '<div class="text-slate-400 text-sm mb-1">Discipline Score</div>';
+        html += '<div class="text-3xl font-bold text-white">87<span class="text-lg text-slate-500">/100</span></div>';
         html += '</div>';
         
-        html += '<div class="metric-card rounded-xl p-4 sm:p-6 card-hover">';
-        html += '<div class="flex items-center justify-between mb-2 sm:mb-4">';
-        html += '<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-violet-500/20 flex items-center justify-center">';
-        html += '<i data-lucide="target" class="w-5 h-5 sm:w-6 sm:h-6 text-violet-400"></i>';
+        // Win Rate
+        html += '<div class="metric-card rounded-xl p-6 card-hover">';
+        html += '<div class="flex items-center justify-between mb-4">';
+        html += '<div class="w-12 h-12 rounded-lg bg-violet-500/20 flex items-center justify-center">';
+        html += '<i data-lucide="target" class="w-6 h-6 text-violet-400"></i>';
         html += '</div>';
         html += '<span class="text-xs font-medium text-slate-500">All time</span>';
         html += '</div>';
-        html += '<div class="text-slate-400 text-xs sm:text-sm mb-1">Win Rate</div>';
-        html += '<div class="text-2xl sm:text-3xl font-bold text-white">' + winRate + '<span class="text-sm sm:text-lg text-slate-500">%</span></div>';
+        html += '<div class="text-slate-400 text-sm mb-1">Win Rate</div>';
+        html += '<div class="text-3xl font-bold text-white">' + winRate + '<span class="text-lg text-slate-500">%</span></div>';
         html += '</div>';
         
-        html += '<div class="metric-card rounded-xl p-4 sm:p-6 card-hover">';
-        html += '<div class="flex items-center justify-between mb-2 sm:mb-4">';
-        html += '<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg ' + (totalPips >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20') + ' flex items-center justify-center">';
-        html += '<i data-lucide="activity" class="w-5 h-5 sm:w-6 sm:h-6 ' + (totalPips >= 0 ? 'text-emerald-400' : 'text-red-400') + '"></i>';
+        // Total Pips
+        html += '<div class="metric-card rounded-xl p-6 card-hover">';
+        html += '<div class="flex items-center justify-between mb-4">';
+        html += '<div class="w-12 h-12 rounded-lg ' + (totalPips >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20') + ' flex items-center justify-center">';
+        html += '<i data-lucide="activity" class="w-6 h-6 ' + (totalPips >= 0 ? 'text-emerald-400' : 'text-red-400') + '"></i>';
         html += '</div>';
         html += '<span class="text-xs font-medium text-slate-500">Total</span>';
         html += '</div>';
-        html += '<div class="text-slate-400 text-xs sm:text-sm mb-1">Total Pips</div>';
-        html += '<div class="text-2xl sm:text-3xl font-bold ' + (totalPips >= 0 ? 'text-emerald-400' : 'text-red-400') + '">';
+        html += '<div class="text-slate-400 text-sm mb-1">Total Pips</div>';
+        html += '<div class="text-3xl font-bold ' + (totalPips >= 0 ? 'text-emerald-400' : 'text-red-400') + '">';
         html += (totalPips > 0 ? '+' : '') + totalPips;
         html += '</div>';
         html += '</div>';
         
-        html += '<div class="metric-card rounded-xl p-4 sm:p-6 card-hover">';
-        html += '<div class="flex items-center justify-between mb-2 sm:mb-4">';
-        html += '<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-orange-500/20 flex items-center justify-center">';
-        html += '<i data-lucide="bar-chart-2" class="w-5 h-5 sm:w-6 sm:h-6 text-orange-400"></i>';
+        // Total Trades
+        html += '<div class="metric-card rounded-xl p-6 card-hover">';
+        html += '<div class="flex items-center justify-between mb-4">';
+        html += '<div class="w-12 h-12 rounded-lg bg-orange-500/20 flex items-center justify-center">';
+        html += '<i data-lucide="bar-chart-2" class="w-6 h-6 text-orange-400"></i>';
         html += '</div>';
         html += '<span class="text-xs font-medium text-slate-500">This month</span>';
         html += '</div>';
-        html += '<div class="text-slate-400 text-xs sm:text-sm mb-1">Total Trades</div>';
-        html += '<div class="text-2xl sm:text-3xl font-bold text-white">' + trades.length + '</div>';
+        html += '<div class="text-slate-400 text-sm mb-1">Total Trades</div>';
+        html += '<div class="text-3xl font-bold text-white">' + trades.length + '</div>';
         html += '</div>';
         
-        html += '</div>';
+        html += '</div>'; // End metrics grid
         
-        html += '<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">';
+        // Recent Trades & Quick Actions
+        html += '<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">';
         
-        html += '<div class="lg:col-span-2 glass rounded-xl p-4 sm:p-6">';
-        html += '<div class="flex items-center justify-between mb-4 sm:mb-6">';
-        html += '<h3 class="text-base sm:text-lg font-semibold text-white">Recent Trades</h3>';
+        // Recent Trades
+        html += '<div class="lg:col-span-2 glass rounded-xl p-6">';
+        html += '<div class="flex items-center justify-between mb-6">';
+        html += '<h3 class="text-lg font-semibold text-white">Recent Trades</h3>';
         html += '<button onclick="showPage(\'journal\')" class="text-sm text-blue-400 hover:text-blue-300 font-medium">View All</button>';
         html += '</div>';
         html += '<div class="space-y-3">';
@@ -905,25 +568,25 @@ async function renderDashboard(content) {
                 const dateStr = date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
                 const yearStr = date.getFullYear();
                 
-                html += '<div class="flex items-center justify-between p-3 sm:p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-slate-600 transition-colors">';
-                html += '<div class="flex items-center gap-3 sm:gap-4">';
-                html += '<div class="text-center min-w-[50px] sm:min-w-[60px]">';
+                html += '<div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-slate-600 transition-colors">';
+                html += '<div class="flex items-center gap-4">';
+                html += '<div class="text-center min-w-[60px]">';
                 html += '<div class="text-xs text-slate-500">' + dateStr + '</div>';
                 html += '<div class="text-xs text-slate-600">' + yearStr + '</div>';
                 html += '</div>';
-                html += '<div class="w-px h-8 bg-slate-700 hidden sm:block"></div>';
+                html += '<div class="w-px h-8 bg-slate-700"></div>';
                 html += '<div>';
-                html += '<div class="font-bold text-white text-sm sm:text-base">' + t.pair + '</div>';
+                html += '<div class="font-bold text-white">' + t.pair + '</div>';
                 html += '<div class="flex items-center gap-2 mt-1">';
                 html += '<span class="status-badge ' + (t.direction === 'LONG' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400') + '">';
                 html += t.direction;
                 html += '</span>';
-                html += '<span class="text-xs text-slate-500 hidden sm:inline">Grade ' + t.grade + '</span>';
+                html += '<span class="text-xs text-slate-500">Grade ' + t.grade + '</span>';
                 html += '</div>';
                 html += '</div>';
                 html += '</div>';
                 html += '<div class="text-right">';
-                html += '<div class="font-mono font-bold ' + (t.pips >= 0 ? 'text-emerald-400' : 'text-red-400') + ' text-base sm:text-lg">';
+                html += '<div class="font-mono font-bold ' + (t.pips >= 0 ? 'text-emerald-400' : 'text-red-400') + ' text-lg">';
                 html += (t.pips > 0 ? '+' : '') + t.pips + ' <span class="text-xs text-slate-500">pips</span>';
                 html += '</div>';
                 html += '</div>';
@@ -937,73 +600,74 @@ async function renderDashboard(content) {
         }
         
         html += '</div>';
-        html += '</div>';
+        html += '</div>'; // End recent trades
         
-        html += '<div class="glass rounded-xl p-4 sm:p-6">';
-        html += '<h3 class="text-base sm:text-lg font-semibold text-white mb-4 sm:mb-6">Quick Actions</h3>';
+        // Quick Actions
+        html += '<div class="glass rounded-xl p-6">';
+        html += '<h3 class="text-lg font-semibold text-white mb-6">Quick Actions</h3>';
         html += '<div class="space-y-3">';
         
-        html += '<button onclick="showPage(\'analysis\')" class="w-full p-3 sm:p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-blue-500/50 hover:bg-slate-800 transition-all text-left group">';
+        html += '<button onclick="showPage(\'analysis\')" class="w-full p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-blue-500/50 hover:bg-slate-800 transition-all text-left group">';
         html += '<div class="flex items-center gap-3">';
-        html += '<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/30 transition-colors">';
-        html += '<i data-lucide="scan-eye" class="w-4 h-4 sm:w-5 sm:h-5 text-blue-400"></i>';
+        html += '<div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/30 transition-colors">';
+        html += '<i data-lucide="scan-eye" class="w-5 h-5 text-blue-400"></i>';
         html += '</div>';
         html += '<div>';
-        html += '<div class="font-medium text-white text-sm sm:text-base">Analyze Chart</div>';
+        html += '<div class="font-medium text-white">Analyze Chart</div>';
         html += '<div class="text-xs text-slate-400">AI-powered setup review</div>';
         html += '</div>';
         html += '</div>';
         html += '</button>';
         
-        html += '<button onclick="showPage(\'mentor\')" class="w-full p-3 sm:p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-violet-500/50 hover:bg-slate-800 transition-all text-left group">';
+        html += '<button onclick="showPage(\'mentor\')" class="w-full p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-violet-500/50 hover:bg-slate-800 transition-all text-left group">';
         html += '<div class="flex items-center gap-3">';
-        html += '<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-violet-500/20 flex items-center justify-center group-hover:bg-violet-500/30 transition-colors">';
-        html += '<i data-lucide="message-circle" class="w-4 h-4 sm:w-5 sm:h-5 text-violet-400"></i>';
+        html += '<div class="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center group-hover:bg-violet-500/30 transition-colors">';
+        html += '<i data-lucide="message-circle" class="w-5 h-5 text-violet-400"></i>';
         html += '</div>';
         html += '<div>';
-        html += '<div class="font-medium text-white text-sm sm:text-base">Ask Mentor</div>';
+        html += '<div class="font-medium text-white">Ask Mentor</div>';
         html += '<div class="text-xs text-slate-400">Trading psychology help</div>';
         html += '</div>';
         html += '</div>';
         html += '</button>';
         
         html += '</div>';
-        html += '</div>';
+        html += '</div>'; // End quick actions
         
-        html += '</div>';
-        html += '</div>';
+        html += '</div>'; // End grid
+        html += '</div>'; // End container
         
         content.innerHTML = html;
         
     } catch (err) {
-        content.innerHTML = '<div class="p-4 pt-20 lg:pt-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">' + err.message + '</div></div>';
+        content.innerHTML = '<div class="p-8"><div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">' + err.message + '</div></div>';
     }
 }
 
 function renderJournal(content) {
-    let html = '<div class="p-4 pt-20 lg:pt-8 max-w-4xl mx-auto fade-in">';
-    html += '<div class="flex items-center justify-between mb-6 sm:mb-8">';
+    let html = '<div class="p-8 max-w-4xl mx-auto fade-in">';
+    html += '<div class="flex items-center justify-between mb-8">';
     html += '<div>';
-    html += '<h2 class="responsive-heading font-bold text-white mb-1">Trade Journal</h2>';
-    html += '<p class="text-slate-400 text-sm">Log and review your trading history</p>';
+    html += '<h2 class="text-3xl font-bold text-white mb-1">Trade Journal</h2>';
+    html += '<p class="text-slate-400">Log and review your trading history</p>';
     html += '</div>';
     html += '</div>';
     
-    html += '<div class="glass rounded-xl p-4 sm:p-6 mb-6">';
-    html += '<h3 class="text-base sm:text-lg font-semibold text-white mb-4 sm:mb-6 flex items-center gap-2">';
+    html += '<div class="glass rounded-xl p-6 mb-6">';
+    html += '<h3 class="text-lg font-semibold text-white mb-6 flex items-center gap-2">';
     html += '<i data-lucide="plus-circle" class="w-5 h-5 text-blue-400"></i>';
     html += 'New Trade Entry';
     html += '</h3>';
-    html += '<form onsubmit="addTrade(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">';
+    html += '<form onsubmit="addTrade(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">';
     
     html += '<div>';
     html += '<label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Currency Pair</label>';
-    html += '<input name="pair" placeholder="EURUSD" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all uppercase" required>';
+    html += '<input name="pair" placeholder="EURUSD" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all uppercase" required>';
     html += '</div>';
     
     html += '<div>';
     html += '<label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Direction</label>';
-    html += '<select name="direction" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">';
+    html += '<select name="direction" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">';
     html += '<option value="LONG">LONG</option>';
     html += '<option value="SHORT">SHORT</option>';
     html += '</select>';
@@ -1011,12 +675,12 @@ function renderJournal(content) {
     
     html += '<div>';
     html += '<label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Pips (+/-)</label>';
-    html += '<input name="pips" type="number" step="0.1" placeholder="+25 or -10" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" required>';
+    html += '<input name="pips" type="number" step="0.1" placeholder="+25 or -10" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" required>';
     html += '</div>';
     
     html += '<div>';
     html += '<label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Grade</label>';
-    html += '<select name="grade" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">';
+    html += '<select name="grade" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">';
     html += '<option value="A">A - Excellent</option>';
     html += '<option value="B">B - Good</option>';
     html += '<option value="C">C - Needs Work</option>';
@@ -1025,15 +689,15 @@ function renderJournal(content) {
     
     html += '<div>';
     html += '<label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Entry Price (Optional)</label>';
-    html += '<input name="entry_price" type="number" step="0.00001" placeholder="1.08500" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">';
+    html += '<input name="entry_price" type="number" step="0.00001" placeholder="1.08500" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">';
     html += '</div>';
     
     html += '<div>';
     html += '<label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Exit Price (Optional)</label>';
-    html += '<input name="exit_price" type="number" step="0.00001" placeholder="1.09000" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">';
+    html += '<input name="exit_price" type="number" step="0.00001" placeholder="1.09000" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">';
     html += '</div>';
     
-    html += '<div class="sm:col-span-2">';
+    html += '<div class="md:col-span-2">';
     html += '<button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 rounded-lg py-3 font-medium text-white shadow-lg transition-all flex items-center justify-center gap-2">';
     html += '<i data-lucide="save" class="w-4 h-4"></i> Save Trade Entry';
     html += '</button>';
@@ -1046,70 +710,24 @@ function renderJournal(content) {
     content.innerHTML = html;
 }
 
-// UPDATED: Add trade with Form data (application/x-www-form-urlencoded)
-async function addTrade(e) {
-    e.preventDefault();
-    const f = e.target;
-    const btn = f.querySelector('button[type="submit"]');
-    const originalText = btn.innerHTML;
-    
-    btn.innerHTML = '<div class="loading-spinner w-5 h-5 border-2"></div> Saving...';
-    btn.disabled = true;
-    
-    try {
-        const formData = new URLSearchParams();
-        formData.append('pair', f.pair.value.toUpperCase());
-        formData.append('direction', f.direction.value);
-        formData.append('pips', f.pips.value);
-        formData.append('grade', f.grade.value);
-        if (f.entry_price.value) formData.append('entry_price', f.entry_price.value);
-        if (f.exit_price.value) formData.append('exit_price', f.exit_price.value);
-        
-        const response = await apiCall('/trades', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: formData.toString()
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(getErrorMessage(data));
-        }
-        
-        btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Saved!';
-        btn.classList.remove('bg-emerald-500');
-        btn.classList.add('bg-emerald-600');
-        
-        setTimeout(function() {
-            showPage('dashboard');
-        }, 1000);
-        
-    } catch (err) {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        alert('Error: ' + err.message);
-    }
-}
-
 function renderChartAnalysis(content) {
-    let html = '<div class="p-4 pt-20 lg:pt-8 max-w-6xl mx-auto fade-in">';
-    html += '<div class="flex items-center justify-between mb-6 sm:mb-8">';
+    let html = '<div class="p-8 max-w-6xl mx-auto fade-in">';
+    html += '<div class="flex items-center justify-between mb-8">';
     html += '<div>';
-    html += '<h2 class="responsive-heading font-bold text-white mb-1">Chart Analysis</h2>';
-    html += '<p class="text-slate-400 text-sm">AI-powered trade setup evaluation</p>';
+    html += '<h2 class="text-3xl font-bold text-white mb-1">Chart Analysis</h2>';
+    html += '<p class="text-slate-400">AI-powered trade setup evaluation</p>';
     html += '</div>';
     html += '</div>';
     
-    html += '<div class="glass rounded-xl p-6 sm:p-8 mb-6 border-2 border-dashed border-slate-700 hover:border-blue-500/50 transition-all cursor-pointer" onclick="document.getElementById(\'chartUpload\').click()">';
+    html += '<div class="glass rounded-xl p-8 mb-6 border-2 border-dashed border-slate-700 hover:border-blue-500/50 transition-all cursor-pointer" onclick="document.getElementById(\'chartUpload\').click()">';
     html += '<input type="file" id="chartUpload" accept="image/*" class="hidden" onchange="analyzeChart(this)">';
     html += '<div class="text-center">';
-    html += '<div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-full bg-blue-500/20 flex items-center justify-center">';
-    html += '<i data-lucide="upload-cloud" class="w-8 h-8 sm:w-10 sm:h-10 text-blue-400"></i>';
+    html += '<div class="w-20 h-20 mx-auto mb-4 rounded-full bg-blue-500/20 flex items-center justify-center">';
+    html += '<i data-lucide="upload-cloud" class="w-10 h-10 text-blue-400"></i>';
     html += '</div>';
-    html += '<p class="text-base sm:text-lg font-medium text-white mb-2">Upload Chart Screenshot</p>';
-    html += '<p class="text-xs sm:text-sm text-slate-400 mb-4">Support: TradingView, MT4, MT5, or any chart image</p>';
-    html += '<button class="px-4 sm:px-6 py-2 sm:py-2.5 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium transition-colors text-sm sm:text-base">';
+    html += '<p class="text-lg font-medium text-white mb-2">Upload Chart Screenshot</p>';
+    html += '<p class="text-sm text-slate-400 mb-4">Support: TradingView, MT4, MT5, or any chart image</p>';
+    html += '<button class="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium transition-colors">';
     html += 'Select Image';
     html += '</button>';
     html += '</div>';
@@ -1166,106 +784,114 @@ async function analyzeChart(input) {
         
         let html = '<div class="analysis-grid">';
         
+        // Chart Display
         html += '<div class="glass rounded-xl overflow-hidden">';
-        html += '<div class="p-3 sm:p-4 border-b border-slate-800 flex items-center justify-between">';
-        html += '<h3 class="font-semibold text-white flex items-center gap-2 text-sm sm:text-base">';
+        html += '<div class="p-4 border-b border-slate-800 flex items-center justify-between">';
+        html += '<h3 class="font-semibold text-white flex items-center gap-2">';
         html += '<i data-lucide="image" class="w-4 h-4 text-blue-400"></i>';
         html += 'Chart Screenshot';
         html += '</h3>';
         html += '<span class="text-xs text-slate-500">' + new Date().toLocaleDateString() + '</span>';
         html += '</div>';
-        html += '<div class="p-3 sm:p-4">';
+        html += '<div class="p-4">';
         html += '<img src="data:image/png;base64,' + data.image_data + '" class="w-full rounded-lg border border-slate-700" alt="Chart Analysis">';
         html += '</div>';
         html += '</div>';
         
-        html += '<div class="space-y-3 sm:space-y-4">';
+        // Analysis Results
+        html += '<div class="space-y-4">';
         
-        html += '<div class="glass rounded-xl p-4 sm:p-6 border ' + qualityColor + '">';
-        html += '<div class="flex items-center justify-between mb-3 sm:mb-4">';
-        html += '<span class="text-xs sm:text-sm font-medium opacity-80">Setup Quality</span>';
-        html += '<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-current bg-opacity-20 flex items-center justify-center text-xl sm:text-2xl font-bold">';
+        // Setup Quality Card
+        html += '<div class="glass rounded-xl p-6 border ' + qualityColor + '">';
+        html += '<div class="flex items-center justify-between mb-4">';
+        html += '<span class="text-sm font-medium opacity-80">Setup Quality</span>';
+        html += '<div class="w-12 h-12 rounded-full bg-current bg-opacity-20 flex items-center justify-center text-2xl font-bold">';
         html += analysis.setup_quality;
         html += '</div>';
         html += '</div>';
-        html += '<div class="grid grid-cols-2 gap-3 sm:gap-4 text-sm">';
+        html += '<div class="grid grid-cols-2 gap-4 text-sm">';
         html += '<div>';
         html += '<span class="text-slate-400 block text-xs mb-1">PAIR</span>';
-        html += '<span class="font-bold text-white text-base sm:text-lg">' + analysis.pair + '</span>';
+        html += '<span class="font-bold text-white text-lg">' + analysis.pair + '</span>';
         html += '</div>';
         html += '<div>';
         html += '<span class="text-slate-400 block text-xs mb-1">DIRECTION</span>';
-        html += '<span class="font-bold ' + (analysis.direction === 'LONG' ? 'text-emerald-400' : 'text-red-400') + ' text-base sm:text-lg">' + analysis.direction + '</span>';
+        html += '<span class="font-bold ' + (analysis.direction === 'LONG' ? 'text-emerald-400' : 'text-red-400') + ' text-lg">' + analysis.direction + '</span>';
         html += '</div>';
         html += '</div>';
         html += '</div>';
         
-        html += '<div class="glass rounded-xl p-4 sm:p-6">';
-        html += '<h4 class="font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">';
+        // Trade Levels
+        html += '<div class="glass rounded-xl p-6">';
+        html += '<h4 class="font-semibold text-white mb-4 flex items-center gap-2">';
         html += '<i data-lucide="layers" class="w-4 h-4 text-violet-400"></i>';
         html += 'Trade Levels';
         html += '</h4>';
-        html += '<div class="space-y-2 sm:space-y-3">';
-        html += '<div class="flex items-center justify-between p-2 sm:p-3 bg-slate-800/50 rounded-lg">';
-        html += '<span class="text-slate-400 text-xs sm:text-sm">Entry Price</span>';
-        html += '<span class="font-mono font-bold text-white text-sm sm:text-base">' + analysis.entry_price + '</span>';
+        html += '<div class="space-y-3">';
+        html += '<div class="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">';
+        html += '<span class="text-slate-400 text-sm">Entry Price</span>';
+        html += '<span class="font-mono font-bold text-white">' + analysis.entry_price + '</span>';
         html += '</div>';
-        html += '<div class="flex items-center justify-between p-2 sm:p-3 bg-slate-800/50 rounded-lg">';
-        html += '<span class="text-slate-400 text-xs sm:text-sm">Stop Loss</span>';
-        html += '<span class="font-mono font-bold text-red-400 text-sm sm:text-base">' + analysis.stop_loss + '</span>';
+        html += '<div class="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">';
+        html += '<span class="text-slate-400 text-sm">Stop Loss</span>';
+        html += '<span class="font-mono font-bold text-red-400">' + analysis.stop_loss + '</span>';
         html += '</div>';
-        html += '<div class="flex items-center justify-between p-2 sm:p-3 bg-slate-800/50 rounded-lg">';
-        html += '<span class="text-slate-400 text-xs sm:text-sm">Take Profit</span>';
-        html += '<span class="font-mono font-bold text-emerald-400 text-sm sm:text-base">' + analysis.take_profit + '</span>';
+        html += '<div class="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">';
+        html += '<span class="text-slate-400 text-sm">Take Profit</span>';
+        html += '<span class="font-mono font-bold text-emerald-400">' + analysis.take_profit + '</span>';
         html += '</div>';
-        html += '<div class="flex items-center justify-between p-2 sm:p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">';
-        html += '<span class="text-blue-400 text-xs sm:text-sm font-medium">Risk:Reward</span>';
-        html += '<span class="font-mono font-bold text-blue-400 text-base sm:text-lg">' + analysis.risk_reward + '</span>';
+        html += '<div class="flex items-center justify-between p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">';
+        html += '<span class="text-blue-400 text-sm font-medium">Risk:Reward</span>';
+        html += '<span class="font-mono font-bold text-blue-400 text-lg">' + analysis.risk_reward + '</span>';
         html += '</div>';
         html += '</div>';
         html += '</div>';
         
-        html += '<div class="glass rounded-xl p-4 sm:p-6">';
-        html += '<h4 class="font-semibold text-white mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">';
+        // Analysis Text
+        html += '<div class="glass rounded-xl p-6">';
+        html += '<h4 class="font-semibold text-white mb-3 flex items-center gap-2">';
         html += '<i data-lucide="file-text" class="w-4 h-4 text-orange-400"></i>';
         html += 'Analysis';
         html += '</h4>';
-        html += '<p class="text-slate-300 text-xs sm:text-sm leading-relaxed">' + analysis.analysis + '</p>';
+        html += '<p class="text-slate-300 text-sm leading-relaxed">' + analysis.analysis + '</p>';
         html += '</div>';
         
-        html += '<div class="glass rounded-xl p-4 sm:p-6 border border-yellow-500/20 bg-yellow-500/5">';
-        html += '<h4 class="font-semibold text-white mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">';
-        html += '<i data-lucide="lightbulb" class="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400"></i>';
+        // Recommendations
+        html += '<div class="glass rounded-xl p-6 border border-yellow-500/20 bg-yellow-500/5">';
+        html += '<h4 class="font-semibold text-white mb-3 flex items-center gap-2">';
+        html += '<i data-lucide="lightbulb" class="w-4 h-4 text-yellow-400"></i>';
         html += 'Recommendations';
         html += '</h4>';
-        html += '<p class="text-slate-300 text-xs sm:text-sm leading-relaxed">' + analysis.recommendations + '</p>';
+        html += '<p class="text-slate-300 text-sm leading-relaxed">' + analysis.recommendations + '</p>';
         html += '</div>';
         
+        // Key Levels
         if (analysis.key_levels && analysis.key_levels.length > 0) {
-            html += '<div class="glass rounded-xl p-4 sm:p-6">';
-            html += '<h4 class="font-semibold text-white mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">';
+            html += '<div class="glass rounded-xl p-6">';
+            html += '<h4 class="font-semibold text-white mb-3 flex items-center gap-2">';
             html += '<i data-lucide="target" class="w-4 h-4 text-pink-400"></i>';
             html += 'Key Levels';
             html += '</h4>';
             html += '<div class="flex flex-wrap gap-2">';
             analysis.key_levels.forEach(function(level) {
-                html += '<span class="px-2 sm:px-3 py-1 bg-slate-800 rounded-full text-xs sm:text-sm font-mono text-slate-300 border border-slate-700">' + level + '</span>';
+                html += '<span class="px-3 py-1 bg-slate-800 rounded-full text-sm font-mono text-slate-300 border border-slate-700">' + level + '</span>';
             });
             html += '</div>';
             html += '</div>';
         }
         
-        html += '<div class="flex gap-2 sm:gap-3">';
-        html += '<button onclick="saveAnalysisToJournal(\'' + analysis.pair + '\', \'' + analysis.direction + '\', \'' + analysis.setup_quality + '\')" class="flex-1 bg-blue-500 hover:bg-blue-600 rounded-lg py-2.5 sm:py-3 font-medium text-white transition-colors flex items-center justify-center gap-2 text-sm sm:text-base">';
+        // Action Buttons
+        html += '<div class="flex gap-3">';
+        html += '<button onclick="saveAnalysisToJournal(\'' + analysis.pair + '\', \'' + analysis.direction + '\', \'' + analysis.setup_quality + '\')" class="flex-1 bg-blue-500 hover:bg-blue-600 rounded-lg py-3 font-medium text-white transition-colors flex items-center justify-center gap-2">';
         html += '<i data-lucide="save" class="w-4 h-4"></i> Save to Journal';
         html += '</button>';
-        html += '<button onclick="renderChartAnalysis(document.getElementById(\'content\'))" class="px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition-colors">';
-        html += '<i data-lucide="refresh-cw" class="w-4 h-4 sm:w-5 sm:h-5"></i>';
+        html += '<button onclick="renderChartAnalysis(document.getElementById(\'content\'))" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition-colors">';
+        html += '<i data-lucide="refresh-cw" class="w-4 h-4"></i>';
         html += '</button>';
         html += '</div>';
         
-        html += '</div>';
-        html += '</div>';
+        html += '</div>'; // End analysis results
+        html += '</div>'; // End analysis grid
         
         resultDiv.innerHTML = html;
         
@@ -1283,25 +909,71 @@ function saveAnalysisToJournal(pair, direction, grade) {
     alert('Analysis for ' + pair + ' ' + direction + ' (Grade ' + grade + ') ready to save to journal!');
 }
 
+async function addTrade(e) {
+    e.preventDefault();
+    const f = e.target;
+    const btn = f.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<div class="loading-spinner w-5 h-5 border-2"></div> Saving...';
+    btn.disabled = true;
+    
+    try {
+        const formData = new URLSearchParams();
+        formData.append('pair', f.pair.value.toUpperCase());
+        formData.append('direction', f.direction.value);
+        formData.append('pips', f.pips.value);
+        formData.append('grade', f.grade.value);
+        if (f.entry_price.value) formData.append('entry_price', f.entry_price.value);
+        if (f.exit_price.value) formData.append('exit_price', f.exit_price.value);
+        
+        const response = await apiCall('/trades', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData.toString()
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(getErrorMessage(data));
+        }
+        
+        btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Saved!';
+        btn.classList.remove('bg-emerald-500');
+        btn.classList.add('bg-emerald-600');
+        
+        setTimeout(function() {
+            showPage('dashboard');
+        }, 1000);
+        
+    } catch (err) {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        alert('Error: ' + err.message);
+    }
+}
+
 function renderTradeAnalysis(content) {
-    let html = '<div class="p-4 pt-20 lg:pt-8 max-w-6xl mx-auto fade-in">';
-    html += '<div class="flex items-center justify-between mb-6 sm:mb-8">';
+    let html = '<div class="p-8 max-w-6xl mx-auto fade-in">';
+    html += '<div class="flex items-center justify-between mb-8">';
     html += '<div>';
-    html += '<h2 class="responsive-heading font-bold text-white mb-1">Advanced Trade Analysis</h2>';
-    html += '<p class="text-slate-400 text-sm">Upload your trading history for comprehensive AI analysis</p>';
+    html += '<h2 class="text-3xl font-bold text-white mb-1">Advanced Trade Analysis</h2>';
+    html += '<p class="text-slate-400">Upload your trading history for comprehensive AI analysis</p>';
     html += '</div>';
     html += '</div>';
     
-    html += '<div class="glass rounded-xl p-6 sm:p-8 mb-6 border-2 border-dashed border-slate-700 hover:border-blue-500/50 transition-all">';
+    // Upload Area
+    html += '<div class="glass rounded-xl p-8 mb-6 border-2 border-dashed border-slate-700 hover:border-blue-500/50 transition-all">';
     html += '<input type="file" id="tradeFileUpload" class="hidden" ';
     html += 'accept=".pdf,.doc,.docx,.csv,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.html,.htm" ';
     html += 'onchange="analyzeTradeFile(this)">';
     html += '<div class="text-center" onclick="document.getElementById(\'tradeFileUpload\').click()">';
-    html += '<div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-full bg-violet-500/20 flex items-center justify-center">';
-    html += '<i data-lucide="file-up" class="w-8 h-8 sm:w-10 sm:h-10 text-violet-400"></i>';
+    html += '<div class="w-20 h-20 mx-auto mb-4 rounded-full bg-violet-500/20 flex items-center justify-center">';
+    html += '<i data-lucide="file-up" class="w-10 h-10 text-violet-400"></i>';
     html += '</div>';
-    html += '<p class="text-base sm:text-lg font-medium text-white mb-2">Upload Trading Statement</p>';
-    html += '<p class="text-xs sm:text-sm text-slate-400 mb-4">';
+    html += '<p class="text-lg font-medium text-white mb-2">Upload Trading Statement</p>';
+    html += '<p class="text-sm text-slate-400 mb-4">';
     html += 'Supports: PDF, Word, Excel, CSV, MT4/MT5 HTML, Screenshots';
     html += '</p>';
     html += '<div class="flex flex-wrap justify-center gap-2 text-xs text-slate-500">';
@@ -1313,16 +985,19 @@ function renderTradeAnalysis(content) {
     html += '</div>';
     html += '</div>';
     
+    // Loading State
     html += '<div id="tradeAnalysisLoading" class="hidden py-12 text-center">';
     html += '<div class="loading-spinner mx-auto mb-4"></div>';
     html += '<p class="text-slate-400">AI is analyzing your trading data...</p>';
     html += '<p class="text-xs text-slate-500 mt-2">This may take 30-60 seconds</p>';
     html += '</div>';
     
+    // Results Container
     html += '<div id="tradeAnalysisResult" class="hidden"></div>';
     
-    html += '<div class="mt-6 sm:mt-8">';
-    html += '<h3 class="text-base sm:text-lg font-semibold text-white mb-4">Previous Analyses</h3>';
+    // History
+    html += '<div class="mt-8">';
+    html += '<h3 class="text-lg font-semibold text-white mb-4">Previous Analyses</h3>';
     html += '<div id="tradeAnalysisHistory" class="space-y-3">';
     html += '<p class="text-slate-500 text-center py-8">Loading history...</p>';
     html += '</div>';
@@ -1367,30 +1042,32 @@ async function analyzeTradeFile(input) {
         const scoreColor = analysis.trader_score >= 80 ? 'text-emerald-400' : (analysis.trader_score >= 60 ? 'text-blue-400' : 'text-orange-400');
         const borderColor = analysis.trader_score >= 80 ? 'border-emerald-500/30' : (analysis.trader_score >= 60 ? 'border-blue-500/30' : 'border-orange-500/30');
         
-        let html = '<div class="space-y-4 sm:space-y-6">';
+        let html = '<div class="space-y-6">';
         
-        html += '<div class="glass rounded-xl p-6 sm:p-8 text-center border-2 ' + borderColor + '">';
-        html += '<div class="text-xs sm:text-sm text-slate-400 mb-2">Your Trader Score</div>';
-        html += '<div class="text-4xl sm:text-6xl font-bold mb-2 ' + scoreColor + '">' + analysis.trader_score + '<span class="text-lg sm:text-2xl text-slate-500">/100</span></div>';
-        html += '<div class="inline-flex flex-col sm:flex-row items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-slate-800">';
+        // Score Card
+        html += '<div class="glass rounded-xl p-8 text-center border-2 ' + borderColor + '">';
+        html += '<div class="text-sm text-slate-400 mb-2">Your Trader Score</div>';
+        html += '<div class="text-6xl font-bold mb-2 ' + scoreColor + '">' + analysis.trader_score + '<span class="text-2xl text-slate-500">/100</span></div>';
+        html += '<div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800">';
         html += '<i data-lucide="user-check" class="w-4 h-4 text-violet-400"></i>';
-        html += '<span class="font-medium text-white text-sm sm:text-base">' + analysis.trader_type.replace(/_/g, ' ').toUpperCase() + '</span>';
+        html += '<span class="font-medium text-white">' + analysis.trader_type.replace(/_/g, ' ').toUpperCase() + '</span>';
         html += '<span class="text-xs text-slate-500">(' + (analysis.trader_type_confidence || 75) + '% confidence)</span>';
         html += '</div>';
         html += '</div>';
         
-        html += '<div class="glass rounded-xl p-4 sm:p-6">';
-        html += '<h4 class="font-semibold text-white mb-3 sm:mb-4 text-sm sm:text-base">Performance Breakdown</h4>';
-        html += '<div class="space-y-2 sm:space-y-3">';
+        // Score Breakdown
+        html += '<div class="glass rounded-xl p-6">';
+        html += '<h4 class="font-semibold text-white mb-4">Performance Breakdown</h4>';
+        html += '<div class="space-y-3">';
         
         if (analysis.score_breakdown) {
             Object.entries(analysis.score_breakdown).forEach(function([key, score]) {
-                html += '<div class="flex items-center gap-2 sm:gap-4">';
-                html += '<span class="text-xs sm:text-sm text-slate-400 w-24 sm:w-32 capitalize">' + key.replace(/_/g, ' ') + '</span>';
+                html += '<div class="flex items-center gap-4">';
+                html += '<span class="text-sm text-slate-400 w-32 capitalize">' + key.replace(/_/g, ' ') + '</span>';
                 html += '<div class="flex-1 bg-slate-800 rounded-full h-2">';
                 html += '<div class="bg-gradient-to-r from-blue-500 to-violet-500 h-2 rounded-full" style="width: ' + score + '%"></div>';
                 html += '</div>';
-                html += '<span class="text-xs sm:text-sm font-bold text-white w-8 sm:w-12 text-right">' + score + '</span>';
+                html += '<span class="text-sm font-bold text-white w-12 text-right">' + score + '</span>';
                 html += '</div>';
             });
         }
@@ -1398,20 +1075,22 @@ async function analyzeTradeFile(input) {
         html += '</div>';
         html += '</div>';
         
-        html += '<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">';
+        // Mistakes & Patterns Grid
+        html += '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">';
         
-        html += '<div class="glass rounded-xl p-4 sm:p-6">';
-        html += '<h4 class="font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">';
-        html += '<i data-lucide="alert-triangle" class="w-4 h-4 sm:w-5 sm:h-5 text-red-400"></i>';
+        // Mistakes
+        html += '<div class="glass rounded-xl p-6">';
+        html += '<h4 class="font-semibold text-white mb-4 flex items-center gap-2">';
+        html += '<i data-lucide="alert-triangle" class="w-5 h-5 text-red-400"></i>';
         html += 'Mistakes Detected';
         html += '</h4>';
-        html += '<div class="space-y-2 sm:space-y-3">';
+        html += '<div class="space-y-3">';
         
         if (analysis.mistakes_detected && analysis.mistakes_detected.length > 0) {
             analysis.mistakes_detected.forEach(function(m) {
-                html += '<div class="p-2 sm:p-3 bg-red-500/10 border border-red-500/20 rounded-lg">';
+                html += '<div class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">';
                 html += '<div class="flex items-center justify-between mb-1">';
-                html += '<span class="font-medium text-red-400 text-xs sm:text-sm">' + m.mistake + '</span>';
+                html += '<span class="font-medium text-red-400 text-sm">' + m.mistake + '</span>';
                 html += '<span class="text-xs px-2 py-1 bg-red-500/20 rounded text-red-400">' + m.frequency + '</span>';
                 html += '</div>';
                 html += '<p class="text-xs text-slate-400">' + m.impact + '</p>';
@@ -1419,46 +1098,48 @@ async function analyzeTradeFile(input) {
                 html += '</div>';
             });
         } else {
-            html += '<p class="text-slate-500 text-xs sm:text-sm">No major mistakes detected - great job!</p>';
+            html += '<p class="text-slate-500 text-sm">No major mistakes detected - great job!</p>';
         }
         
         html += '</div>';
         html += '</div>';
         
-        html += '<div class="glass rounded-xl p-4 sm:p-6">';
-        html += '<h4 class="font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">';
-        html += '<i data-lucide="activity" class="w-4 h-4 sm:w-5 sm:h-5 text-blue-400"></i>';
+        // Patterns
+        html += '<div class="glass rounded-xl p-6">';
+        html += '<h4 class="font-semibold text-white mb-4 flex items-center gap-2">';
+        html += '<i data-lucide="activity" class="w-5 h-5 text-blue-400"></i>';
         html += 'Patterns Detected';
         html += '</h4>';
-        html += '<div class="space-y-2 sm:space-y-3">';
+        html += '<div class="space-y-3">';
         
         if (analysis.patterns_detected && analysis.patterns_detected.length > 0) {
             analysis.patterns_detected.forEach(function(p) {
-                html += '<div class="p-2 sm:p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">';
-                html += '<div class="font-medium text-blue-400 text-xs sm:text-sm mb-1">' + p.pattern + '</div>';
+                html += '<div class="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">';
+                html += '<div class="font-medium text-blue-400 text-sm mb-1">' + p.pattern + '</div>';
                 html += '<p class="text-xs text-slate-400">Occurs: ' + p.occurrence + '</p>';
                 html += '<p class="text-xs text-slate-500 mt-1">' + p.consequence + '</p>';
                 html += '</div>';
             });
         } else {
-            html += '<p class="text-slate-500 text-xs sm:text-sm">No significant patterns detected</p>';
+            html += '<p class="text-slate-500 text-sm">No significant patterns detected</p>';
         }
         
         html += '</div>';
         html += '</div>';
         
-        html += '</div>';
+        html += '</div>'; // End grid
         
-        html += '<div class="glass rounded-xl p-4 sm:p-6 border border-yellow-500/20">';
-        html += '<h4 class="font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">';
-        html += '<i data-lucide="lightbulb" class="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400"></i>';
+        // Recommendations
+        html += '<div class="glass rounded-xl p-6 border border-yellow-500/20">';
+        html += '<h4 class="font-semibold text-white mb-4 flex items-center gap-2">';
+        html += '<i data-lucide="lightbulb" class="w-5 h-5 text-yellow-400"></i>';
         html += 'Actionable Recommendations';
         html += '</h4>';
         html += '<ul class="space-y-2">';
         
         if (analysis.recommendations) {
             analysis.recommendations.forEach(function(r) {
-                html += '<li class="flex items-start gap-3 text-xs sm:text-sm text-slate-300">';
+                html += '<li class="flex items-start gap-3 text-sm text-slate-300">';
                 html += '<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0"></i>';
                 html += '<span>' + r + '</span>';
                 html += '</li>';
@@ -1468,27 +1149,29 @@ async function analyzeTradeFile(input) {
         html += '</ul>';
         html += '</div>';
         
-        html += '<div class="glass rounded-xl p-4 sm:p-6">';
-        html += '<h4 class="font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">';
-        html += '<i data-lucide="book-open" class="w-4 h-4 sm:w-5 sm:h-5 text-violet-400"></i>';
+        // Learning Resources
+        html += '<div class="glass rounded-xl p-6">';
+        html += '<h4 class="font-semibold text-white mb-4 flex items-center gap-2">';
+        html += '<i data-lucide="book-open" class="w-5 h-5 text-violet-400"></i>';
         html += 'Recommended Learning';
         html += '</h4>';
-        html += '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">';
+        html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">';
         
         if (analysis.learning_resources && analysis.learning_resources.length > 0) {
             analysis.learning_resources.forEach(function(r) {
                 html += '<div class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg">';
                 html += '<i data-lucide="external-link" class="w-4 h-4 text-slate-500"></i>';
-                html += '<span class="text-xs sm:text-sm text-slate-300">' + r + '</span>';
+                html += '<span class="text-sm text-slate-300">' + r + '</span>';
                 html += '</div>';
             });
         } else {
-            html += '<p class="text-slate-500 text-xs sm:text-sm col-span-2">Continue practicing your current strategy</p>';
+            html += '<p class="text-slate-500 text-sm col-span-2">Continue practicing your current strategy</p>';
         }
         
         html += '</div>';
         html += '</div>';
         
+        // Projected Improvement
         html += '<div class="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">';
         html += '<p class="text-sm text-emerald-400">';
         html += '<i data-lucide="trending-up" class="w-4 h-4 inline mr-2"></i>';
@@ -1496,7 +1179,7 @@ async function analyzeTradeFile(input) {
         html += '</p>';
         html += '</div>';
         
-        html += '</div>';
+        html += '</div>'; // End container
         
         resultDiv.innerHTML = html;
         lucide.createIcons();
@@ -1523,13 +1206,13 @@ async function loadTradeAnalysisHistory() {
         let html = '';
         data.forEach(function(item) {
             const date = new Date(item.created_at);
-            html += '<div class="flex items-center justify-between p-3 sm:p-4 bg-slate-800/50 rounded-lg border border-slate-700/50">';
-            html += '<div class="flex items-center gap-3 sm:gap-4">';
+            html += '<div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-700/50">';
+            html += '<div class="flex items-center gap-4">';
             html += '<div class="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center">';
             html += '<i data-lucide="file-text" class="w-5 h-5 text-violet-400"></i>';
             html += '</div>';
             html += '<div>';
-            html += '<div class="font-medium text-white text-sm sm:text-base">' + item.filename + '</div>';
+            html += '<div class="font-medium text-white">' + item.filename + '</div>';
             html += '<div class="text-xs text-slate-400">' + item.trader_type + ' • Score: ' + item.trader_score + '</div>';
             html += '</div>';
             html += '</div>';
@@ -1548,32 +1231,32 @@ async function loadTradeAnalysisHistory() {
 }
 
 function renderDiscipline(content) {
-    let html = '<div class="p-4 pt-20 lg:pt-8 max-w-4xl mx-auto fade-in">';
-    html += '<div class="flex items-center justify-between mb-6 sm:mb-8">';
+    let html = '<div class="p-8 max-w-4xl mx-auto fade-in">';
+    html += '<div class="flex items-center justify-between mb-8">';
     html += '<div>';
-    html += '<h2 class="responsive-heading font-bold text-white mb-1">Discipline Score</h2>';
-    html += '<p class="text-slate-400 text-sm">Track your trading discipline metrics</p>';
+    html += '<h2 class="text-3xl font-bold text-white mb-1">Discipline Score</h2>';
+    html += '<p class="text-slate-400">Track your trading discipline metrics</p>';
     html += '</div>';
     html += '</div>';
     
-    html += '<div class="glass rounded-xl p-6 sm:p-12 text-center">';
-    html += '<div class="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4 sm:mb-6 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-2xl shadow-blue-500/20">';
-    html += '<span class="text-3xl sm:text-5xl font-bold text-white">87</span>';
+    html += '<div class="glass rounded-xl p-12 text-center">';
+    html += '<div class="w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-2xl shadow-blue-500/20">';
+    html += '<span class="text-5xl font-bold text-white">87</span>';
     html += '</div>';
-    html += '<h3 class="text-xl sm:text-2xl font-bold text-white mb-2">Disciplined Trader</h3>';
-    html += '<p class="text-slate-400 text-sm max-w-md mx-auto">You are showing strong discipline in your trading approach. Keep following your process and risk management rules.</p>';
+    html += '<h3 class="text-2xl font-bold text-white mb-2">Disciplined Trader</h3>';
+    html += '<p class="text-slate-400 max-w-md mx-auto">You are showing strong discipline in your trading approach. Keep following your process and risk management rules.</p>';
     
-    html += '<div class="grid grid-cols-3 gap-3 sm:gap-6 mt-8 sm:mt-12 max-w-2xl mx-auto">';
-    html += '<div class="p-3 sm:p-4 bg-slate-800/50 rounded-lg">';
-    html += '<div class="text-xl sm:text-2xl font-bold text-emerald-400 mb-1">95%</div>';
+    html += '<div class="grid grid-cols-3 gap-6 mt-12 max-w-2xl mx-auto">';
+    html += '<div class="p-4 bg-slate-800/50 rounded-lg">';
+    html += '<div class="text-2xl font-bold text-emerald-400 mb-1">95%</div>';
     html += '<div class="text-xs text-slate-500 uppercase tracking-wider">Plan Adherence</div>';
     html += '</div>';
-    html += '<div class="p-3 sm:p-4 bg-slate-800/50 rounded-lg">';
-    html += '<div class="text-xl sm:text-2xl font-bold text-blue-400 mb-1">88%</div>';
+    html += '<div class="p-4 bg-slate-800/50 rounded-lg">';
+    html += '<div class="text-2xl font-bold text-blue-400 mb-1">88%</div>';
     html += '<div class="text-xs text-slate-500 uppercase tracking-wider">Risk Management</div>';
     html += '</div>';
-    html += '<div class="p-3 sm:p-4 bg-slate-800/50 rounded-lg">';
-    html += '<div class="text-xl sm:text-2xl font-bold text-orange-400 mb-1">78%</div>';
+    html += '<div class="p-4 bg-slate-800/50 rounded-lg">';
+    html += '<div class="text-2xl font-bold text-orange-400 mb-1">78%</div>';
     html += '<div class="text-xs text-slate-500 uppercase tracking-wider">Emotional Control</div>';
     html += '</div>';
     html += '</div>';
@@ -1585,36 +1268,36 @@ function renderDiscipline(content) {
 }
 
 function renderMentor(content) {
-    let html = '<div class="p-4 pt-20 lg:pt-8 max-w-4xl mx-auto h-[calc(100vh-5rem)] lg:h-[calc(100vh-2rem)] flex flex-col fade-in">';
-    html += '<div class="flex items-center justify-between mb-4 sm:mb-6">';
+    let html = '<div class="p-8 max-w-4xl mx-auto h-[calc(100vh-2rem)] flex flex-col fade-in">';
+    html += '<div class="flex items-center justify-between mb-6">';
     html += '<div>';
-    html += '<h2 class="responsive-heading font-bold text-white mb-1">AI Mentor</h2>';
-    html += '<p class="text-slate-400 text-sm">Your personal trading psychology coach</p>';
+    html += '<h2 class="text-3xl font-bold text-white mb-1">AI Mentor</h2>';
+    html += '<p class="text-slate-400">Your personal trading psychology coach</p>';
     html += '</div>';
     html += '</div>';
     
     html += '<div class="glass rounded-xl flex-1 flex flex-col overflow-hidden">';
-    html += '<div id="chatHistory" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">';
+    html += '<div id="chatHistory" class="flex-1 overflow-y-auto p-6 space-y-4">';
     html += '<div class="flex gap-3">';
-    html += '<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">';
-    html += '<i data-lucide="bot" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>';
+    html += '<div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">';
+    html += '<i data-lucide="bot" class="w-5 h-5 text-white"></i>';
     html += '</div>';
-    html += '<div class="bg-slate-800 rounded-2xl rounded-tl-sm px-4 sm:px-5 py-3 max-w-[85%] sm:max-w-[80%]">';
-    html += '<p class="text-slate-200 text-xs sm:text-sm leading-relaxed">Hello! I am your AI trading mentor. I am here to help you with trading psychology, risk management, and maintaining discipline. What would you like to discuss today?</p>';
+    html += '<div class="bg-slate-800 rounded-2xl rounded-tl-sm px-5 py-3 max-w-[80%]">';
+    html += '<p class="text-slate-200 text-sm leading-relaxed">Hello! I am your AI trading mentor. I am here to help you with trading psychology, risk management, and maintaining discipline. What would you like to discuss today?</p>';
     html += '</div>';
     html += '</div>';
     html += '</div>';
     
-    html += '<div class="p-3 sm:p-4 border-t border-slate-800 bg-slate-900/50">';
-    html += '<div class="flex gap-2 sm:gap-3">';
+    html += '<div class="p-4 border-t border-slate-800 bg-slate-900/50">';
+    html += '<div class="flex gap-3">';
     html += '<input type="text" id="mentorInput" placeholder="Ask about trading psychology, risk management, or your trading plan..." ';
-    html += 'class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 sm:px-5 py-2.5 sm:py-3 text-white text-sm placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" ';
+    html += 'class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-5 py-3 text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" ';
     html += 'onkeypress="if(event.key===\'Enter\') askMentor()">';
-    html += '<button onclick="askMentor()" class="px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-500 hover:bg-blue-600 rounded-xl text-white font-medium transition-colors flex items-center gap-2">';
+    html += '<button onclick="askMentor()" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-xl text-white font-medium transition-colors flex items-center gap-2">';
     html += '<i data-lucide="send" class="w-4 h-4"></i>';
     html += '</button>';
     html += '</div>';
-    html += '<div class="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide">';
+    html += '<div class="flex gap-2 mt-3 overflow-x-auto pb-1">';
     html += '<button onclick="quickAsk(\'How do I control FOMO?\')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">How do I control FOMO?</button>';
     html += '<button onclick="quickAsk(\'What is proper risk management?\')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">Risk management tips</button>';
     html += '<button onclick="quickAsk(\'How to review losing trades?\')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 hover:text-white transition-colors whitespace-nowrap">Review losing trades</button>';
@@ -1633,7 +1316,6 @@ function quickAsk(message) {
     askMentor();
 }
 
-// UPDATED: Ask mentor with Form data (application/x-www-form-urlencoded)
 async function askMentor() {
     const input = document.getElementById('mentorInput');
     const message = input.value.trim();
@@ -1641,12 +1323,13 @@ async function askMentor() {
     
     const chat = document.getElementById('chatHistory');
     
+    // Add user message
     let userHtml = '<div class="flex gap-3 flex-row-reverse">';
-    userHtml += '<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">';
-    userHtml += '<i data-lucide="user" class="w-4 h-4 sm:w-5 sm:h-5 text-slate-300"></i>';
+    userHtml += '<div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">';
+    userHtml += '<i data-lucide="user" class="w-5 h-5 text-slate-300"></i>';
     userHtml += '</div>';
-    userHtml += '<div class="bg-blue-600 rounded-2xl rounded-tr-sm px-4 sm:px-5 py-3 max-w-[85%] sm:max-w-[80%]">';
-    userHtml += '<p class="text-white text-xs sm:text-sm leading-relaxed">' + message + '</p>';
+    userHtml += '<div class="bg-blue-600 rounded-2xl rounded-tr-sm px-5 py-3 max-w-[80%]">';
+    userHtml += '<p class="text-white text-sm leading-relaxed">' + message + '</p>';
     userHtml += '</div>';
     userHtml += '</div>';
     
@@ -1656,12 +1339,13 @@ async function askMentor() {
     chat.scrollTop = chat.scrollHeight;
     lucide.createIcons();
     
+    // Show typing indicator
     const typingId = 'typing-' + Date.now();
     let typingHtml = '<div id="' + typingId + '" class="flex gap-3">';
-    typingHtml += '<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">';
-    typingHtml += '<i data-lucide="bot" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>';
+    typingHtml += '<div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">';
+    typingHtml += '<i data-lucide="bot" class="w-5 h-5 text-white"></i>';
     typingHtml += '</div>';
-    typingHtml += '<div class="bg-slate-800 rounded-2xl rounded-tl-sm px-4 sm:px-5 py-3">';
+    typingHtml += '<div class="bg-slate-800 rounded-2xl rounded-tl-sm px-5 py-3">';
     typingHtml += '<div class="flex gap-1">';
     typingHtml += '<div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce"></div>';
     typingHtml += '<div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>';
@@ -1674,29 +1358,26 @@ async function askMentor() {
     chat.scrollTop = chat.scrollHeight;
     
     try {
-        const formData = new URLSearchParams();
-        formData.append('message', message);
-        formData.append('context_type', 'general');
-        
-        const response = await apiCall('/mentorship/personalized', {
+        const response = await apiCall('/mentorship/personalized?message=' + encodeURIComponent(message), {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: formData.toString()
+            body: 'message=' + encodeURIComponent(message) + '&context_type=general'
         });
         
         const data = await response.json();
         
+        // Remove typing indicator
         const typingEl = document.getElementById(typingId);
         if (typingEl) typingEl.remove();
         
         let responseHtml = '<div class="flex gap-3">';
-        responseHtml += '<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">';
-        responseHtml += '<i data-lucide="bot" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>';
+        responseHtml += '<div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">';
+        responseHtml += '<i data-lucide="bot" class="w-5 h-5 text-white"></i>';
         responseHtml += '</div>';
-        responseHtml += '<div class="bg-slate-800 rounded-2xl rounded-tl-sm px-4 sm:px-5 py-3 max-w-[85%] sm:max-w-[80%]">';
+        responseHtml += '<div class="bg-slate-800 rounded-2xl rounded-tl-sm px-5 py-3 max-w-[80%]">';
         
         if (data.personalized_response) {
-            responseHtml += '<p class="text-slate-200 text-xs sm:text-sm leading-relaxed">' + data.personalized_response + '</p>';
+            responseHtml += '<p class="text-slate-200 text-sm leading-relaxed">' + data.personalized_response + '</p>';
             if (data.identified_pattern) {
                 responseHtml += '<div class="mt-2 pt-2 border-t border-slate-700">';
                 responseHtml += '<p class="text-xs text-violet-400">Pattern: ' + data.identified_pattern + '</p>';
@@ -1713,7 +1394,7 @@ async function askMentor() {
                 responseHtml += '</ul>';
             }
         } else {
-            responseHtml += '<p class="text-slate-200 text-xs sm:text-sm leading-relaxed">' + (data.response || data.fallback_response || 'I am here to help with your trading journey.') + '</p>';
+            responseHtml += '<p class="text-slate-200 text-sm leading-relaxed">' + (data.response || data.fallback_response || 'I am here to help with your trading journey.') + '</p>';
         }
         
         responseHtml += '</div>';
@@ -1726,11 +1407,11 @@ async function askMentor() {
         if (typingEl) typingEl.remove();
         
         let errorHtml = '<div class="flex gap-3">';
-        errorHtml += '<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">';
-        errorHtml += '<i data-lucide="alert-circle" class="w-4 h-4 sm:w-5 sm:h-5 text-red-400"></i>';
+        errorHtml += '<div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">';
+        errorHtml += '<i data-lucide="alert-circle" class="w-5 h-5 text-red-400"></i>';
         errorHtml += '</div>';
-        errorHtml += '<div class="bg-red-500/10 border border-red-500/20 rounded-2xl rounded-tl-sm px-4 sm:px-5 py-3 max-w-[85%] sm:max-w-[80%]">';
-        errorHtml += '<p class="text-red-400 text-xs sm:text-sm">Sorry, I am having trouble connecting. Please try again.</p>';
+        errorHtml += '<div class="bg-red-500/10 border border-red-500/20 rounded-2xl rounded-tl-sm px-5 py-3 max-w-[80%]">';
+        errorHtml += '<p class="text-red-400 text-sm">Sorry, I am having trouble connecting. Please try again.</p>';
         errorHtml += '</div>';
         errorHtml += '</div>';
         
@@ -1742,15 +1423,15 @@ async function askMentor() {
 }
 
 function renderBlog(content) {
-    let html = '<div class="p-4 pt-20 lg:pt-8 max-w-6xl mx-auto fade-in">';
-    html += '<div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-4">';
+    let html = '<div class="p-8 max-w-6xl mx-auto fade-in">';
+    html += '<div class="flex items-center justify-between mb-8">';
     html += '<div>';
-    html += '<h2 class="responsive-heading font-bold text-white mb-1">Trading Blog</h2>';
-    html += '<p class="text-slate-400 text-sm">Insights, strategies, and market analysis</p>';
+    html += '<h2 class="text-3xl font-bold text-white mb-1">Trading Blog</h2>';
+    html += '<p class="text-slate-400">Insights, strategies, and market analysis</p>';
     html += '</div>';
     html += '<div class="flex gap-2">';
     html += '<input type="text" id="blogSearch" placeholder="Search articles..." ';
-    html += 'class="flex-1 sm:flex-none bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white text-sm" ';
+    html += 'class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white text-sm" ';
     html += 'onkeypress="if(event.key===\'Enter\') searchBlog()">';
     html += '<button onclick="searchBlog()" class="px-4 py-2 bg-blue-500 rounded-lg text-white text-sm">';
     html += '<i data-lucide="search" class="w-4 h-4"></i>';
@@ -1758,7 +1439,8 @@ function renderBlog(content) {
     html += '</div>';
     html += '</div>';
     
-    html += '<div class="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide" id="blogCategories">';
+    // Categories
+    html += '<div class="flex gap-2 mb-6 overflow-x-auto pb-2" id="blogCategories">';
     html += '<button onclick="filterBlog(\'all\')" class="px-4 py-2 bg-blue-500 rounded-full text-white text-sm whitespace-nowrap">All</button>';
     html += '<button onclick="filterBlog(\'strategy\')" class="px-4 py-2 bg-slate-800 rounded-full text-slate-300 text-sm whitespace-nowrap">Strategy</button>';
     html += '<button onclick="filterBlog(\'psychology\')" class="px-4 py-2 bg-slate-800 rounded-full text-slate-300 text-sm whitespace-nowrap">Psychology</button>';
@@ -1766,8 +1448,9 @@ function renderBlog(content) {
     html += '<button onclick="filterBlog(\'technical-analysis\')" class="px-4 py-2 bg-slate-800 rounded-full text-slate-300 text-sm whitespace-nowrap">Technical Analysis</button>';
     html += '</div>';
     
-    html += '<div id="blogPosts" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">';
-    html += '<p class="text-slate-500 col-span-full text-center py-12">Loading articles...</p>';
+    // Posts Grid
+    html += '<div id="blogPosts" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">';
+    html += '<p class="text-slate-500 col-span-3 text-center py-12">Loading articles...</p>';
     html += '</div>';
     
     html += '</div>';
@@ -1791,7 +1474,7 @@ async function loadBlogPosts(category, search) {
         const container = document.getElementById('blogPosts');
         
         if (!data.posts || data.posts.length === 0) {
-            container.innerHTML = '<p class="text-slate-500 col-span-full text-center py-12">No articles found</p>';
+            container.innerHTML = '<p class="text-slate-500 col-span-3 text-center py-12">No articles found</p>';
             return;
         }
         
@@ -1802,20 +1485,20 @@ async function loadBlogPosts(category, search) {
             html += '<article class="glass rounded-xl overflow-hidden card-hover cursor-pointer" onclick="showBlogPost(\'' + post.slug + '\')">';
             
             if (post.featured_image) {
-                html += '<div class="h-40 sm:h-48 bg-cover bg-center" style="background-image: url(\'' + post.featured_image + '\')"></div>';
+                html += '<div class="h-48 bg-cover bg-center" style="background-image: url(\'' + post.featured_image + '\')"></div>';
             } else {
-                html += '<div class="h-40 sm:h-48 bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center">';
-                html += '<i data-lucide="image" class="w-10 h-10 sm:w-12 sm:h-12 text-slate-600"></i>';
+                html += '<div class="h-48 bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center">';
+                html += '<i data-lucide="image" class="w-12 h-12 text-slate-600"></i>';
                 html += '</div>';
             }
             
-            html += '<div class="p-4 sm:p-6">';
+            html += '<div class="p-6">';
             html += '<div class="flex items-center gap-2 mb-3">';
             html += '<span class="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded">' + (post.category || 'General') + '</span>';
             html += '<span class="text-xs text-slate-500">' + date.toLocaleDateString() + '</span>';
             html += '</div>';
-            html += '<h3 class="text-base sm:text-lg font-bold text-white mb-2 line-clamp-2">' + post.title + '</h3>';
-            html += '<p class="text-xs sm:text-sm text-slate-400 line-clamp-3 mb-4">' + post.excerpt + '</p>';
+            html += '<h3 class="text-lg font-bold text-white mb-2 line-clamp-2">' + post.title + '</h3>';
+            html += '<p class="text-sm text-slate-400 line-clamp-3 mb-4">' + post.excerpt + '</p>';
             html += '<div class="flex items-center justify-between text-xs text-slate-500">';
             html += '<span class="flex items-center gap-1">';
             html += '<i data-lucide="eye" class="w-3 h-3"></i> ' + (post.view_count || 0) + ' views';
@@ -1830,11 +1513,12 @@ async function loadBlogPosts(category, search) {
         lucide.createIcons();
         
     } catch (err) {
-        document.getElementById('blogPosts').innerHTML = '<p class="text-red-400 col-span-full text-center py-12">Error loading articles: ' + err.message + '</p>';
+        document.getElementById('blogPosts').innerHTML = '<p class="text-red-400 col-span-3 text-center py-12">Error loading articles: ' + err.message + '</p>';
     }
 }
 
 function filterBlog(category) {
+    // Update active button
     const buttons = document.querySelectorAll('#blogCategories button');
     buttons.forEach(function(btn) {
         if (btn.textContent.toLowerCase().includes(category.replace('-', ' ')) || (category === 'all' && btn.textContent === 'All')) {
@@ -1866,24 +1550,24 @@ async function showBlogPost(slug) {
         const content = document.getElementById('content');
         const date = new Date(post.published_at);
         
-        let html = '<div class="p-4 pt-20 lg:pt-8 max-w-4xl mx-auto fade-in">';
-        html += '<button onclick="showPage(\'blog\')" class="mb-4 sm:mb-6 flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm">';
+        let html = '<div class="p-8 max-w-4xl mx-auto fade-in">';
+        html += '<button onclick="showPage(\'blog\')" class="mb-6 flex items-center gap-2 text-slate-400 hover:text-white transition-colors">';
         html += '<i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Blog';
         html += '</button>';
         
         if (post.featured_image) {
-            html += '<div class="h-48 sm:h-64 rounded-xl bg-cover bg-center mb-6 sm:mb-8" style="background-image: url(\'' + post.featured_image + '\')"></div>';
+            html += '<div class="h-64 rounded-xl bg-cover bg-center mb-8" style="background-image: url(\'' + post.featured_image + '\')"></div>';
         }
         
-        html += '<div class="flex flex-wrap items-center gap-2 mb-4">';
+        html += '<div class="flex items-center gap-2 mb-4">';
         html += '<span class="px-3 py-1 bg-blue-500/20 text-blue-400 text-sm rounded">' + (post.category || 'General') + '</span>';
         html += '<span class="text-slate-500 text-sm">' + date.toLocaleDateString() + '</span>';
         html += '</div>';
         
-        html += '<h1 class="text-2xl sm:text-4xl font-bold text-white mb-4 sm:mb-6">' + post.title + '</h1>';
+        html += '<h1 class="text-4xl font-bold text-white mb-6">' + post.title + '</h1>';
         
         if (post.tags && post.tags.length > 0) {
-            html += '<div class="flex flex-wrap gap-2 mb-6 sm:mb-8">';
+            html += '<div class="flex gap-2 mb-8">';
             post.tags.forEach(function(tag) {
                 html += '<span class="px-2 py-1 bg-slate-800 text-slate-400 text-xs rounded">' + tag + '</span>';
             });
@@ -1891,7 +1575,7 @@ async function showBlogPost(slug) {
         }
         
         html += '<div class="prose prose-invert max-w-none">';
-        html += '<div class="text-slate-300 text-sm sm:text-base leading-relaxed">' + post.content + '</div>';
+        html += '<div class="text-slate-300 leading-relaxed">' + post.content + '</div>';
         html += '</div>';
         
         html += '</div>';
@@ -1906,62 +1590,64 @@ async function showBlogPost(slug) {
 
 function renderAdmin(content) {
     if (!currentUser.is_admin) {
-        let html = '<div class="p-4 pt-20 lg:pt-8 text-center">';
-        html += '<i data-lucide="lock" class="w-12 h-12 sm:w-16 sm:h-16 text-red-400 mx-auto mb-4"></i>';
-        html += '<h2 class="text-xl sm:text-2xl font-bold text-white mb-2">Access Denied</h2>';
-        html += '<p class="text-slate-400 text-sm">You do not have permission to view this page</p>';
+        let html = '<div class="p-8 text-center">';
+        html += '<i data-lucide="lock" class="w-16 h-16 text-red-400 mx-auto mb-4"></i>';
+        html += '<h2 class="text-2xl font-bold text-white mb-2">Access Denied</h2>';
+        html += '<p class="text-slate-400">You do not have permission to view this page</p>';
         html += '</div>';
         content.innerHTML = html;
         lucide.createIcons();
         return;
     }
     
-    let html = '<div class="p-4 pt-20 lg:pt-8 max-w-7xl mx-auto fade-in">';
-    html += '<div class="flex items-center justify-between mb-6 sm:mb-8">';
+    let html = '<div class="p-8 max-w-7xl mx-auto fade-in">';
+    html += '<div class="flex items-center justify-between mb-8">';
     html += '<div>';
-    html += '<h2 class="responsive-heading font-bold text-white mb-1">Admin Dashboard</h2>';
-    html += '<p class="text-slate-400 text-sm">Manage your platform</p>';
+    html += '<h2 class="text-3xl font-bold text-white mb-1">Admin Dashboard</h2>';
+    html += '<p class="text-slate-400">Manage your platform</p>';
     html += '</div>';
     html += '</div>';
     
-    html += '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8" id="adminStats">';
-    html += '<div class="metric-card rounded-xl p-4 sm:p-6"><div class="text-slate-400 text-xs sm:text-sm mb-1">Total Users</div><div class="text-2xl sm:text-3xl font-bold text-white">-</div></div>';
-    html += '<div class="metric-card rounded-xl p-4 sm:p-6"><div class="text-slate-400 text-xs sm:text-sm mb-1">Total Trades</div><div class="text-2xl sm:text-3xl font-bold text-white">-</div></div>';
-    html += '<div class="metric-card rounded-xl p-4 sm:p-6"><div class="text-slate-400 text-xs sm:text-sm mb-1">Blog Posts</div><div class="text-2xl sm:text-3xl font-bold text-white">-</div></div>';
-    html += '<div class="metric-card rounded-xl p-4 sm:p-6"><div class="text-slate-400 text-xs sm:text-sm mb-1">Avg Trader Score</div><div class="text-2xl sm:text-3xl font-bold text-white">-</div></div>';
+    // Stats Grid
+    html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" id="adminStats">';
+    html += '<div class="metric-card rounded-xl p-6"><div class="text-slate-400 text-sm mb-1">Total Users</div><div class="text-3xl font-bold text-white">-</div></div>';
+    html += '<div class="metric-card rounded-xl p-6"><div class="text-slate-400 text-sm mb-1">Total Trades</div><div class="text-3xl font-bold text-white">-</div></div>';
+    html += '<div class="metric-card rounded-xl p-6"><div class="text-slate-400 text-sm mb-1">Blog Posts</div><div class="text-3xl font-bold text-white">-</div></div>';
+    html += '<div class="metric-card rounded-xl p-6"><div class="text-slate-400 text-sm mb-1">Avg Trader Score</div><div class="text-3xl font-bold text-white">-</div></div>';
     html += '</div>';
     
-    html += '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">';
+    // Quick Actions
+    html += '<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">';
     
-    html += '<div class="glass rounded-xl p-4 sm:p-6">';
-    html += '<h3 class="font-semibold text-white mb-4 text-sm sm:text-base">Content Management</h3>';
+    html += '<div class="glass rounded-xl p-6">';
+    html += '<h3 class="font-semibold text-white mb-4">Content Management</h3>';
     html += '<div class="space-y-2">';
-    html += '<button onclick="showAdminSection(\'blog-editor\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors text-sm">';
+    html += '<button onclick="showAdminSection(\'blog-editor\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">';
     html += '<i data-lucide="file-plus" class="w-4 h-4 inline mr-2"></i> New Blog Post';
     html += '</button>';
-    html += '<button onclick="showAdminSection(\'media\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors text-sm">';
+    html += '<button onclick="showAdminSection(\'media\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">';
     html += '<i data-lucide="image" class="w-4 h-4 inline mr-2"></i> Media Library';
     html += '</button>';
-    html += '<button onclick="showAdminSection(\'blog-posts\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors text-sm">';
+    html += '<button onclick="showAdminSection(\'blog-posts\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">';
     html += '<i data-lucide="list" class="w-4 h-4 inline mr-2"></i> Manage Posts';
     html += '</button>';
     html += '</div>';
     html += '</div>';
     
-    html += '<div class="glass rounded-xl p-4 sm:p-6">';
-    html += '<h3 class="font-semibold text-white mb-4 text-sm sm:text-base">User Management</h3>';
+    html += '<div class="glass rounded-xl p-6">';
+    html += '<h3 class="font-semibold text-white mb-4">User Management</h3>';
     html += '<div class="space-y-2">';
-    html += '<button onclick="showAdminSection(\'users\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors text-sm">';
+    html += '<button onclick="showAdminSection(\'users\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">';
     html += '<i data-lucide="users" class="w-4 h-4 inline mr-2"></i> All Users';
     html += '</button>';
-    html += '<button onclick="showAdminSection(\'analytics\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors text-sm">';
+    html += '<button onclick="showAdminSection(\'analytics\')" class="w-full text-left px-4 py-3 bg-slate-800/50 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">';
     html += '<i data-lucide="bar-chart-2" class="w-4 h-4 inline mr-2"></i> Analytics';
     html += '</button>';
     html += '</div>';
     html += '</div>';
     
-    html += '<div class="glass rounded-xl p-4 sm:p-6">';
-    html += '<h3 class="font-semibold text-white mb-4 text-sm sm:text-base">Recent Activity</h3>';
+    html += '<div class="glass rounded-xl p-6">';
+    html += '<h3 class="font-semibold text-white mb-4">Recent Activity</h3>';
     html += '<div id="recentActivity" class="space-y-3 text-sm">';
     html += '<p class="text-slate-500">Loading...</p>';
     html += '</div>';
@@ -1969,7 +1655,8 @@ function renderAdmin(content) {
     
     html += '</div>';
     
-    html += '<div id="adminSection" class="glass rounded-xl p-4 sm:p-6 hidden"></div>';
+    // Dynamic Admin Section
+    html += '<div id="adminSection" class="glass rounded-xl p-6 hidden"></div>';
     
     html += '</div>';
     
@@ -1986,32 +1673,33 @@ async function loadAdminStats() {
         const statsDiv = document.getElementById('adminStats');
         let html = '';
         
-        html += '<div class="metric-card rounded-xl p-4 sm:p-6">';
-        html += '<div class="text-slate-400 text-xs sm:text-sm mb-1">Total Users</div>';
-        html += '<div class="text-2xl sm:text-3xl font-bold text-white">' + (data.users.total_users || 0) + '</div>';
+        html += '<div class="metric-card rounded-xl p-6">';
+        html += '<div class="text-slate-400 text-sm mb-1">Total Users</div>';
+        html += '<div class="text-3xl font-bold text-white">' + (data.users.total_users || 0) + '</div>';
         html += '<div class="text-xs text-emerald-400 mt-1">+' + (data.users.new_users_7d || 0) + ' this week</div>';
         html += '</div>';
         
-        html += '<div class="metric-card rounded-xl p-4 sm:p-6">';
-        html += '<div class="text-slate-400 text-xs sm:text-sm mb-1">Total Trades</div>';
-        html += '<div class="text-2xl sm:text-3xl font-bold text-white">' + (data.trades.total_trades || 0) + '</div>';
+        html += '<div class="metric-card rounded-xl p-6">';
+        html += '<div class="text-slate-400 text-sm mb-1">Total Trades</div>';
+        html += '<div class="text-3xl font-bold text-white">' + (data.trades.total_trades || 0) + '</div>';
         html += '<div class="text-xs text-slate-400 mt-1">' + (data.trades.trades_7d || 0) + ' this week</div>';
         html += '</div>';
         
-        html += '<div class="metric-card rounded-xl p-4 sm:p-6">';
-        html += '<div class="text-slate-400 text-xs sm:text-sm mb-1">Blog Posts</div>';
-        html += '<div class="text-2xl sm:text-3xl font-bold text-white">' + (data.blog.published_posts || 0) + '</div>';
+        html += '<div class="metric-card rounded-xl p-6">';
+        html += '<div class="text-slate-400 text-sm mb-1">Blog Posts</div>';
+        html += '<div class="text-3xl font-bold text-white">' + (data.blog.published_posts || 0) + '</div>';
         html += '<div class="text-xs text-slate-400 mt-1">' + (data.blog.total_views || 0) + ' total views</div>';
         html += '</div>';
         
-        html += '<div class="metric-card rounded-xl p-4 sm:p-6">';
-        html += '<div class="text-slate-400 text-xs sm:text-sm mb-1">Avg Trader Score</div>';
-        html += '<div class="text-2xl sm:text-3xl font-bold text-white">' + Math.round(data.analyses.avg_trader_score || 0) + '</div>';
+        html += '<div class="metric-card rounded-xl p-6">';
+        html += '<div class="text-slate-400 text-sm mb-1">Avg Trader Score</div>';
+        html += '<div class="text-3xl font-bold text-white">' + Math.round(data.analyses.avg_trader_score || 0) + '</div>';
         html += '<div class="text-xs text-slate-400 mt-1">' + (data.analyses.total_analyses || 0) + ' analyses</div>';
         html += '</div>';
         
         statsDiv.innerHTML = html;
         
+        // Recent activity
         const activityDiv = document.getElementById('recentActivity');
         let activityHtml = '';
         
@@ -2052,7 +1740,7 @@ function showAdminSection(section) {
 
 function renderBlogEditor(container) {
     let html = '<div class="flex items-center justify-between mb-6">';
-    html += '<h3 class="text-base sm:text-lg font-semibold text-white">New Blog Post</h3>';
+    html += '<h3 class="text-lg font-semibold text-white">New Blog Post</h3>';
     html += '<button onclick="document.getElementById(\'adminSection\').classList.add(\'hidden\')" class="text-slate-400 hover:text-white">';
     html += '<i data-lucide="x" class="w-5 h-5"></i>';
     html += '</button>';
@@ -2061,13 +1749,13 @@ function renderBlogEditor(container) {
     html += '<form onsubmit="saveBlogPost(event)" class="space-y-4">';
     html += '<div>';
     html += '<label class="block text-sm font-medium text-slate-400 mb-2">Title</label>';
-    html += '<input type="text" name="title" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white" placeholder="Post title">';
+    html += '<input type="text" name="title" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="Post title">';
     html += '</div>';
     
-    html += '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">';
+    html += '<div class="grid grid-cols-2 gap-4">';
     html += '<div>';
     html += '<label class="block text-sm font-medium text-slate-400 mb-2">Category</label>';
-    html += '<select name="category" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white">';
+    html += '<select name="category" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">';
     html += '<option value="strategy">Strategy</option>';
     html += '<option value="psychology">Psychology</option>';
     html += '<option value="risk-management">Risk Management</option>';
@@ -2077,7 +1765,7 @@ function renderBlogEditor(container) {
     html += '</div>';
     html += '<div>';
     html += '<label class="block text-sm font-medium text-slate-400 mb-2">Status</label>';
-    html += '<select name="status" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white">';
+    html += '<select name="status" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">';
     html += '<option value="draft">Draft</option>';
     html += '<option value="published">Published</option>';
     html += '</select>';
@@ -2086,38 +1774,22 @@ function renderBlogEditor(container) {
     
     html += '<div>';
     html += '<label class="block text-sm font-medium text-slate-400 mb-2">Content</label>';
-    html += '<div class="glass rounded-xl overflow-hidden">';
-    html += '<div class="editor-toolbar">';
-    html += '<button type="button" onclick="insertImagePrompt()" class="editor-btn" title="Insert Image">';
-    html += '<i data-lucide="image" class="w-4 h-4"></i>';
-    html += '</button>';
-    html += '<button type="button" onclick="formatText(\'bold\')" class="editor-btn" title="Bold">';
-    html += '<i data-lucide="bold" class="w-4 h-4"></i>';
-    html += '</button>';
-    html += '<button type="button" onclick="formatText(\'italic\')" class="editor-btn" title="Italic">';
-    html += '<i data-lucide="italic" class="w-4 h-4"></i>';
-    html += '</button>';
-    html += '<button type="button" onclick="formatText(\'heading\')" class="editor-btn" title="Heading">';
-    html += '<i data-lucide="heading" class="w-4 h-4"></i>';
-    html += '</button>';
-    html += '</div>';
-    html += '<textarea id="editor" name="content" rows="10" required class="editor-textarea" placeholder="Write your post content here..."></textarea>';
-    html += '</div>';
+    html += '<textarea name="content" rows="10" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="Write your post content here..."></textarea>';
     html += '</div>';
     
     html += '<div>';
     html += '<label class="block text-sm font-medium text-slate-400 mb-2">Excerpt</label>';
-    html += '<textarea name="excerpt" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white" placeholder="Brief summary of the post"></textarea>';
+    html += '<textarea name="excerpt" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="Brief summary of the post"></textarea>';
     html += '</div>';
     
     html += '<div>';
     html += '<label class="block text-sm font-medium text-slate-400 mb-2">Tags (comma separated)</label>';
-    html += '<input type="text" name="tags" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white" placeholder="forex, trading, strategy">';
+    html += '<input type="text" name="tags" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="forex, trading, strategy">';
     html += '</div>';
     
-    html += '<div class="flex flex-col sm:flex-row gap-3">';
-    html += '<button type="submit" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium">Save Post</button>';
-    html += '<button type="button" onclick="document.getElementById(\'adminSection\').classList.add(\'hidden\')" class="px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium">Cancel</button>';
+    html += '<div class="flex gap-3">';
+    html += '<button type="submit" class="px-6 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium">Save Post</button>';
+    html += '<button type="button" onclick="document.getElementById(\'adminSection\').classList.add(\'hidden\')" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium">Cancel</button>';
     html += '</div>';
     
     html += '</form>';
@@ -2126,67 +1798,6 @@ function renderBlogEditor(container) {
     lucide.createIcons();
 }
 
-async function uploadMedia(file) {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('alt_text', 'Description');
-    
-    const response = await fetch(API_URL + '/admin/media/upload', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + authToken },
-        body: formData
-    });
-    
-    const data = await response.json();
-    return data.url;
-}
-
-function insertImage(url) {
-    const editor = document.getElementById('editor');
-    editor.value += '<img src="' + url + '" alt="Image" class="w-full rounded-lg my-4">';
-}
-
-function insertImagePrompt() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            try {
-                const url = await uploadMedia(file);
-                insertImage(url);
-            } catch (err) {
-                alert('Error uploading image: ' + err.message);
-            }
-        }
-    };
-    input.click();
-}
-
-function formatText(type) {
-    const editor = document.getElementById('editor');
-    const start = editor.selectionStart;
-    const end = editor.selectionEnd;
-    const selectedText = editor.value.substring(start, end);
-    let replacement = '';
-    
-    switch(type) {
-        case 'bold':
-            replacement = '<strong>' + selectedText + '</strong>';
-            break;
-        case 'italic':
-            replacement = '<em>' + selectedText + '</em>';
-            break;
-        case 'heading':
-            replacement = '<h2>' + selectedText + '</h2>';
-            break;
-    }
-    
-    editor.value = editor.value.substring(0, start) + replacement + editor.value.substring(end);
-}
-
-// UPDATED: Save blog post with Form data (application/x-www-form-urlencoded)
 async function saveBlogPost(e) {
     e.preventDefault();
     const form = e.target;
@@ -2234,7 +1845,7 @@ async function renderBlogPostsList(container) {
         const data = await response.json();
         
         let html = '<div class="flex items-center justify-between mb-6">';
-        html += '<h3 class="text-base sm:text-lg font-semibold text-white">Manage Posts</h3>';
+        html += '<h3 class="text-lg font-semibold text-white">Manage Posts</h3>';
         html += '<button onclick="document.getElementById(\'adminSection\').classList.add(\'hidden\')" class="text-slate-400 hover:text-white">';
         html += '<i data-lucide="x" class="w-5 h-5"></i>';
         html += '</button>';
@@ -2249,9 +1860,9 @@ async function renderBlogPostsList(container) {
         html += '<div class="space-y-3">';
         data.posts.forEach(function(post) {
             const date = new Date(post.published_at);
-            html += '<div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-slate-800/50 rounded-lg gap-3">';
+            html += '<div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">';
             html += '<div>';
-            html += '<div class="font-medium text-white text-sm sm:text-base">' + post.title + '</div>';
+            html += '<div class="font-medium text-white">' + post.title + '</div>';
             html += '<div class="text-xs text-slate-400">' + date.toLocaleDateString() + ' • ' + (post.view_count || 0) + ' views</div>';
             html += '</div>';
             html += '<div class="flex gap-2">';
@@ -2297,32 +1908,32 @@ async function renderUsersList(container) {
         const data = await response.json();
         
         let html = '<div class="flex items-center justify-between mb-6">';
-        html += '<h3 class="text-base sm:text-lg font-semibold text-white">All Users</h3>';
+        html += '<h3 class="text-lg font-semibold text-white">All Users</h3>';
         html += '<button onclick="document.getElementById(\'adminSection\').classList.add(\'hidden\')" class="text-slate-400 hover:text-white">';
         html += '<i data-lucide="x" class="w-5 h-5"></i>';
         html += '</button>';
         html += '</div>';
         
-        if (!data || data.length === 0) {
+        if (!data.users || data.users.length === 0) {
             html += '<p class="text-slate-500">No users found</p>';
             container.innerHTML = html;
             return;
         }
         
         html += '<div class="space-y-3">';
-        data.forEach(function(user) {
+        data.users.forEach(function(user) {
             const date = new Date(user.created_at);
-            html += '<div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-slate-800/50 rounded-lg gap-3">';
+            html += '<div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">';
             html += '<div class="flex items-center gap-3">';
             html += '<div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">';
             html += '<i data-lucide="user" class="w-5 h-5 text-blue-400"></i>';
             html += '</div>';
             html += '<div>';
-            html += '<div class="font-medium text-white text-sm sm:text-base">' + user.name + '</div>';
+            html += '<div class="font-medium text-white">' + user.name + '</div>';
             html += '<div class="text-xs text-slate-400">' + user.email + '</div>';
             html += '</div>';
             html += '</div>';
-            html += '<div class="text-left sm:text-right">';
+            html += '<div class="text-right">';
             html += '<div class="text-xs text-slate-400">' + date.toLocaleDateString() + '</div>';
             if (user.is_admin) {
                 html += '<span class="text-xs text-emerald-400">Admin</span>';
@@ -2342,9 +1953,9 @@ async function renderUsersList(container) {
 
 function renderMediaLibrary(container) {
     let html = '<div class="flex items-center justify-between mb-6">';
-    html += '<h3 class="text-base sm:text-lg font-semibold text-white">Media Library</h3>';
+    html += '<h3 class="text-lg font-semibold text-white">Media Library</h3>';
     html += '<div class="flex gap-2">';
-    html += '<input type="file" id="mediaUpload" class="hidden" onchange="uploadMediaFile(this)">';
+    html += '<input type="file" id="mediaUpload" class="hidden" onchange="uploadMedia(this)">';
     html += '<button onclick="document.getElementById(\'mediaUpload\').click()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white text-sm">';
     html += '<i data-lucide="upload" class="w-4 h-4 inline mr-2"></i>Upload';
     html += '</button>';
@@ -2354,7 +1965,7 @@ function renderMediaLibrary(container) {
     html += '</div>';
     html += '</div>';
     
-    html += '<div id="mediaGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">';
+    html += '<div id="mediaGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">';
     html += '<p class="text-slate-500 col-span-full">Loading media...</p>';
     html += '</div>';
     
@@ -2369,13 +1980,13 @@ async function loadMediaFiles() {
         const data = await response.json();
         const container = document.getElementById('mediaGrid');
         
-        if (!data || data.length === 0) {
+        if (!data.media || data.media.length === 0) {
             container.innerHTML = '<p class="text-slate-500 col-span-full">No media files</p>';
             return;
         }
         
         let html = '';
-        data.forEach(function(file) {
+        data.media.forEach(function(file) {
             const isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(file.file_type.toLowerCase());
             
             html += '<div class="aspect-square bg-slate-800 rounded-lg overflow-hidden relative group cursor-pointer" onclick="copyMediaUrl(\'' + file.url + '\')">';
@@ -2384,7 +1995,7 @@ async function loadMediaFiles() {
                 html += '<img src="' + file.url + '" class="w-full h-full object-cover" alt="' + (file.alt_text || '') + '">';
             } else {
                 html += '<div class="w-full h-full flex items-center justify-center bg-slate-700">';
-                html += '<i data-lucide="file" class="w-6 h-6 sm:w-8 sm:h-8 text-slate-500"></i>';
+                html += '<i data-lucide="file" class="w-8 h-8 text-slate-500"></i>';
                 html += '</div>';
             }
             
@@ -2402,7 +2013,7 @@ async function loadMediaFiles() {
     }
 }
 
-async function uploadMediaFile(input) {
+async function uploadMedia(input) {
     const file = input.files[0];
     if (!file) return;
     
@@ -2417,7 +2028,7 @@ async function uploadMediaFile(input) {
         
         const data = await response.json();
         
-        if (response.ok) {
+        if (data.success) {
             alert('Media uploaded: ' + data.url);
             loadMediaFiles();
         } else {
