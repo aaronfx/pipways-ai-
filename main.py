@@ -84,11 +84,28 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 # Database Setup
-DATABASE_URL = os.getenv("DATABASE_URL", "pipways.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./pipways.db")
 
 def get_db_connection():
     """Get database connection with row factory"""
-    conn = sqlite3.connect(DATABASE_URL)
+    # Parse DATABASE_URL to extract file path
+    # Handle both "sqlite:///path/to/db.db" and just "path/to/db.db"
+    db_url = DATABASE_URL
+    
+    if db_url.startswith("sqlite:///"):
+        # Remove the sqlite:/// prefix (handles both absolute and relative paths)
+        db_path = db_url[10:]
+    elif db_url.startswith("sqlite://"):
+        db_path = db_url[9:]
+    else:
+        db_path = db_url
+    
+    # Ensure the directory exists for the database file
+    db_dir = os.path.dirname(db_path)
+    if db_dir and not os.path.exists(db_dir):
+        os.makedirs(db_dir, exist_ok=True)
+    
+    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
 
