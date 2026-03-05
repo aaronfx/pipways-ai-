@@ -1,38 +1,33 @@
-# Web Framework
+# FastAPI and Server
 fastapi==0.104.1
-uvicorn==0.24.0
+uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 
-# Database
-asyncpg==0.29.0
-
-# Authentication & Security
+# Security
 python-jose[cryptography]==3.3.0
-bcrypt==4.0.1
-
-# AI & API
-openai==1.3.0
-requests==2.31.0
-
-# File Processing
-PyPDF2==3.0.1
-python-docx==1.1.0
-pandas==2.1.3
-openpyxl==3.1.2
-xlrd==2.0.1
-beautifulsoup4==4.12.2
-lxml==4.9.3
-python-magic==0.4.27
-
-# Image Processing
-pillow==10.3.0
-
-# SEO & Utilities
-python-slugify==8.0.1
-
-# Environment
+passlib[bcrypt]==1.7.4
 python-dotenv==1.0.0
 
-# Optional: Rate Limiting & Caching (for future use)
-# slowapi==0.1.9
-# redis==5.0.1
+# PDF Processing - PyMuPDF is faster than pdfplumber/PyPDF2
+PyMuPDF==1.23.8
+pdfplumber==0.10.0
+
+# Data Processing
+pandas==2.1.3
+numpy==1.26.2
+openpyxl==3.1.2
+lxml==4.9.3
+beautifulsoup4==4.12.2
+html5lib==1.1
+
+# Image Processing
+Pillow==10.1.0
+
+# Validation
+email-validator==2.1.0
+
+# Async File Operations
+aiofiles==23.2.1
+
+# HTTP Client (for external AI APIs)
+httpx==0.25.2
