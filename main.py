@@ -1,50 +1,27 @@
-""" Pipways Trading Platform API Enhanced with SEO-friendly blog, media management, and optimized PDF processing """
-
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Form, Query, Request, status
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, status, Form, Query, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any, Union
+from jose import JWTError, jwt
 from datetime import datetime, timedelta
-from pathlib import Path
-import uuid
+import asyncpg
 import os
+import base64
+import requests
+import bcrypt
 import json
 import re
-import asyncio
-import aiofiles
-import hashlib
-from contextlib import asynccontextmanager
-
-# Security & Auth
-from passlib.context import CryptContext
-from jose import JWTError, jwt
-
-# Database (using SQLite for simplicity - replace with PostgreSQL for production)
-import sqlite3
-from contextlib import contextmanager
-
-# PDF Processing - Using PyMuPDF for speed and reliability
-import fitz  # PyMuPDF - faster than pdfplumber and PyPDF2
-import pandas as pd
+import uuid
 import io
+import csv
+from typing import Optional, List, Dict, Any
+from pathlib import Path
+import shutil
 
-# Image processing
-from PIL import Image
-import imghdr
+app = FastAPI(title="Pipways API")
 
-# Email validation
-import email_validator
-
-app = FastAPI(
-    title="Pipways API",
-    description="Institutional Trader Development Platform",
-    version="2.0.0"
-)
-
-# CORS Configuration - More permissive for debugging
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -53,1257 +30,1587 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configuration
+# Security
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_DAYS = 30
+security = HTTPBearer()
+
+# OpenRouter Configuration
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
+# Database
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Default admin credentials
+DEFAULT_ADMIN_EMAIL = "admin@pipways.com"
+DEFAULT_ADMIN_PASSWORD = "admin123"
+
+# File upload settings
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 MEDIA_DIR = UPLOAD_DIR / "media"
 MEDIA_DIR.mkdir(exist_ok=True)
-PDF_TEMP_DIR = UPLOAD_DIR / "pdf_temp"
-PDF_TEMP_DIR.mkdir(exist_ok=True)
-
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
-MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
-ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
-ALLOWED_DOCUMENT_TYPES = {
-    "application/pdf",
-    "text/csv",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "text/html"
+
+ALLOWED_TRADE_FILE_TYPES = {
+    'application/pdf': '.pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+    'application/msword': '.doc',
+    'text/csv': '.csv',
+    'application/vnd.ms-excel': '.xls',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+    'image/png': '.png',
+    'image/jpeg': '.jpg',
+    'image/webp': '.webp'
 }
 
-# Security
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
-
-# Database Setup
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./pipways.db")
-
-def get_db_connection():
-    """Get database connection with row factory"""
-    db_url = DATABASE_URL
-    
-    if db_url.startswith("sqlite:///"):
-        db_path = db_url[10:]
-    elif db_url.startswith("sqlite://"):
-        db_path = db_url[9:]
-    else:
-        db_path = db_url
-    
-    db_dir = os.path.dirname(db_path)
-    if db_dir and not os.path.exists(db_dir):
-        os.makedirs(db_dir, exist_ok=True)
-    
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-@contextmanager
-def get_db():
-    """Context manager for database connections"""
-    conn = get_db_connection()
+async def get_db():
+    conn = await asyncpg.connect(DATABASE_URL, ssl="require")
     try:
         yield conn
     finally:
-        conn.close()
+        await conn.close()
 
-def init_db():
-    """Initialize database tables"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        
-        # Users table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT UNIQUE NOT NULL,
-                hashed_password TEXT NOT NULL,
-                name TEXT NOT NULL,
-                is_admin BOOLEAN DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Trades table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS trades (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                pair TEXT NOT NULL,
-                direction TEXT NOT NULL,
-                pips REAL NOT NULL,
-                grade TEXT NOT NULL,
-                entry_price REAL,
-                exit_price REAL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            )
-        """)
-        
-        # Enhanced Blog Posts table with SEO fields
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS blog_posts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                slug TEXT UNIQUE NOT NULL,
-                content TEXT NOT NULL,
-                excerpt TEXT,
-                featured_image TEXT,
-                category TEXT DEFAULT 'general',
-                tags TEXT,
-                status TEXT DEFAULT 'draft',
-                meta_title TEXT,
-                meta_description TEXT,
-                meta_keywords TEXT,
-                og_image TEXT,
-                author_id INTEGER,
-                view_count INTEGER DEFAULT 0,
-                published_at TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (author_id) REFERENCES users(id)
-            )
-        """)
-        
-        # Media Library table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS media (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                filename TEXT NOT NULL,
-                original_name TEXT NOT NULL,
-                file_path TEXT NOT NULL,
-                file_type TEXT NOT NULL,
-                file_size INTEGER NOT NULL,
-                mime_type TEXT NOT NULL,
-                alt_text TEXT,
-                uploaded_by INTEGER,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (uploaded_by) REFERENCES users(id)
-            )
-        """)
-        
-        # Trade Analyses table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS trade_analyses (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                filename TEXT NOT NULL,
-                file_type TEXT NOT NULL,
-                trader_score INTEGER,
-                trader_type TEXT,
-                analysis_data TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            )
-        """)
-        
-        # Chart Analyses table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS chart_analyses (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                image_path TEXT NOT NULL,
-                analysis_data TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            )
-        """)
-        
-        conn.commit()
+# Password hashing
+def get_password_hash(password: str) -> str:
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode('utf-8')
 
-@app.on_event("startup")
-async def startup_event():
-    init_db()
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    password_bytes = plain_password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+    hashed_bytes = hashed_password.encode('utf-8')
+    return bcrypt.checkpw(password_bytes, hashed_bytes)
 
-# Pydantic Models
-class UserCreate(BaseModel):
-    email: str
-    password: str
-    name: str
-
-class UserLogin(BaseModel):
-    email: str
-    password: str
-
-class User(BaseModel):
-    id: int
-    email: str
-    name: str
-    is_admin: bool
-    
-    class Config:
-        from_attributes = True
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-    user: User
-
-class TradeCreate(BaseModel):
-    pair: str
-    direction: str
-    pips: float
-    grade: str
-    entry_price: Optional[float] = None
-    exit_price: Optional[float] = None
-
-class Trade(BaseModel):
-    id: int
-    pair: str
-    direction: str
-    pips: float
-    grade: str
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-# Enhanced Blog Models with SEO
-class BlogPostCreate(BaseModel):
-    title: str
-    content: str
-    excerpt: Optional[str] = None
-    category: str = "general"
-    tags: Optional[List[str]] = None
-    status: str = "draft"
-    featured_image_id: Optional[int] = None
-    meta_title: Optional[str] = None
-    meta_description: Optional[str] = None
-    meta_keywords: Optional[str] = None
-
-class BlogPostUpdate(BaseModel):
-    title: Optional[str] = None
-    content: Optional[str] = None
-    excerpt: Optional[str] = None
-    category: Optional[str] = None
-    tags: Optional[List[str]] = None
-    status: Optional[str] = None
-    featured_image_id: Optional[int] = None
-    meta_title: Optional[str] = None
-    meta_description: Optional[str] = None
-    meta_keywords: Optional[str] = None
-
-class BlogPostResponse(BaseModel):
-    id: int
-    title: str
-    slug: str
-    content: str
-    excerpt: Optional[str]
-    featured_image: Optional[str]
-    category: str
-    tags: List[str]
-    status: str
-    meta_title: Optional[str]
-    meta_description: Optional[str]
-    meta_keywords: Optional[str]
-    og_image: Optional[str]
-    author: Optional[User]
-    view_count: int
-    published_at: Optional[datetime]
-    created_at: datetime
-    updated_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-class MediaResponse(BaseModel):
-    id: int
-    filename: str
-    original_name: str
-    url: str
-    file_type: str
-    file_size: int
-    mime_type: str
-    alt_text: Optional[str]
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-class ChartAnalysisResponse(BaseModel):
-    success: bool
-    analysis: Dict[str, Any]
-    image_data: Optional[str] = None
-    error: Optional[str] = None
-
-class TradeAnalysisResponse(BaseModel):
-    success: bool
-    analysis: Dict[str, Any]
-    error: Optional[str] = None
-
-# Helper Functions
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+def create_access_token(data: dict):
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+    expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-def generate_slug(title: str) -> str:
-    """Generate URL-friendly slug from title"""
-    slug = re.sub(r'[^\w\s-]','', title.lower())
-    slug = re.sub(r'[-\s]+','-', slug)
-    return slug[:200]
-
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(
-        status_code=401,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise credentials_exception
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return email
     except JWTError:
-        raise credentials_exception
-    
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-        user = cursor.fetchone()
-        if user is None:
-            raise credentials_exception
-        return dict(user)
+        raise HTTPException(status_code=401, detail="Invalid token")
 
-async def validate_file_type(file: UploadFile, allowed_types: set) -> bool:
-    """Validate file type by content"""
-    content = await file.read(2048)
-    await file.seek(0)
-    
-    if file.content_type not in allowed_types:
-        return False
-    
-    if file.content_type.startswith('image/'):
-        file_type = imghdr.what(None, content)
-        if not file_type:
-            return False
-    
-    return True
+async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(security), conn=Depends(get_db)):
+    email = await get_current_user(credentials)
+    user = await conn.fetchrow("SELECT is_admin FROM users WHERE email = $1", email)
+    if not user or not user['is_admin']:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return email
 
-async def save_upload_file(upload_file: UploadFile, destination: Path) -> str:
-    """Save uploaded file with streaming for large files"""
-    file_id = str(uuid.uuid4())
-    extension = Path(upload_file.filename).suffix
-    filename = f"{file_id}{extension}"
-    file_path = destination / filename
+# OpenRouter API Helpers
+def openrouter_chat(messages, model="anthropic/claude-3.5-sonnet", max_tokens=1000):
+    if not OPENROUTER_API_KEY:
+        return None, "OpenRouter API key not configured"
     
-    async with aiofiles.open(file_path, 'wb') as out_file:
-        while chunk := await upload_file.read(1024 * 1024):
-            await out_file.write(chunk)
-    
-    return str(file_path.relative_to(UPLOAD_DIR))
-
-def process_image_for_web(file_path: Path, max_width: int = 1920, max_height: int = 1080) -> Path:
-    """Process and optimize image for web"""
-    with Image.open(file_path) as img:
-        if img.mode in ('RGBA', 'LA', 'P'):
-            background = Image.new('RGB', img.size, (255, 255, 255))
-            background.paste(img, mask=img.split()[-1] if img.mode != 'P' else None)
-            img = background
-        
-        if img.width > max_width or img.height > max_height:
-            img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
-        
-        output_path = file_path.parent / f"{file_path.stem}_optimized{file_path.suffix}"
-        img.save(output_path, 'JPEG', quality=85, optimize=True)
-        return output_path
-
-# Optimized PDF Processing with PyMuPDF
-async def extract_text_from_pdf(file_path: Path) -> str:
-    """Fast PDF text extraction using PyMuPDF"""
-    text = []
-    try:
-        doc = fitz.open(file_path)
-        
-        for page_num in range(len(doc)):
-            page = doc[page_num]
-            text.append(f"\n--- Page {page_num + 1} ---\n")
-            text.append(page.get_text("text"))
-        
-        doc.close()
-        return "\n".join(text)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"PDF processing error: {str(e)}")
-
-async def extract_tables_from_pdf(file_path: Path) -> List[pd.DataFrame]:
-    """Extract tables from PDF using PyMuPDF + pandas"""
-    tables = []
-    try:
-        doc = fitz.open(file_path)
-        
-        for page_num in range(len(doc)):
-            page = doc[page_num]
-            tabs = page.find_tables()
-            
-            if tabs.tables:
-                for tab in tabs.tables:
-                    df = pd.DataFrame(tab.extract())
-                    tables.append(df)
-        
-        doc.close()
-        return tables
-    except Exception as e:
-        return []
-
-async def process_trading_statement(file_path: Path, file_type: str) -> Dict[str, Any]:
-    """Process trading statement with optimized extraction"""
-    content = ""
-    tables = []
-    
-    try:
-        if file_type == "application/pdf":
-            content = await extract_text_from_pdf(file_path)
-            tables = await extract_tables_from_pdf(file_path)
-        elif file_type in ["text/csv", "application/vnd.ms-excel", 
-                          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]:
-            if file_type == "text/csv":
-                df = pd.read_csv(file_path)
-            else:
-                df = pd.read_excel(file_path)
-            tables = [df]
-            content = df.to_string()
-        elif file_type == "text/html":
-            async with aiofiles.open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                content = await f.read()
-            tables = pd.read_html(str(file_path))
-        
-        analysis = analyze_trading_data(content, tables)
-        return analysis
-        
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Processing error: {str(e)}")
-
-def analyze_trading_data(content: str, tables: List[pd.DataFrame]) -> Dict[str, Any]:
-    """AI-powered trading analysis"""
-    analysis = {
-        "trader_score": 75,
-        "trader_type": "developing_scalper",
-        "trader_type_confidence": 80,
-        "score_breakdown": {
-            "risk_management": 70,
-            "consistency": 65,
-            "profitability": 80,
-            "psychology": 75,
-            "strategy": 85
-        },
-        "mistakes_detected": [
-            {
-                "mistake": "Oversized positions",
-                "frequency": "frequent",
-                "impact": "High risk exposure",
-                "evidence": "Position sizes exceed 2% risk rule"
-            }
-        ],
-        "patterns_detected": [
-            {
-                "pattern": "Revenge trading",
-                "occurrence": "After losses",
-                "consequence": "Increased drawdown"
-            }
-        ],
-        "recommendations": [
-            "Implement strict position sizing",
-            "Use stop losses consistently",
-            "Keep a trading journal"
-        ],
-        "learning_resources": [
-            "Risk Management Masterclass",
-            "Trading Psychology Guide"
-        ],
-        "projected_improvement": "With consistent practice, expect 15% improvement in 3 months"
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://pipways-web.onrender.com",
+        "X-Title": "Pipways Trading Platform"
     }
     
-    return analysis
+    data = {
+        "model": model,
+        "messages": messages,
+        "max_tokens": max_tokens
+    }
+    
+    try:
+        response = requests.post(
+            f"{OPENROUTER_BASE_URL}/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=60
+        )
+        response.raise_for_status()
+        result = response.json()
+        return result["choices"][0]["message"]["content"], None
+    except Exception as e:
+        return None, str(e)
 
-# FIXED: Authentication Endpoints - Using Form data like the old working code
+def openrouter_vision(image_base64, prompt, model="anthropic/claude-3.5-sonnet"):
+    if not OPENROUTER_API_KEY:
+        return None, "OpenRouter API key not configured"
+    
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://pipways-web.onrender.com",
+        "X-Title": "Pipways Trading Platform"
+    }
+    
+    data = {
+        "model": model,
+        "messages": [
+            {
+                "role": "system",
+                "content": """You are a professional forex trading analyst. Analyze the provided chart and respond in this exact JSON format:
+{
+    "pair": "EURUSD",
+    "direction": "LONG/SHORT",
+    "setup_quality": "A/B/C",
+    "entry_price": "1.0850",
+    "stop_loss": "1.0820",
+    "take_profit": "1.0900",
+    "risk_reward": "1:1.67",
+    "analysis": "Clear trendline break with volume confirmation...",
+    "key_levels": ["1.0850", "1.0820", "1.0900"],
+    "recommendations": "Wait for pullback to 1.0840 before entering..."
+}"""
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{image_base64}"}
+                    }
+                ]
+            }
+        ],
+        "max_tokens": 1000
+    }
+    
+    try:
+        response = requests.post(
+            f"{OPENROUTER_BASE_URL}/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=60
+        )
+        response.raise_for_status()
+        result = response.json()
+        return result["choices"][0]["message"]["content"], None
+    except Exception as e:
+        return None, str(e)
+
+# File processing helpers
+def extract_text_from_pdf(file_data: bytes) -> str:
+    try:
+        import PyPDF2
+        pdf_file = io.BytesIO(file_data)
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n"
+        return text
+    except Exception as e:
+        return f"Error extracting PDF: {str(e)}"
+
+def extract_text_from_docx(file_data: bytes) -> str:
+    try:
+        import docx
+        doc_file = io.BytesIO(file_data)
+        doc = docx.Document(doc_file)
+        text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+        return text
+    except Exception as e:
+        return f"Error extracting DOCX: {str(e)}"
+
+def parse_csv_trades(file_data: bytes) -> List[Dict]:
+    try:
+        csv_file = io.StringIO(file_data.decode('utf-8'))
+        reader = csv.DictReader(csv_file)
+        trades = list(reader)
+        return trades
+    except Exception as e:
+        return [{"error": str(e)}]
+
+def parse_mt4_statement(file_data: bytes) -> Dict:
+    """Parse MT4/MT5 HTML or CSV statement"""
+    content = file_data.decode('utf-8', errors='ignore')
+    
+    # Try to extract trades from HTML statement
+    trades = []
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(content, 'html.parser')
+        tables = soup.find_all('table')
+        for table in tables:
+            rows = table.find_all('tr')
+            for row in rows:
+                cols = row.find_all('td')
+                if len(cols) >= 10:  # Likely a trade row
+                    trade = {
+                        'ticket': cols[0].text.strip(),
+                        'open_time': cols[1].text.strip(),
+                        'type': cols[2].text.strip(),
+                        'size': cols[3].text.strip(),
+                        'item': cols[4].text.strip(),
+                        'price': cols[5].text.strip(),
+                        'sl': cols[6].text.strip(),
+                        'tp': cols[7].text.strip(),
+                        'close_time': cols[8].text.strip(),
+                        'price_close': cols[9].text.strip(),
+                        'commission': cols[10].text.strip() if len(cols) > 10 else '',
+                        'taxes': cols[11].text.strip() if len(cols) > 11 else '',
+                        'swap': cols[12].text.strip() if len(cols) > 12 else '',
+                        'profit': cols[13].text.strip() if len(cols) > 13 else ''
+                    }
+                    trades.append(trade)
+    except:
+        pass
+    
+    return {"trades": trades, "raw_content": content[:5000]}
+
+# AI Analysis functions
+async def analyze_trader_performance(trade_data: Dict, user_id: int) -> Dict:
+    """Comprehensive AI analysis of trading performance"""
+    
+    prompt = f"""Analyze this trading data and provide a comprehensive assessment:
+
+Trading Data: {json.dumps(trade_data, indent=2)}
+
+Provide your analysis in this exact JSON format:
+{{
+    "trader_type": "scalper/day_trader/swing_trader/position_trader",
+    "trader_type_confidence": 85,
+    "trader_score": 78,
+    "score_breakdown": {{
+        "risk_management": 80,
+        "consistency": 75,
+        "profitability": 82,
+        "psychology": 70,
+        "strategy": 85
+    }},
+    "mistakes_detected": [
+        {{
+            "mistake": "Holding losers too long",
+            "frequency": "high",
+            "impact": "Significant drawdowns",
+            "evidence": "Average loss 3x larger than average win"
+        }}
+    ],
+    "patterns_detected": [
+        {{
+            "pattern": "Revenge trading after losses",
+            "occurrence": "After 3+ consecutive losses",
+            "consequence": "Increased position sizes, deviation from strategy"
+        }}
+    ],
+    "strengths": [
+        "Good win rate on EURUSD pairs",
+        "Consistent risk per trade"
+    ],
+    "weaknesses": [
+        "Overtrading during volatile sessions",
+        "Poor exit timing"
+    ],
+    "recommendations": [
+        "Implement hard stop-loss at 2% account risk",
+        "Take 15-minute break after 2 consecutive losses",
+        "Focus on A-grade setups only"
+    ],
+    "learning_resources": [
+        "Book: Trading in the Zone by Mark Douglas",
+        "Course: Advanced Risk Management",
+        "Exercise: 20-trade challenge with strict rules"
+    ],
+    "projected_improvement": "With recommended changes, expect 15-20% improvement in risk-adjusted returns within 3 months"
+}}"""
+
+    messages = [
+        {
+            "role": "system",
+            "content": "You are an expert trading psychologist and performance analyst with 20+ years experience. Be thorough, specific, and actionable."
+        },
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ]
+    
+    response, error = openrouter_chat(messages, max_tokens=2000)
+    
+    if error:
+        return {
+            "success": False,
+            "error": error,
+            "fallback_analysis": {
+                "trader_type": "Unknown",
+                "trader_score": 50,
+                "recommendations": ["Please upload clearer trade data for analysis"]
+            }
+        }
+    
+    try:
+        # Extract JSON from response
+        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+        if json_match:
+            analysis = json.loads(json_match.group())
+            analysis['success'] = True
+            return analysis
+    except Exception as e:
+        pass
+    
+    return {
+        "success": False,
+        "raw_response": response,
+        "error": "Failed to parse analysis"
+    }
+
+async def get_personalized_mentorship(user_id: int, context: Dict, conn) -> Dict:
+    """Generate personalized mentorship based on user's trading history"""
+    
+    # Get user's recent analyses and trades
+    recent_analyses = await conn.fetch(
+        "SELECT analysis_result FROM trade_analysis_uploads WHERE user_id = $1 ORDER BY created_at DESC LIMIT 3",
+        user_id
+    )
+    
+    recent_trades = await conn.fetch(
+        "SELECT * FROM trades WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10",
+        user_id
+    )
+    
+    user_history = {
+        "recent_analyses": [dict(a) for a in recent_analyses],
+        "recent_trades": [dict(t) for t in recent_trades],
+        "current_context": context
+    }
+    
+    prompt = f"""Based on this trader's history and current question, provide personalized mentorship:
+
+User History: {json.dumps(user_history, indent=2, default=str)}
+
+Current Question/Context: {context.get('message', 'General guidance')}
+
+Provide response in this JSON format:
+{{
+    "personalized_response": "Specific advice addressing their patterns...",
+    "identified_pattern": "Reference to their specific recurring issue",
+    "actionable_steps": ["Step 1", "Step 2", "Step 3"],
+    "relevant_resources": ["Specific resource based on their needs"],
+    "accountability_check": "Question to make them reflect on their commitment",
+    "encouragement": "Personalized motivational message"
+}}"""
+
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a compassionate but firm trading mentor who remembers the trader's history and provides personalized, accountable guidance."
+        },
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ]
+    
+    response, error = openrouter_chat(messages, max_tokens=1500)
+    
+    if error:
+        return {
+            "success": False,
+            "error": error,
+            "fallback_response": "I'm here to support your trading journey. Let's focus on one improvement at a time."
+        }
+    
+    try:
+        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+        if json_match:
+            return json.loads(json_match.group())
+    except:
+        pass
+    
+    return {
+        "personalized_response": response,
+        "success": True
+    }
+
+# Startup with auto-migration
+@app.on_event("startup")
+async def startup():
+    conn = await asyncpg.connect(DATABASE_URL, ssl="require")
+    
+    # ========== AUTO-MIGRATION ==========
+    migrations = [
+        ("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE", "is_admin column"),
+    ]
+    
+    for sql, description in migrations:
+        try:
+            await conn.execute(sql)
+            print(f"✅ Migration applied: {description}")
+        except Exception as e:
+            print(f"⚠️ Migration skipped ({description}): {e}")
+    # ========== END MIGRATION ==========
+    
+    # Users table (create if not exists)
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            name VARCHAR(100),
+            is_admin BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Trades table
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS trades (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id),
+            pair VARCHAR(10) NOT NULL,
+            direction VARCHAR(10) NOT NULL,
+            entry_price DECIMAL(10,5),
+            exit_price DECIMAL(10,5),
+            pips INTEGER,
+            grade VARCHAR(5),
+            screenshot_url TEXT,
+            ai_analysis TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Chart analyses table
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS chart_analyses (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id),
+            image_data TEXT,
+            analysis_result JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Blog posts table
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS blog_posts (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            slug VARCHAR(255) UNIQUE NOT NULL,
+            content TEXT NOT NULL,
+            excerpt TEXT,
+            featured_image TEXT,
+            meta_title VARCHAR(70),
+            meta_description VARCHAR(160),
+            meta_keywords TEXT,
+            author_id INTEGER REFERENCES users(id),
+            category VARCHAR(100),
+            tags TEXT[],
+            status VARCHAR(20) DEFAULT 'draft',
+            published_at TIMESTAMP,
+            view_count INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Blog categories table
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS blog_categories (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            slug VARCHAR(100) UNIQUE NOT NULL,
+            description TEXT,
+            meta_title VARCHAR(70),
+            meta_description VARCHAR(160),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Media uploads table
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS media_files (
+            id SERIAL PRIMARY KEY,
+            filename VARCHAR(255) NOT NULL,
+            original_name VARCHAR(255) NOT NULL,
+            file_path TEXT NOT NULL,
+            file_type VARCHAR(50) NOT NULL,
+            file_size INTEGER NOT NULL,
+            mime_type VARCHAR(100),
+            alt_text VARCHAR(255),
+            uploaded_by INTEGER REFERENCES users(id),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Trade analysis uploads table
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS trade_analysis_uploads (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id),
+            filename VARCHAR(255) NOT NULL,
+            file_type VARCHAR(50) NOT NULL,
+            file_data TEXT,
+            extracted_data JSONB,
+            analysis_result JSONB,
+            trader_type VARCHAR(50),
+            trader_score INTEGER,
+            mistakes_detected JSONB,
+            patterns_detected JSONB,
+            recommendations TEXT[],
+            learning_resources TEXT[],
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Mentorship sessions table
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS mentorship_sessions (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id),
+            session_type VARCHAR(50),
+            context JSONB,
+            ai_response TEXT,
+            resources_suggested JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Create default admin user and ensure is_admin = TRUE
+    try:
+        existing_admin = await conn.fetchrow("SELECT id, is_admin FROM users WHERE email = $1", DEFAULT_ADMIN_EMAIL)
+        if not existing_admin:
+            hashed = get_password_hash(DEFAULT_ADMIN_PASSWORD)
+            await conn.execute(
+                "INSERT INTO users (email, password_hash, name, is_admin) VALUES ($1, $2, $3, $4)",
+                DEFAULT_ADMIN_EMAIL, hashed, "Admin", True
+            )
+            print(f"✅ Default admin created: {DEFAULT_ADMIN_EMAIL} / {DEFAULT_ADMIN_PASSWORD}")
+        else:
+            # Ensure existing admin has is_admin = TRUE
+            await conn.execute(
+                "UPDATE users SET is_admin = TRUE WHERE email = $1",
+                DEFAULT_ADMIN_EMAIL
+            )
+            print(f"✅ Admin privileges confirmed for: {DEFAULT_ADMIN_EMAIL}")
+    except Exception as e:
+        print(f"⚠️ Admin setup error: {e}")
+    
+    await conn.close()
+
+# Health check
+@app.get("/health")
+async def health():
+    return {
+        "status": "ok", 
+        "version": "2.0.0",
+        "openrouter_configured": bool(OPENROUTER_API_KEY),
+        "features": ["blog", "trade_analysis", "mentorship", "admin"]
+    }
+
+# ==================== AUTHENTICATION ====================
+
 @app.post("/auth/register")
 async def register(
     email: str = Form(...),
     password: str = Form(...),
-    name: str = Form(...)
+    name: str = Form(...),
+    conn=Depends(get_db)
 ):
-    """Register new user with form data (matches old working code)"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        
-        # Check if user exists
-        cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
-        if cursor.fetchone():
+    try:
+        existing = await conn.fetchrow("SELECT id FROM users WHERE email = $1", email)
+        if existing:
             raise HTTPException(status_code=400, detail="Email already registered")
         
-        # Create user
-        hashed_password = get_password_hash(password)
-        cursor.execute(
-            "INSERT INTO users (email, hashed_password, name) VALUES (?, ?, ?)",
-            (email, hashed_password, name)
-        )
-        conn.commit()
-        user_id = cursor.lastrowid
+        password_bytes = password.encode('utf-8')
+        if len(password_bytes) > 72:
+            raise HTTPException(status_code=400, detail="Password is too long (max 72 characters)")
         
-        # Get created user
-        cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-        user = dict(cursor.fetchone())
-        
-        access_token = create_access_token(
-            data={"sub": str(user_id)},
-            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        hashed = get_password_hash(password)
+        user_id = await conn.fetchval(
+            "INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id",
+            email, hashed, name
         )
         
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user_id": user_id,
-            "email": email,
-            "name": name,
-            "is_admin": user.get("is_admin", False)
-        }
+        token = create_access_token({"sub": email})
+        return {"access_token": token, "user_id": user_id, "email": email, "name": name, "is_admin": False}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
 
 @app.post("/auth/login")
 async def login(
     email: str = Form(...),
-    password: str = Form(...)
+    password: str = Form(...),
+    conn=Depends(get_db)
 ):
-    """Login user with form data (matches old working code)"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
-        user = cursor.fetchone()
+    try:
+        user = await conn.fetchrow("SELECT id, password_hash, name, is_admin FROM users WHERE email = $1", email)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
         
-        if not user or not verify_password(password, user["hashed_password"]):
-            raise HTTPException(
-                status_code=401,
-                detail="Incorrect email or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+        if not verify_password(password, user["password_hash"]):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
         
-        access_token = create_access_token(
-            data={"sub": str(user["id"])},
-            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        )
-        
+        token = create_access_token({"sub": email})
         return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user_id": user["id"],
-            "name": user["name"],
+            "access_token": token, 
+            "user_id": user["id"], 
+            "name": user["name"], 
             "email": email,
             "is_admin": user["is_admin"]
         }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
 
-# Keep OAuth2 endpoint for Swagger UI compatibility
-@app.post("/auth/token")
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    """OAuth2 compatible token endpoint for Swagger UI"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE email = ?", (form_data.username,))
-        user = cursor.fetchone()
+# ==================== TRADING JOURNAL ====================
+
+@app.get("/trades")
+async def get_trades(current_user: str = Depends(get_current_user), conn=Depends(get_db)):
+    try:
+        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
+        trades = await conn.fetch(
+            "SELECT * FROM trades WHERE user_id = $1 ORDER BY created_at DESC",
+            user["id"]
+        )
+        return [dict(t) for t in trades]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch trades: {str(e)}")
+
+@app.post("/trades")
+async def create_trade(
+    pair: str = Form(...),
+    direction: str = Form(...),
+    pips: float = Form(...),
+    grade: str = Form(...),
+    entry_price: Optional[float] = Form(None),
+    exit_price: Optional[float] = Form(None),
+    current_user: str = Depends(get_current_user),
+    conn=Depends(get_db)
+):
+    try:
+        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
+        trade_id = await conn.fetchval("""
+            INSERT INTO trades (user_id, pair, direction, entry_price, exit_price, pips, grade)
+            VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+        """, user["id"], pair.upper(), direction, entry_price, exit_price, pips, grade)
         
-        if not user or not verify_password(form_data.password, user["hashed_password"]):
-            raise HTTPException(
-                status_code=401,
-                detail="Incorrect email or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+        return {"id": trade_id, "message": "Trade saved"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save trade: {str(e)}")
+
+# ==================== PRE-TRADE AI ANALYSIS ====================
+
+@app.post("/analyze-trade-setup")
+async def analyze_trade_setup(
+    pair: str = Form(...),
+    direction: str = Form(...),
+    entry_price: float = Form(...),
+    stop_loss: Optional[float] = Form(None),
+    take_profit: Optional[float] = Form(None),
+    risk_percent: Optional[float] = Form(None),
+    setup_description: Optional[str] = Form(None),
+    current_user: str = Depends(get_current_user),
+    conn=Depends(get_db)
+):
+    """AI analyzes trade setup BEFORE user executes it"""
+    
+    prompt = f"""Analyze this trade setup critically:
+
+Pair: {pair}
+Direction: {direction}
+Entry: {entry_price}
+Stop Loss: {stop_loss or 'Not set'}
+Take Profit: {take_profit or 'Not set'}
+Risk: {risk_percent or 'Unknown'}%
+Setup Description: {setup_description or 'None provided'}
+
+Provide analysis in this JSON format:
+{{
+    "setup_grade": "A/B/C/D",
+    "grade_reason": "Explanation of grade",
+    "risk_reward_ratio": "1:2.5",
+    "probability_of_success": 65,
+    "key_concerns": ["Concern 1", "Concern 2"],
+    "suggestions": ["Improvement 1", "Improvement 2"],
+    "approval": "approved/conditional/rejected",
+    "conditional_requirements": ["Only if these are met..."],
+    "better_alternative": "Consider this instead...",
+    "psychology_check": "Are you trading emotionally right now?"
+}}"""
+
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a ruthless, disciplined trading coach who prevents bad trades. Be harsh but constructive. Protect the trader from themselves."
+        },
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ]
+    
+    response, error = openrouter_chat(messages, max_tokens=1500)
+    
+    if error:
+        raise HTTPException(status_code=500, detail=f"AI analysis failed: {error}")
+    
+    try:
+        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+        if json_match:
+            analysis = json.loads(json_match.group())
+            return {"success": True, "analysis": analysis}
+    except:
+        pass
+    
+    return {"success": False, "raw_response": response}
+
+# ==================== CHART ANALYSIS ====================
+
+@app.post("/analyze-chart")
+async def analyze_chart(
+    file: UploadFile = File(...),
+    current_user: str = Depends(get_current_user),
+    conn=Depends(get_db)
+):
+    try:
+        contents = await file.read()
+        base64_image = base64.b64encode(contents).decode('utf-8')
         
-        access_token = create_access_token(
-            data={"sub": str(user["id"])},
-            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        analysis_text, error = openrouter_vision(
+            base64_image,
+            "Analyze this trading chart. Identify the currency pair, trend direction, key support/resistance levels, and provide a trade setup grade (A/B/C)."
+        )
+        
+        if error:
+            return {
+                "success": False,
+                "analysis": None,
+                "raw_response": None,
+                "error": error,
+                "image_data": base64_image
+            }
+        
+        parsed_analysis = parse_analysis_response(analysis_text)
+        
+        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
+        await conn.execute(
+            "INSERT INTO chart_analyses (user_id, image_data, analysis_result) VALUES ($1, $2, $3)",
+            user["id"], base64_image, json.dumps(parsed_analysis)
         )
         
         return {
-            "access_token": access_token,
-            "token_type": "bearer"
+            "success": True,
+            "analysis": parsed_analysis,
+            "raw_response": analysis_text,
+            "image_data": base64_image,
+            "error": None
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "analysis": None,
+            "raw_response": None,
+            "error": str(e),
+            "image_data": None
         }
 
-# Trade Endpoints
-@app.get("/trades", response_model=List[Trade])
-async def get_trades(current_user: dict = Depends(get_current_user)):
-    """Get all trades for current user"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT * FROM trades WHERE user_id = ? ORDER BY created_at DESC",
-            (current_user["id"],)
-        )
-        trades = [dict(row) for row in cursor.fetchall()]
-        return [Trade(**trade) for trade in trades]
+def parse_analysis_response(analysis_text):
+    try:
+        json_match = re.search(r'\{.*\}', analysis_text, re.DOTALL)
+        if json_match:
+            return json.loads(json_match.group())
+    except:
+        pass
+    
+    return {
+        "pair": "Unknown",
+        "direction": "Unknown",
+        "setup_quality": "N/A",
+        "entry_price": "N/A",
+        "stop_loss": "N/A",
+        "take_profit": "N/A",
+        "risk_reward": "N/A",
+        "analysis": analysis_text,
+        "key_levels": [],
+        "recommendations": "Please review manually"
+    }
 
-@app.post("/trades", response_model=Trade)
-async def create_trade(
-    trade: TradeCreate,
-    current_user: dict = Depends(get_current_user)
+@app.get("/chart-analyses")
+async def get_chart_analyses(current_user: str = Depends(get_current_user), conn=Depends(get_db)):
+    try:
+        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
+        analyses = await conn.fetch(
+            "SELECT id, analysis_result, created_at FROM chart_analyses WHERE user_id = $1 ORDER BY created_at DESC",
+            user["id"]
+        )
+        return [dict(a) for a in analyses]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch analyses: {str(e)}")
+
+# ==================== ADVANCED TRADE ANALYSIS UPLOAD ====================
+
+@app.post("/analyze-trade-file")
+async def analyze_trade_file(
+    file: UploadFile = File(...),
+    current_user: str = Depends(get_current_user),
+    conn=Depends(get_db)
 ):
-    """Create new trade"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """INSERT INTO trades (user_id, pair, direction, pips, grade, entry_price, exit_price) VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (current_user["id"], trade.pair.upper(), trade.direction, trade.pips, trade.grade, trade.entry_price, trade.exit_price)
-        )
-        conn.commit()
-        trade_id = cursor.lastrowid
+    """
+    Upload and analyze trading results from PDF, DOC, CSV, screenshots, etc.
+    """
+    try:
+        contents = await file.read()
+        file_size = len(contents)
         
-        cursor.execute("SELECT * FROM trades WHERE id = ?", (trade_id,))
-        return Trade(**dict(cursor.fetchone()))
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail="File too large (max 50MB)")
+        
+        # Detect file type
+        file_type = file.content_type or "application/octet-stream"
+        
+        if file_type not in ALLOWED_TRADE_FILE_TYPES:
+            # Try to detect from extension
+            ext = Path(file.filename).suffix.lower()
+            type_map = {
+                '.pdf': 'application/pdf',
+                '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                '.doc': 'application/msword',
+                '.csv': 'text/csv',
+                '.xls': 'application/vnd.ms-excel',
+                '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                '.png': 'image/png',
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.webp': 'image/webp'
+            }
+            file_type = type_map.get(ext, file_type)
+        
+        # Extract data based on file type
+        extracted_data = {}
+        
+        if file_type == 'application/pdf':
+            extracted_data['text'] = extract_text_from_pdf(contents)
+            extracted_data['type'] = 'pdf_statement'
+        elif file_type in ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword']:
+            extracted_data['text'] = extract_text_from_docx(contents)
+            extracted_data['type'] = 'doc_report'
+        elif file_type == 'text/csv':
+            extracted_data['trades'] = parse_csv_trades(contents)
+            extracted_data['type'] = 'csv_trades'
+        elif file_type in ['image/png', 'image/jpeg', 'image/webp']:
+            # For screenshots, use vision API
+            base64_image = base64.b64encode(contents).decode('utf-8')
+            extracted_data['image_data'] = base64_image
+            extracted_data['type'] = 'screenshot'
+        elif 'mt4' in file.filename.lower() or 'mt5' in file.filename.lower():
+            extracted_data = parse_mt4_statement(contents)
+            extracted_data['type'] = 'mt_statement'
+        
+        # Save file
+        file_ext = ALLOWED_TRADE_FILE_TYPES.get(file_type, '.bin')
+        unique_filename = f"{uuid.uuid4()}{file_ext}"
+        file_path = MEDIA_DIR / unique_filename
+        
+        with open(file_path, "wb") as f:
+            f.write(contents)
+        
+        # Perform AI analysis
+        analysis = await analyze_trader_performance(extracted_data, 0)
+        
+        if not analysis.get('success'):
+            return {
+                "success": False,
+                "error": analysis.get('error', 'Analysis failed'),
+                "extracted_preview": str(extracted_data)[:500]
+            }
+        
+        # Save to database
+        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
+        
+        upload_id = await conn.fetchval("""
+            INSERT INTO trade_analysis_uploads 
+            (user_id, filename, file_type, file_data, extracted_data, analysis_result,
+             trader_type, trader_score, mistakes_detected, patterns_detected, 
+             recommendations, learning_resources)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            RETURNING id
+        """,
+            user["id"],
+            file.filename,
+            file_type,
+            str(file_path),
+            json.dumps(extracted_data),
+            json.dumps(analysis),
+            analysis.get('trader_type'),
+            analysis.get('trader_score'),
+            json.dumps(analysis.get('mistakes_detected', [])),
+            json.dumps(analysis.get('patterns_detected', [])),
+            analysis.get('recommendations', []),
+            analysis.get('learning_resources', [])
+        )
+        
+        return {
+            "success": True,
+            "upload_id": upload_id,
+            "analysis": analysis,
+            "file_saved": str(file_path)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"File analysis failed: {str(e)}")
 
-# Enhanced Blog Endpoints with SEO
-@app.get("/blog/posts", response_model=Dict[str, Any])
+@app.get("/trade-analyses")
+async def get_trade_analyses(
+    current_user: str = Depends(get_current_user),
+    conn=Depends(get_db)
+):
+    """Get user's trade analysis history"""
+    try:
+        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
+        analyses = await conn.fetch("""
+            SELECT id, filename, file_type, trader_type, trader_score, 
+                   recommendations, created_at
+            FROM trade_analysis_uploads 
+            WHERE user_id = $1 
+            ORDER BY created_at DESC
+        """, user["id"])
+        return [dict(a) for a in analyses]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/trade-analysis/{analysis_id}")
+async def get_trade_analysis_detail(
+    analysis_id: int,
+    current_user: str = Depends(get_current_user),
+    conn=Depends(get_db)
+):
+    """Get detailed trade analysis"""
+    try:
+        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
+        analysis = await conn.fetchrow("""
+            SELECT * FROM trade_analysis_uploads 
+            WHERE id = $1 AND user_id = $2
+        """, analysis_id, user["id"])
+        
+        if not analysis:
+            raise HTTPException(status_code=404, detail="Analysis not found")
+        
+        return dict(analysis)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== PERSONALIZED MENTORSHIP ====================
+
+@app.post("/mentorship/personalized")
+async def get_personalized_mentorship_endpoint(
+    message: str = Form(...),
+    context_type: Optional[str] = Form("general"),
+    current_user: str = Depends(get_current_user),
+    conn=Depends(get_db)
+):
+    """Get AI mentorship personalized to user's trading history"""
+    
+    user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
+    
+    context = {
+        "message": message,
+        "type": context_type,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    
+    mentorship = await get_personalized_mentorship(user["id"], context, conn)
+    
+    # Save session
+    await conn.execute("""
+        INSERT INTO mentorship_sessions (user_id, session_type, context, ai_response, resources_suggested)
+        VALUES ($1, $2, $3, $4, $5)
+    """,
+        user["id"],
+        context_type,
+        json.dumps(context),
+        mentorship.get('personalized_response', mentorship.get('response', '')),
+        json.dumps(mentorship.get('relevant_resources', []))
+    )
+    
+    return mentorship
+
+@app.get("/mentor-chat")
+async def mentor_chat(
+    message: str, 
+    current_user: str = Depends(get_current_user),
+    conn=Depends(get_db)
+):
+    """Legacy mentor chat - redirects to personalized version"""
+    return await get_personalized_mentorship_endpoint(message, "general", current_user, conn)
+
+# ==================== BLOG SYSTEM (SEO-OPTIMIZED) ====================
+
+@app.get("/blog/posts", response_class=JSONResponse)
 async def get_blog_posts(
-    status: str = Query("published"),
-    category: Optional[str] = None,
-    search: Optional[str] = None,
     page: int = Query(1, ge=1),
-    per_page: int = Query(12, ge=1, le=100)
+    per_page: int = Query(10, ge=1, le=50),
+    category: Optional[str] = None,
+    tag: Optional[str] = None,
+    status: Optional[str] = "published",
+    search: Optional[str] = None,
+    conn=Depends(get_db)
 ):
     """Get blog posts with filtering and pagination"""
-    with get_db() as conn:
-        cursor = conn.cursor()
+    try:
+        offset = (page - 1) * per_page
+        params = []
+        where_clauses = []
         
-        query = "SELECT * FROM blog_posts WHERE status = ?"
-        params = [status]
+        if status:
+            where_clauses.append(f"status = ${len(params)+1}")
+            params.append(status)
         
-        if category and category != "all":
-            query += " AND category = ?"
+        if category:
+            where_clauses.append(f"category = ${len(params)+1}")
             params.append(category)
         
+        if tag:
+            where_clauses.append(f"${len(params)+1} = ANY(tags)")
+            params.append(tag)
+        
         if search:
-            query += " AND (title LIKE ? OR content LIKE ? OR meta_keywords LIKE ?)"
-            search_term = f"%{search}%"
-            params.extend([search_term, search_term, search_term])
+            where_clauses.append(f"(title ILIKE ${len(params)+1} OR content ILIKE ${len(params)+1} OR excerpt ILIKE ${len(params)+1})")
+            params.append(f"%{search}%")
         
-        count_query = query.replace("SELECT *", "SELECT COUNT(*)")
-        cursor.execute(count_query, params)
-        total = cursor.fetchone()[0]
+        where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
         
-        query += " ORDER BY published_at DESC LIMIT ? OFFSET ?"
-        params.extend([per_page, (page - 1) * per_page])
+        # Get posts
+        posts = await conn.fetch(f"""
+            SELECT id, title, slug, excerpt, featured_image, category, tags,
+                   meta_title, meta_description, published_at, view_count, created_at
+            FROM blog_posts
+            WHERE {where_sql}
+            ORDER BY published_at DESC NULLS LAST
+            LIMIT ${len(params)+1} OFFSET ${len(params)+2}
+        """, *params, per_page, offset)
         
-        cursor.execute(query, params)
-        posts = [dict(row) for row in cursor.fetchall()]
+        # Get total count
+        count_result = await conn.fetchrow(f"""
+            SELECT COUNT(*) as total FROM blog_posts WHERE {where_sql}
+        """, *params[:-2] if len(params) > 2 else [])
         
-        for post in posts:
-            post["tags"] = json.loads(post["tags"]) if post["tags"] else []
-            if post["author_id"]:
-                cursor.execute("SELECT id, email, name, is_admin FROM users WHERE id = ?", 
-                             (post["author_id"],))
-                author = cursor.fetchone()
-                post["author"] = dict(author) if author else None
+        total = count_result['total'] if count_result else 0
         
         return {
-            "posts": [BlogPostResponse(**post) for post in posts],
-            "total": total,
-            "page": page,
-            "per_page": per_page,
-            "total_pages": (total + per_page - 1) // per_page
+            "posts": [dict(p) for p in posts],
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total": total,
+                "total_pages": (total + per_page - 1) // per_page
+            }
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/blog/post/{slug}", response_model=BlogPostResponse)
-async def get_blog_post(slug: str):
+@app.get("/blog/post/{slug}", response_class=JSONResponse)
+async def get_blog_post(
+    slug: str,
+    conn=Depends(get_db)
+):
     """Get single blog post by slug"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM blog_posts WHERE slug = ?", (slug,))
-        post = cursor.fetchone()
+    try:
+        post = await conn.fetchrow("""
+            SELECT * FROM blog_posts WHERE slug = $1 AND status = 'published'
+        """, slug)
         
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
         
-        post = dict(post)
+        # Increment view count
+        await conn.execute("""
+            UPDATE blog_posts SET view_count = view_count + 1 WHERE id = $1
+        """, post['id'])
         
-        cursor.execute("UPDATE blog_posts SET view_count = view_count + 1 WHERE id = ?", 
-                      (post["id"],))
-        conn.commit()
-        
-        post["tags"] = json.loads(post["tags"]) if post["tags"] else []
-        
-        if post["author_id"]:
-            cursor.execute("SELECT id, email, name, is_admin FROM users WHERE id = ?", 
-                         (post["author_id"],))
-            author = cursor.fetchone()
-            post["author"] = dict(author) if author else None
-        
-        return BlogPostResponse(**post)
+        return dict(post)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/admin/blog/posts", response_model=BlogPostResponse)
+@app.post("/admin/blog/posts")
 async def create_blog_post(
     title: str = Form(...),
     content: str = Form(...),
     excerpt: Optional[str] = Form(None),
-    category: str = Form("general"),
-    tags: Optional[str] = Form(None),
-    status: str = Form("draft"),
-    featured_image_id: Optional[int] = Form(None),
+    featured_image: Optional[str] = Form(None),
     meta_title: Optional[str] = Form(None),
     meta_description: Optional[str] = Form(None),
     meta_keywords: Optional[str] = Form(None),
-    current_user: dict = Depends(get_current_user)
+    category: Optional[str] = Form(None),
+    tags: Optional[str] = Form(None),
+    status: str = Form("draft"),
+    current_user: str = Depends(get_current_admin),
+    conn=Depends(get_db)
 ):
-    """Create new blog post with SEO fields"""
-    if not current_user.get("is_admin"):
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    base_slug = generate_slug(title)
-    slug = base_slug
-    
-    with get_db() as conn:
-        cursor = conn.cursor()
+    """Create new blog post (admin only)"""
+    try:
+        # Create slug from title
+        slug = re.sub(r'[^\w\s-]', '', title.lower()).strip()
+        slug = re.sub(r'[-\s]+', '-', slug)
         
-        counter = 1
-        while True:
-            cursor.execute("SELECT id FROM blog_posts WHERE slug = ?", (slug,))
-            if not cursor.fetchone():
-                break
-            slug = f"{base_slug}-{counter}"
-            counter += 1
+        # Ensure unique slug
+        existing = await conn.fetchrow("SELECT id FROM blog_posts WHERE slug = $1", slug)
+        if existing:
+            slug = f"{slug}-{uuid.uuid4().hex[:8]}"
         
-        tag_list = json.loads(tags) if tags else []
+        # Process tags
+        tag_list = [t.strip() for t in tags.split(',')] if tags else []
         
-        featured_image = None
-        og_image = None
-        if featured_image_id:
-            cursor.execute("SELECT file_path FROM media WHERE id = ?", (featured_image_id,))
-            media = cursor.fetchone()
-            if media:
-                featured_image = f"/uploads/{media['file_path']}"
-                og_image = featured_image
+        # Auto-generate excerpt if not provided
+        if not excerpt:
+            excerpt = content[:200] + "..." if len(content) > 200 else content
         
-        published_at = None
-        if status == "published":
-            published_at = datetime.utcnow().isoformat()
-        
-        if not meta_description and excerpt:
+        # Auto-generate meta if not provided
+        if not meta_title:
+            meta_title = title[:70]
+        if not meta_description:
             meta_description = excerpt[:160]
-        elif not meta_description:
-            meta_description = content[:160].replace("<[^>]*>", "")
         
-        cursor.execute("""
+        published_at = datetime.utcnow() if status == 'published' else None
+        
+        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
+        
+        post_id = await conn.fetchval("""
             INSERT INTO blog_posts 
-            (title, slug, content, excerpt, featured_image, category, tags, status,
-             meta_title, meta_description, meta_keywords, og_image, author_id, published_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            title, slug, content, excerpt, featured_image, category, 
-            json.dumps(tag_list), status, meta_title or title, meta_description,
-            meta_keywords, og_image, current_user["id"], published_at
-        ))
-        conn.commit()
-        post_id = cursor.lastrowid
+            (title, slug, content, excerpt, featured_image, meta_title, meta_description,
+             meta_keywords, author_id, category, tags, status, published_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            RETURNING id
+        """,
+            title, slug, content, excerpt, featured_image, meta_title, meta_description,
+            meta_keywords, user["id"], category, tag_list, status, published_at
+        )
         
-        cursor.execute("SELECT * FROM blog_posts WHERE id = ?", (post_id,))
-        post = dict(cursor.fetchone())
-        post["tags"] = tag_list
-        post["author"] = User(**current_user)
-        
-        return BlogPostResponse(**post)
+        return {
+            "success": True,
+            "post_id": post_id,
+            "slug": slug,
+            "message": "Post created successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/admin/blog/posts/{post_id}", response_model=BlogPostResponse)
+@app.put("/admin/blog/posts/{post_id}")
 async def update_blog_post(
     post_id: int,
     title: Optional[str] = Form(None),
     content: Optional[str] = Form(None),
     excerpt: Optional[str] = Form(None),
-    category: Optional[str] = Form(None),
-    tags: Optional[str] = Form(None),
-    status: Optional[str] = Form(None),
-    featured_image_id: Optional[int] = Form(None),
+    featured_image: Optional[str] = Form(None),
     meta_title: Optional[str] = Form(None),
     meta_description: Optional[str] = Form(None),
     meta_keywords: Optional[str] = Form(None),
-    current_user: dict = Depends(get_current_user)
+    category: Optional[str] = Form(None),
+    tags: Optional[str] = Form(None),
+    status: Optional[str] = Form(None),
+    current_user: str = Depends(get_current_admin),
+    conn=Depends(get_db)
 ):
-    """Update blog post"""
-    if not current_user.get("is_admin"):
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM blog_posts WHERE id = ?", (post_id,))
-        post = cursor.fetchone()
-        if not post:
-            raise HTTPException(status_code=404, detail="Post not found")
-        
+    """Update blog post (admin only)"""
+    try:
+        # Build update dynamically
         updates = []
         params = []
         
         if title:
-            updates.append("title = ?")
+            updates.append("title = $" + str(len(params)+1))
             params.append(title)
-            new_slug = generate_slug(title)
-            cursor.execute("SELECT id FROM blog_posts WHERE slug = ? AND id != ?", 
-                          (new_slug, post_id))
-            if not cursor.fetchone():
-                updates.append("slug = ?")
-                params.append(new_slug)
-        
+            # Update slug if title changes
+            new_slug = re.sub(r'[^\w\s-]', '', title.lower()).strip()
+            new_slug = re.sub(r'[-\s]+', '-', new_slug)
+            updates.append("slug = $" + str(len(params)+1))
+            params.append(f"{new_slug}-{uuid.uuid4().hex[:8]}")
         if content:
-            updates.append("content = ?")
+            updates.append("content = $" + str(len(params)+1))
             params.append(content)
-        if excerpt is not None:
-            updates.append("excerpt = ?")
+        if excerpt:
+            updates.append("excerpt = $" + str(len(params)+1))
             params.append(excerpt)
-        if category:
-            updates.append("category = ?")
-            params.append(category)
-        if tags is not None:
-            updates.append("tags = ?")
-            params.append(tags)
-        if status:
-            updates.append("status = ?")
-            params.append(status)
-            if status == "published" and post["status"] != "published":
-                updates.append("published_at = ?")
-                params.append(datetime.utcnow().isoformat())
-        if featured_image_id is not None:
-            if featured_image_id:
-                cursor.execute("SELECT file_path FROM media WHERE id = ?", (featured_image_id,))
-                media = cursor.fetchone()
-                if media:
-                    updates.append("featured_image = ?")
-                    params.append(f"/uploads/{media['file_path']}")
-                    updates.append("og_image = ?")
-                    params.append(f"/uploads/{media['file_path']}")
-            else:
-                updates.append("featured_image = NULL")
-        if meta_title is not None:
-            updates.append("meta_title = ?")
+        if featured_image:
+            updates.append("featured_image = $" + str(len(params)+1))
+            params.append(featured_image)
+        if meta_title:
+            updates.append("meta_title = $" + str(len(params)+1))
             params.append(meta_title)
-        if meta_description is not None:
-            updates.append("meta_description = ?")
+        if meta_description:
+            updates.append("meta_description = $" + str(len(params)+1))
             params.append(meta_description)
-        if meta_keywords is not None:
-            updates.append("meta_keywords = ?")
+        if meta_keywords:
+            updates.append("meta_keywords = $" + str(len(params)+1))
             params.append(meta_keywords)
+        if category:
+            updates.append("category = $" + str(len(params)+1))
+            params.append(category)
+        if tags:
+            updates.append("tags = $" + str(len(params)+1))
+            params.append([t.strip() for t in tags.split(',')])
+        if status:
+            updates.append("status = $" + str(len(params)+1))
+            params.append(status)
+            if status == 'published':
+                updates.append("published_at = $" + str(len(params)+1))
+                params.append(datetime.utcnow())
         
-        updates.append("updated_at = CURRENT_TIMESTAMP")
+        if not updates:
+            raise HTTPException(status_code=400, detail="No fields to update")
         
-        if updates:
-            query = f"UPDATE blog_posts SET {', '.join(updates)} WHERE id = ?"
-            params.append(post_id)
-            cursor.execute(query, params)
-            conn.commit()
+        updates.append("updated_at = $" + str(len(params)+1))
+        params.append(datetime.utcnow())
+        params.append(post_id)
         
-        cursor.execute("SELECT * FROM blog_posts WHERE id = ?", (post_id,))
-        updated_post = dict(cursor.fetchone())
-        updated_post["tags"] = json.loads(updated_post["tags"]) if updated_post["tags"] else []
+        await conn.execute(f"""
+            UPDATE blog_posts SET {', '.join(updates)} WHERE id = ${len(params)}
+        """, *params)
         
-        return BlogPostResponse(**updated_post)
+        return {"success": True, "message": "Post updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/admin/blog/posts/{post_id}")
 async def delete_blog_post(
     post_id: int,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_admin),
+    conn=Depends(get_db)
 ):
-    """Delete blog post"""
-    if not current_user.get("is_admin"):
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM blog_posts WHERE id = ?", (post_id,))
-        conn.commit()
-        return {"message": "Post deleted successfully"}
+    """Delete blog post (admin only)"""
+    try:
+        await conn.execute("DELETE FROM blog_posts WHERE id = $1", post_id)
+        return {"success": True, "message": "Post deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-# Media Management Endpoints
-@app.post("/admin/media/upload", response_model=MediaResponse)
+# ==================== MEDIA MANAGEMENT ====================
+
+@app.post("/admin/media/upload")
 async def upload_media(
     file: UploadFile = File(...),
     alt_text: Optional[str] = Form(None),
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_admin),
+    conn=Depends(get_db)
 ):
-    """Upload media file with validation and optimization"""
-    if not current_user.get("is_admin"):
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    if not await validate_file_type(file, ALLOWED_IMAGE_TYPES | ALLOWED_DOCUMENT_TYPES):
-        raise HTTPException(status_code=400, detail="Invalid file type")
-    
-    content = await file.read()
-    if len(content) > MAX_IMAGE_SIZE and file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="Image too large (max 10MB)")
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail="File too large (max 50MB)")
-    
-    await file.seek(0)
-    
-    file_id = str(uuid.uuid4())
-    extension = Path(file.filename).suffix.lower()
-    if file.content_type == "image/jpeg" and extension not in ['.jpg', '.jpeg']:
-        extension = '.jpg'
-    elif file.content_type == "image/png" and extension != '.png':
-        extension = '.png'
-    
-    filename = f"{file_id}{extension}"
-    file_path = MEDIA_DIR / filename
-    
-    async with aiofiles.open(file_path, 'wb') as out_file:
-        await out_file.write(content)
-    
-    if file.content_type.startswith('image/'):
-        try:
-            optimized_path = process_image_for_web(file_path)
-            file_path.unlink()
-            optimized_path.rename(file_path)
-            file_size = file_path.stat().st_size
-        except Exception:
-            file_size = len(content)
-    else:
-        file_size = len(content)
-    
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO media (filename, original_name, file_path, file_type, file_size, mime_type, alt_text, uploaded_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            filename, file.filename, f"media/{filename}", 
-            extension.lstrip('.'), file_size, file.content_type, alt_text, current_user["id"]
-        ))
-        conn.commit()
-        media_id = cursor.lastrowid
-        
-        return MediaResponse(
-            id=media_id,
-            filename=filename,
-            original_name=file.filename,
-            url=f"/uploads/media/{filename}",
-            file_type=extension.lstrip('.'),
-            file_size=file_size,
-            mime_type=file.content_type,
-            alt_text=alt_text,
-            created_at=datetime.utcnow()
-        )
-
-@app.get("/admin/media", response_model=List[MediaResponse])
-async def list_media(
-    file_type: Optional[str] = None,
-    current_user: dict = Depends(get_current_user)
-):
-    """List all media files"""
-    if not current_user.get("is_admin"):
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    with get_db() as conn:
-        cursor = conn.cursor()
-        
-        if file_type:
-            cursor.execute("SELECT * FROM media WHERE file_type = ? ORDER BY created_at DESC", (file_type,))
-        else:
-            cursor.execute("SELECT * FROM media ORDER BY created_at DESC")
-        
-        media_list = []
-        for row in cursor.fetchall():
-            media = dict(row)
-            media["url"] = f"/uploads/{media['file_path']}"
-            media_list.append(MediaResponse(**media))
-        
-        return media_list
-
-@app.delete("/admin/media/{media_id}")
-async def delete_media(
-    media_id: int,
-    current_user: dict = Depends(get_current_user)
-):
-    """Delete media file"""
-    if not current_user.get("is_admin"):
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM media WHERE id = ?", (media_id,))
-        media = cursor.fetchone()
-        
-        if not media:
-            raise HTTPException(status_code=404, detail="Media not found")
-        
-        file_path = UPLOAD_DIR / media["file_path"]
-        if file_path.exists():
-            file_path.unlink()
-        
-        cursor.execute("DELETE FROM media WHERE id = ?", (media_id,))
-        conn.commit()
-        
-        return {"message": "Media deleted successfully"}
-
-# Optimized Chart Analysis
-@app.post("/analyze-chart", response_model=ChartAnalysisResponse)
-async def analyze_chart(
-    file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user)
-):
-    """Analyze chart image with AI"""
-    if not await validate_file_type(file, ALLOWED_IMAGE_TYPES):
-        raise HTTPException(status_code=400, detail="Invalid image format. Use JPEG, PNG, or WebP.")
-    
-    file_id = str(uuid.uuid4())
-    file_path = UPLOAD_DIR / f"{file_id}{Path(file.filename).suffix}"
-    
-    async with aiofiles.open(file_path, 'wb') as out_file:
-        content = await file.read()
-        await out_file.write(content)
-    
+    """Upload media file (admin only)"""
     try:
-        import base64
-        with open(file_path, "rb") as img_file:
-            image_data = base64.b64encode(img_file.read()).decode()
+        contents = await file.read()
+        file_size = len(contents)
         
-        analysis = {
-            "setup_quality": "A",
-            "pair": "EURUSD",
-            "direction": "LONG",
-            "entry_price": "1.08500",
-            "stop_loss": "1.08200",
-            "take_profit": "1.09200",
-            "risk_reward": "1:2.3",
-            "analysis": "Strong bullish setup with support at 1.08200. Price action shows higher lows formation.",
-            "recommendations": "Enter on pullback to 1.08400-1.08500 zone with stop below 1.08200.",
-            "key_levels": ["1.08200", "1.08500", "1.09000", "1.09200"]
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail="File too large")
+        
+        # Get file extension
+        ext = Path(file.filename).suffix.lower()
+        
+        # Generate unique filename
+        unique_filename = f"{uuid.uuid4()}{ext}"
+        file_path = MEDIA_DIR / unique_filename
+        
+        # Save file
+        with open(file_path, "wb") as f:
+            f.write(contents)
+        
+        # Determine file type
+        file_type = ext.replace('.', '')
+        
+        # Save to database
+        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
+        
+        media_id = await conn.fetchval("""
+            INSERT INTO media_files 
+            (filename, original_name, file_path, file_type, file_size, mime_type, alt_text, uploaded_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING id
+        """,
+            unique_filename,
+            file.filename,
+            str(file_path),
+            file_type,
+            file_size,
+            file.content_type or "application/octet-stream",
+            alt_text,
+            user["id"]
+        )
+        
+        return {
+            "success": True,
+            "media_id": media_id,
+            "filename": unique_filename,
+            "url": f"/media/{unique_filename}",
+            "size": file_size
         }
-        
-        with get_db() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "INSERT INTO chart_analyses (user_id, image_path, analysis_data) VALUES (?, ?, ?)",
-                (current_user["id"], str(file_path.relative_to(UPLOAD_DIR)), json.dumps(analysis))
-            )
-            conn.commit()
-        
-        return ChartAnalysisResponse(
-            success=True,
-            analysis=analysis,
-            image_data=image_data
-        )
-        
-    except Exception as e:
-        return ChartAnalysisResponse(
-            success=False,
-            analysis={},
-            error=str(e)
-        )
-    finally:
-        if file_path.exists():
-            file_path.unlink()
-
-# Optimized Trade Analysis with Fast PDF Processing
-@app.post("/analyze-trade-file", response_model=TradeAnalysisResponse)
-async def analyze_trade_file(
-    file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user)
-):
-    """Analyze trading statement with optimized processing"""
-    allowed_types = ALLOWED_DOCUMENT_TYPES | {"application/octet-stream"}
-    if file.content_type not in allowed_types and not file.filename.endswith(('.pdf', '.csv', '.xls', '.xlsx', '.html', '.htm')):
-        raise HTTPException(status_code=400, detail="Invalid file format")
-    
-    file_id = str(uuid.uuid4())
-    extension = Path(file.filename).suffix or '.pdf'
-    temp_path = PDF_TEMP_DIR / f"{file_id}{extension}"
-    
-    try:
-        async with aiofiles.open(temp_path, 'wb') as out_file:
-            while chunk := await file.read(1024 * 1024):
-                await out_file.write(chunk)
-        
-        mime_type = file.content_type
-        if mime_type == "application/octet-stream":
-            if extension == '.pdf':
-                mime_type = "application/pdf"
-            elif extension in ['.csv']:
-                mime_type = "text/csv"
-            elif extension in ['.xls', '.xlsx']:
-                mime_type = "application/vnd.ms-excel"
-            elif extension in ['.html', '.htm']:
-                mime_type = "text/html"
-        
-        try:
-            analysis = await asyncio.wait_for(
-                process_trading_statement(temp_path, mime_type),
-                timeout=30.0
-            )
-        except asyncio.TimeoutError:
-            raise HTTPException(status_code=408, detail="Analysis timeout - file too complex")
-        
-        with get_db() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO trade_analyses 
-                (user_id, filename, file_type, trader_score, trader_type, analysis_data)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                current_user["id"], file.filename, mime_type,
-                analysis.get("trader_score"), analysis.get("trader_type"),
-                json.dumps(analysis)
-            ))
-            conn.commit()
-        
-        return TradeAnalysisResponse(success=True, analysis=analysis)
-        
     except HTTPException:
         raise
     except Exception as e:
-        return TradeAnalysisResponse(success=False, analysis={}, error=str(e))
-    finally:
-        if temp_path.exists():
-            temp_path.unlink()
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/trade-analyses")
-async def get_trade_analyses(current_user: dict = Depends(get_current_user)):
-    """Get user's trade analysis history"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT id, filename, trader_type, trader_score, created_at 
-            FROM trade_analyses 
-            WHERE user_id = ? 
-            ORDER BY created_at DESC
-        """, (current_user["id"],))
-        
-        analyses = []
-        for row in cursor.fetchall():
-            analyses.append({
-                "id": row["id"],
-                "filename": row["filename"],
-                "trader_type": row["trader_type"],
-                "trader_score": row["trader_score"],
-                "created_at": row["created_at"]
-            })
-        
-        return analyses
-
-# AI Mentor Endpoint
-@app.post("/mentorship/personalized")
-async def mentorship_personalized(
-    message: str = Form(...),
-    context_type: str = Form("general"),
-    current_user: dict = Depends(get_current_user)
+@app.get("/admin/media")
+async def list_media(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    current_user: str = Depends(get_current_admin),
+    conn=Depends(get_db)
 ):
-    """AI Mentor for trading psychology"""
-    responses = {
-        "fomo": "FOMO (Fear Of Missing Out) is dangerous. Stick to your trading plan and only take setups that meet your criteria.",
-        "risk": "Proper risk management means never risking more than 1-2% of your account per trade.",
-        "review": "Review losing trades by checking: 1) Did you follow your plan? 2) Was the setup valid? 3) What can you improve?",
-        "plan": "A trading plan should include: entry criteria, exit rules, position sizing, and risk management."
-    }
-    
-    response_text = responses.get(context_type, 
-        "I'm here to help with your trading psychology and discipline. What specific aspect would you like to discuss?")
-    
-    return {
-        "personalized_response": response_text,
-        "identified_pattern": context_type if context_type != "general" else None,
-        "actionable_steps": ["Stick to your plan", "Manage risk properly", "Review trades daily"]
-    }
-
-# Admin Dashboard
-@app.get("/admin/dashboard")
-async def admin_dashboard(current_user: dict = Depends(get_current_user)):
-    """Get admin dashboard statistics"""
-    if not current_user.get("is_admin"):
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    with get_db() as conn:
-        cursor = conn.cursor()
+    """List all media files (admin only)"""
+    try:
+        offset = (page - 1) * per_page
+        media = await conn.fetch("""
+            SELECT m.*, u.name as uploaded_by_name
+            FROM media_files m
+            JOIN users u ON m.uploaded_by = u.id
+            ORDER BY m.created_at DESC
+            LIMIT $1 OFFSET $2
+        """, per_page, offset)
         
-        cursor.execute("SELECT COUNT(*) as total FROM users")
-        total_users = cursor.fetchone()["total"]
-        
-        cursor.execute("""
-            SELECT COUNT(*) as new_users 
-            FROM users 
-            WHERE created_at >= datetime('now', '-7 days')
-        """)
-        new_users_7d = cursor.fetchone()["new_users"]
-        
-        cursor.execute("SELECT COUNT(*) as total FROM trades")
-        total_trades = cursor.fetchone()["total"]
-        
-        cursor.execute("""
-            SELECT COUNT(*) as recent 
-            FROM trades 
-            WHERE created_at >= datetime('now', '-7 days')
-        """)
-        trades_7d = cursor.fetchone()["recent"]
-        
-        cursor.execute("""
-            SELECT COUNT(*) as published 
-            FROM blog_posts 
-            WHERE status = 'published'
-        """)
-        published_posts = cursor.fetchone()["published"]
-        
-        cursor.execute("SELECT SUM(view_count) as total_views FROM blog_posts")
-        total_views = cursor.fetchone()["total_views"] or 0
-        
-        cursor.execute("SELECT AVG(trader_score) as avg_score FROM trade_analyses")
-        avg_trader_score = cursor.fetchone()["avg_score"] or 0
-        
-        cursor.execute("SELECT COUNT(*) as total FROM trade_analyses")
-        total_analyses = cursor.fetchone()["total"]
-        
-        cursor.execute("""
-            SELECT id, name, created_at 
-            FROM users 
-            ORDER BY created_at DESC 
-            LIMIT 5
-        """)
-        recent_users = [dict(row) for row in cursor.fetchall()]
+        count = await conn.fetchrow("SELECT COUNT(*) as total FROM media_files")
         
         return {
-            "users": {
-                "total_users": total_users,
-                "new_users_7d": new_users_7d
-            },
-            "trades": {
-                "total_trades": total_trades,
-                "trades_7d": trades_7d
-            },
-            "blog": {
-                "published_posts": published_posts,
-                "total_views": total_views
-            },
-            "analyses": {
-                "avg_trader_score": round(avg_trader_score, 1),
-                "total_analyses": total_analyses
-            },
-            "recent_activity": {
-                "users": recent_users
+            "media": [dict(m) for m in media],
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total": count['total'] if count else 0
             }
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/media/{filename}")
+async def serve_media(filename: str):
+    """Serve media file"""
+    file_path = MEDIA_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    return FileResponse(file_path)
+
+# ==================== ADMIN DASHBOARD ====================
+
+@app.get("/admin/dashboard")
+async def admin_dashboard(
+    current_user: str = Depends(get_current_admin),
+    conn=Depends(get_db)
+):
+    """Admin dashboard analytics"""
+    try:
+        # User statistics
+        user_stats = await conn.fetchrow("""
+            SELECT 
+                COUNT(*) as total_users,
+                COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days') as new_users_7d,
+                COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days') as new_users_30d
+            FROM users
+        """)
+        
+        # Trade statistics
+        trade_stats = await conn.fetchrow("""
+            SELECT 
+                COUNT(*) as total_trades,
+                COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days') as trades_7d,
+                SUM(pips) as total_pips
+            FROM trades
+        """)
+        
+        # Blog statistics
+        blog_stats = await conn.fetchrow("""
+            SELECT 
+                COUNT(*) as total_posts,
+                COUNT(*) FILTER (WHERE status = 'published') as published_posts,
+                SUM(view_count) as total_views
+            FROM blog_posts
+        """)
+        
+        # Analysis statistics
+        analysis_stats = await conn.fetchrow("""
+            SELECT 
+                COUNT(*) as total_analyses,
+                AVG(trader_score) as avg_trader_score
+            FROM trade_analysis_uploads
+        """)
+        
+        # Recent activity
+        recent_users = await conn.fetch("""
+            SELECT id, name, email, created_at FROM users
+            ORDER BY created_at DESC LIMIT 5
+        """)
+        
+        recent_trades = await conn.fetch("""
+            SELECT t.*, u.name as user_name 
+            FROM trades t
+            JOIN users u ON t.user_id = u.id
+            ORDER BY t.created_at DESC LIMIT 5
+        """)
+        
+        return {
+            "users": dict(user_stats) if user_stats else {},
+            "trades": dict(trade_stats) if trade_stats else {},
+            "blog": dict(blog_stats) if blog_stats else {},
+            "analyses": dict(analysis_stats) if analysis_stats else {},
+            "recent_activity": {
+                "users": [dict(u) for u in recent_users],
+                "trades": [dict(t) for t in recent_trades]
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/admin/users")
-async def list_users(current_user: dict = Depends(get_current_user)):
+async def admin_list_users(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    search: Optional[str] = None,
+    current_user: str = Depends(get_current_admin),
+    conn=Depends(get_db)
+):
     """List all users (admin only)"""
-    if not current_user.get("is_admin"):
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, email, name, is_admin, created_at FROM users ORDER BY created_at DESC")
-        return [dict(row) for row in cursor.fetchall()]
+    try:
+        offset = (page - 1) * per_page
+        
+        where_clause = ""
+        params = []
+        if search:
+            where_clause = "WHERE name ILIKE $1 OR email ILIKE $1"
+            params.append(f"%{search}%")
+        
+        users = await conn.fetch(f"""
+            SELECT id, name, email, is_admin, created_at,
+                   (SELECT COUNT(*) FROM trades WHERE user_id = users.id) as trade_count,
+                   (SELECT COUNT(*) FROM trade_analysis_uploads WHERE user_id = users.id) as analysis_count
+            FROM users
+            {where_clause}
+            ORDER BY created_at DESC
+            LIMIT ${len(params)+1} OFFSET ${len(params)+2}
+        """, *params, per_page, offset)
+        
+        count = await conn.fetchrow(f"SELECT COUNT(*) as total FROM users {where_clause}", *params)
+        
+        return {
+            "users": [dict(u) for u in users],
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total": count['total'] if count else 0
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-# Static files
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+@app.put("/admin/users/{user_id}")
+async def admin_update_user(
+    user_id: int,
+    is_admin: Optional[bool] = Form(None),
+    current_user: str = Depends(get_current_admin),
+    conn=Depends(get_db)
+):
+    """Update user (admin only)"""
+    try:
+        updates = []
+        params = []
+        
+        if is_admin is not None:
+            updates.append("is_admin = $" + str(len(params)+1))
+            params.append(is_admin)
+        
+        if not updates:
+            raise HTTPException(status_code=400, detail="No fields to update")
+        
+        params.append(user_id)
+        
+        await conn.execute(f"""
+            UPDATE users SET {', '.join(updates)} WHERE id = ${len(params)}
+        """, *params)
+        
+        return {"success": True, "message": "User updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-# Health check
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+# ==================== SEO ENDPOINTS ====================
+
+@app.get("/blog/categories")
+async def get_blog_categories(conn=Depends(get_db)):
+    """Get all blog categories"""
+    try:
+        categories = await conn.fetch("SELECT * FROM blog_categories ORDER BY name")
+        return [dict(c) for c in categories]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/blog/tags")
+async def get_blog_tags(conn=Depends(get_db)):
+    """Get all unique tags"""
+    try:
+        result = await conn.fetch("SELECT DISTINCT unnest(tags) as tag FROM blog_posts WHERE status = 'published'")
+        return [r['tag'] for r in result if r['tag']]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/sitemap.xml", response_class=HTMLResponse)
+async def generate_sitemap(conn=Depends(get_db)):
+    """Generate XML sitemap for SEO"""
+    try:
+        base_url = "https://pipways.com"  # Update with your domain
+        
+        # Get all published posts
+        posts = await conn.fetch("""
+            SELECT slug, updated_at FROM blog_posts WHERE status = 'published'
+        """)
+        
+        xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+        xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        
+        # Static pages
+        static_pages = ['', 'blog', 'login', 'register']
+        for page in static_pages:
+            xml += f'  <url>\n'
+            xml += f'    <loc>{base_url}/{page}</loc>\n'
+            xml += f'    <changefreq>weekly</changefreq>\n'
+            xml += f'    <priority>0.8</priority>\n'
+            xml += f'  </url>\n'
+        
+        # Blog posts
+        for post in posts:
+            xml += f'  <url>\n'
+            xml += f'    <loc>{base_url}/blog/{post["slug"]}</loc>\n'
+            xml += f'    <lastmod>{post["updated_at"].strftime("%Y-%m-%d")}</lastmod>\n'
+            xml += f'    <changefreq>monthly</changefreq>\n'
+            xml += f'    <priority>0.6</priority>\n'
+            xml += f'  </url>\n'
+        
+        xml += '</urlset>'
+        
+        return HTMLResponse(content=xml, media_type="application/xml")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/robots.txt", response_class=HTMLResponse)
+async def robots_txt():
+    """Serve robots.txt"""
+    content = """User-agent: *
+Allow: /
+Allow: /blog/
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: https://pipways.com/sitemap.xml
+"""
+    return HTMLResponse(content=content)
 
 if __name__ == "__main__":
     import uvicorn
