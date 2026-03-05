@@ -619,20 +619,22 @@ function getErrorMessage(data) {
     return JSON.stringify(data);
 }
 
+// UPDATED: Login with JSON
 async function handleLogin(e) {
     e.preventDefault();
     const form = e.target;
     const errorEl = document.getElementById('auth-error');
     
     try {
-        const formData = new URLSearchParams();
-        formData.append('email', form.email.value);
-        formData.append('password', form.password.value);
-        
         const response = await fetch(API_URL + '/auth/login', {
             method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: formData.toString()
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email: form.email.value,
+                password: form.password.value
+            })
         });
         
         const data = await response.json();
@@ -642,9 +644,9 @@ async function handleLogin(e) {
         }
         
         authToken = data.access_token;
-        currentUser = data;
+        currentUser = data.user;
         localStorage.setItem('pipways_token', authToken);
-        localStorage.setItem('pipways_user', JSON.stringify(data));
+        localStorage.setItem('pipways_user', JSON.stringify(data.user));
         showApp();
         
     } catch (err) {
@@ -653,21 +655,23 @@ async function handleLogin(e) {
     }
 }
 
+// UPDATED: Register with JSON
 async function handleRegister(e) {
     e.preventDefault();
     const form = e.target;
     const errorEl = document.getElementById('auth-error');
     
     try {
-        const formData = new URLSearchParams();
-        formData.append('email', form.email.value);
-        formData.append('password', form.password.value);
-        formData.append('name', form.name.value);
-        
         const response = await fetch(API_URL + '/auth/register', {
             method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: formData.toString()
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email: form.email.value,
+                password: form.password.value,
+                name: form.name.value
+            })
         });
         
         const data = await response.json();
@@ -677,9 +681,9 @@ async function handleRegister(e) {
         }
         
         authToken = data.access_token;
-        currentUser = data;
+        currentUser = data.user;
         localStorage.setItem('pipways_token', authToken);
-        localStorage.setItem('pipways_user', JSON.stringify(data));
+        localStorage.setItem('pipways_user', JSON.stringify(data.user));
         showApp();
         
     } catch (err) {
@@ -717,12 +721,10 @@ async function apiCall(endpoint, options) {
 }
 
 function updateMobileNav(page) {
-    // Reset all mobile nav items
     document.querySelectorAll('.mobile-nav-item').forEach(function(item) {
         item.classList.remove('active');
     });
     
-    // Set active based on page
     const navMap = {
         'dashboard': 'mobile-nav-dashboard',
         'journal': 'mobile-nav-journal',
@@ -739,7 +741,6 @@ function updateMobileNav(page) {
 async function showPage(page) {
     const content = document.getElementById('content');
     
-    // Update desktop sidebar active state
     document.querySelectorAll('.nav-btn').forEach(function(btn) {
         btn.classList.remove('active');
     });
@@ -749,10 +750,7 @@ async function showPage(page) {
         activeBtn.classList.add('active');
     }
     
-    // Update mobile nav
     updateMobileNav(page);
-    
-    // Close mobile sidebar if open
     closeMobileSidebar();
     
     if (page === 'dashboard') {
@@ -775,7 +773,6 @@ async function showPage(page) {
         renderMoreMenu(content);
     }
     
-    // Show admin nav if user is admin
     if (currentUser.is_admin) {
         const adminNav = document.getElementById('admin-nav');
         const adminNavMobile = document.getElementById('admin-nav-mobile');
@@ -830,7 +827,6 @@ async function renderDashboard(content) {
         
         let html = '<div class="p-4 pt-20 lg:pt-8 max-w-7xl mx-auto">';
         
-        // Header
         html += '<div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">';
         html += '<div>';
         html += '<h2 class="responsive-heading font-bold text-white mb-1">Dashboard</h2>';
@@ -841,10 +837,8 @@ async function renderDashboard(content) {
         html += '</button>';
         html += '</div>';
         
-        // Metrics Grid - 2 cols on mobile, 4 on desktop
         html += '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">';
         
-        // Discipline Score
         html += '<div class="metric-card rounded-xl p-4 sm:p-6 card-hover">';
         html += '<div class="flex items-center justify-between mb-2 sm:mb-4">';
         html += '<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">';
@@ -858,7 +852,6 @@ async function renderDashboard(content) {
         html += '<div class="text-2xl sm:text-3xl font-bold text-white">87<span class="text-sm sm:text-lg text-slate-500">/100</span></div>';
         html += '</div>';
         
-        // Win Rate
         html += '<div class="metric-card rounded-xl p-4 sm:p-6 card-hover">';
         html += '<div class="flex items-center justify-between mb-2 sm:mb-4">';
         html += '<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-violet-500/20 flex items-center justify-center">';
@@ -870,7 +863,6 @@ async function renderDashboard(content) {
         html += '<div class="text-2xl sm:text-3xl font-bold text-white">' + winRate + '<span class="text-sm sm:text-lg text-slate-500">%</span></div>';
         html += '</div>';
         
-        // Total Pips
         html += '<div class="metric-card rounded-xl p-4 sm:p-6 card-hover">';
         html += '<div class="flex items-center justify-between mb-2 sm:mb-4">';
         html += '<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg ' + (totalPips >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20') + ' flex items-center justify-center">';
@@ -884,7 +876,6 @@ async function renderDashboard(content) {
         html += '</div>';
         html += '</div>';
         
-        // Total Trades
         html += '<div class="metric-card rounded-xl p-4 sm:p-6 card-hover">';
         html += '<div class="flex items-center justify-between mb-2 sm:mb-4">';
         html += '<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-orange-500/20 flex items-center justify-center">';
@@ -896,12 +887,10 @@ async function renderDashboard(content) {
         html += '<div class="text-2xl sm:text-3xl font-bold text-white">' + trades.length + '</div>';
         html += '</div>';
         
-        html += '</div>'; // End metrics grid
+        html += '</div>';
         
-        // Recent Trades & Quick Actions
         html += '<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">';
         
-        // Recent Trades
         html += '<div class="lg:col-span-2 glass rounded-xl p-4 sm:p-6">';
         html += '<div class="flex items-center justify-between mb-4 sm:mb-6">';
         html += '<h3 class="text-base sm:text-lg font-semibold text-white">Recent Trades</h3>';
@@ -947,9 +936,8 @@ async function renderDashboard(content) {
         }
         
         html += '</div>';
-        html += '</div>'; // End recent trades
+        html += '</div>';
         
-        // Quick Actions
         html += '<div class="glass rounded-xl p-4 sm:p-6">';
         html += '<h3 class="text-base sm:text-lg font-semibold text-white mb-4 sm:mb-6">Quick Actions</h3>';
         html += '<div class="space-y-3">';
@@ -979,10 +967,10 @@ async function renderDashboard(content) {
         html += '</button>';
         
         html += '</div>';
-        html += '</div>'; // End quick actions
+        html += '</div>';
         
-        html += '</div>'; // End grid
-        html += '</div>'; // End container
+        html += '</div>';
+        html += '</div>';
         
         content.innerHTML = html;
         
@@ -1055,6 +1043,51 @@ function renderJournal(content) {
     html += '</div>';
     
     content.innerHTML = html;
+}
+
+// UPDATED: Add trade with JSON
+async function addTrade(e) {
+    e.preventDefault();
+    const f = e.target;
+    const btn = f.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<div class="loading-spinner w-5 h-5 border-2"></div> Saving...';
+    btn.disabled = true;
+    
+    try {
+        const response = await apiCall('/trades', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                pair: f.pair.value.toUpperCase(),
+                direction: f.direction.value,
+                pips: parseFloat(f.pips.value),
+                grade: f.grade.value,
+                entry_price: f.entry_price.value ? parseFloat(f.entry_price.value) : null,
+                exit_price: f.exit_price.value ? parseFloat(f.exit_price.value) : null
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(getErrorMessage(data));
+        }
+        
+        btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Saved!';
+        btn.classList.remove('bg-emerald-500');
+        btn.classList.add('bg-emerald-600');
+        
+        setTimeout(function() {
+            showPage('dashboard');
+        }, 1000);
+        
+    } catch (err) {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        alert('Error: ' + err.message);
+    }
 }
 
 function renderChartAnalysis(content) {
@@ -1131,7 +1164,6 @@ async function analyzeChart(input) {
         
         let html = '<div class="analysis-grid">';
         
-        // Chart Display
         html += '<div class="glass rounded-xl overflow-hidden">';
         html += '<div class="p-3 sm:p-4 border-b border-slate-800 flex items-center justify-between">';
         html += '<h3 class="font-semibold text-white flex items-center gap-2 text-sm sm:text-base">';
@@ -1145,10 +1177,8 @@ async function analyzeChart(input) {
         html += '</div>';
         html += '</div>';
         
-        // Analysis Results
         html += '<div class="space-y-3 sm:space-y-4">';
         
-        // Setup Quality Card
         html += '<div class="glass rounded-xl p-4 sm:p-6 border ' + qualityColor + '">';
         html += '<div class="flex items-center justify-between mb-3 sm:mb-4">';
         html += '<span class="text-xs sm:text-sm font-medium opacity-80">Setup Quality</span>';
@@ -1168,7 +1198,6 @@ async function analyzeChart(input) {
         html += '</div>';
         html += '</div>';
         
-        // Trade Levels
         html += '<div class="glass rounded-xl p-4 sm:p-6">';
         html += '<h4 class="font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">';
         html += '<i data-lucide="layers" class="w-4 h-4 text-violet-400"></i>';
@@ -1194,7 +1223,6 @@ async function analyzeChart(input) {
         html += '</div>';
         html += '</div>';
         
-        // Analysis Text
         html += '<div class="glass rounded-xl p-4 sm:p-6">';
         html += '<h4 class="font-semibold text-white mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">';
         html += '<i data-lucide="file-text" class="w-4 h-4 text-orange-400"></i>';
@@ -1203,7 +1231,6 @@ async function analyzeChart(input) {
         html += '<p class="text-slate-300 text-xs sm:text-sm leading-relaxed">' + analysis.analysis + '</p>';
         html += '</div>';
         
-        // Recommendations
         html += '<div class="glass rounded-xl p-4 sm:p-6 border border-yellow-500/20 bg-yellow-500/5">';
         html += '<h4 class="font-semibold text-white mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">';
         html += '<i data-lucide="lightbulb" class="w-4 h-4 text-yellow-400"></i>';
@@ -1212,7 +1239,6 @@ async function analyzeChart(input) {
         html += '<p class="text-slate-300 text-xs sm:text-sm leading-relaxed">' + analysis.recommendations + '</p>';
         html += '</div>';
         
-        // Key Levels
         if (analysis.key_levels && analysis.key_levels.length > 0) {
             html += '<div class="glass rounded-xl p-4 sm:p-6">';
             html += '<h4 class="font-semibold text-white mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">';
@@ -1227,7 +1253,6 @@ async function analyzeChart(input) {
             html += '</div>';
         }
         
-        // Action Buttons
         html += '<div class="flex gap-2 sm:gap-3">';
         html += '<button onclick="saveAnalysisToJournal(\'' + analysis.pair + '\', \'' + analysis.direction + '\', \'' + analysis.setup_quality + '\')" class="flex-1 bg-blue-500 hover:bg-blue-600 rounded-lg py-2.5 sm:py-3 font-medium text-white transition-colors flex items-center justify-center gap-2 text-sm sm:text-base">';
         html += '<i data-lucide="save" class="w-4 h-4"></i> Save to Journal';
@@ -1237,8 +1262,8 @@ async function analyzeChart(input) {
         html += '</button>';
         html += '</div>';
         
-        html += '</div>'; // End analysis results
-        html += '</div>'; // End analysis grid
+        html += '</div>';
+        html += '</div>';
         
         resultDiv.innerHTML = html;
         
@@ -1256,51 +1281,6 @@ function saveAnalysisToJournal(pair, direction, grade) {
     alert('Analysis for ' + pair + ' ' + direction + ' (Grade ' + grade + ') ready to save to journal!');
 }
 
-async function addTrade(e) {
-    e.preventDefault();
-    const f = e.target;
-    const btn = f.querySelector('button[type="submit"]');
-    const originalText = btn.innerHTML;
-    
-    btn.innerHTML = '<div class="loading-spinner w-5 h-5 border-2"></div> Saving...';
-    btn.disabled = true;
-    
-    try {
-        const formData = new URLSearchParams();
-        formData.append('pair', f.pair.value.toUpperCase());
-        formData.append('direction', f.direction.value);
-        formData.append('pips', f.pips.value);
-        formData.append('grade', f.grade.value);
-        if (f.entry_price.value) formData.append('entry_price', f.entry_price.value);
-        if (f.exit_price.value) formData.append('exit_price', f.exit_price.value);
-        
-        const response = await apiCall('/trades', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: formData.toString()
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(getErrorMessage(data));
-        }
-        
-        btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Saved!';
-        btn.classList.remove('bg-emerald-500');
-        btn.classList.add('bg-emerald-600');
-        
-        setTimeout(function() {
-            showPage('dashboard');
-        }, 1000);
-        
-    } catch (err) {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        alert('Error: ' + err.message);
-    }
-}
-
 function renderTradeAnalysis(content) {
     let html = '<div class="p-4 pt-20 lg:pt-8 max-w-6xl mx-auto fade-in">';
     html += '<div class="flex items-center justify-between mb-6 sm:mb-8">';
@@ -1310,7 +1290,6 @@ function renderTradeAnalysis(content) {
     html += '</div>';
     html += '</div>';
     
-    // Upload Area
     html += '<div class="glass rounded-xl p-6 sm:p-8 mb-6 border-2 border-dashed border-slate-700 hover:border-blue-500/50 transition-all">';
     html += '<input type="file" id="tradeFileUpload" class="hidden" ';
     html += 'accept=".pdf,.doc,.docx,.csv,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.html,.htm" ';
@@ -1332,17 +1311,14 @@ function renderTradeAnalysis(content) {
     html += '</div>';
     html += '</div>';
     
-    // Loading State
     html += '<div id="tradeAnalysisLoading" class="hidden py-12 text-center">';
     html += '<div class="loading-spinner mx-auto mb-4"></div>';
     html += '<p class="text-slate-400">AI is analyzing your trading data...</p>';
     html += '<p class="text-xs text-slate-500 mt-2">This may take 30-60 seconds</p>';
     html += '</div>';
     
-    // Results Container
     html += '<div id="tradeAnalysisResult" class="hidden"></div>';
     
-    // History
     html += '<div class="mt-6 sm:mt-8">';
     html += '<h3 class="text-base sm:text-lg font-semibold text-white mb-4">Previous Analyses</h3>';
     html += '<div id="tradeAnalysisHistory" class="space-y-3">';
@@ -1391,7 +1367,6 @@ async function analyzeTradeFile(input) {
         
         let html = '<div class="space-y-4 sm:space-y-6">';
         
-        // Score Card
         html += '<div class="glass rounded-xl p-6 sm:p-8 text-center border-2 ' + borderColor + '">';
         html += '<div class="text-xs sm:text-sm text-slate-400 mb-2">Your Trader Score</div>';
         html += '<div class="text-4xl sm:text-6xl font-bold mb-2 ' + scoreColor + '">' + analysis.trader_score + '<span class="text-lg sm:text-2xl text-slate-500">/100</span></div>';
@@ -1402,7 +1377,6 @@ async function analyzeTradeFile(input) {
         html += '</div>';
         html += '</div>';
         
-        // Score Breakdown
         html += '<div class="glass rounded-xl p-4 sm:p-6">';
         html += '<h4 class="font-semibold text-white mb-3 sm:mb-4 text-sm sm:text-base">Performance Breakdown</h4>';
         html += '<div class="space-y-2 sm:space-y-3">';
@@ -1422,10 +1396,8 @@ async function analyzeTradeFile(input) {
         html += '</div>';
         html += '</div>';
         
-        // Mistakes & Patterns Grid
         html += '<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">';
         
-        // Mistakes
         html += '<div class="glass rounded-xl p-4 sm:p-6">';
         html += '<h4 class="font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">';
         html += '<i data-lucide="alert-triangle" class="w-4 h-4 sm:w-5 sm:h-5 text-red-400"></i>';
@@ -1451,7 +1423,6 @@ async function analyzeTradeFile(input) {
         html += '</div>';
         html += '</div>';
         
-        // Patterns
         html += '<div class="glass rounded-xl p-4 sm:p-6">';
         html += '<h4 class="font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">';
         html += '<i data-lucide="activity" class="w-4 h-4 sm:w-5 sm:h-5 text-blue-400"></i>';
@@ -1474,9 +1445,8 @@ async function analyzeTradeFile(input) {
         html += '</div>';
         html += '</div>';
         
-        html += '</div>'; // End grid
+        html += '</div>';
         
-        // Recommendations
         html += '<div class="glass rounded-xl p-4 sm:p-6 border border-yellow-500/20">';
         html += '<h4 class="font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">';
         html += '<i data-lucide="lightbulb" class="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400"></i>';
@@ -1496,7 +1466,6 @@ async function analyzeTradeFile(input) {
         html += '</ul>';
         html += '</div>';
         
-        // Learning Resources
         html += '<div class="glass rounded-xl p-4 sm:p-6">';
         html += '<h4 class="font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">';
         html += '<i data-lucide="book-open" class="w-4 h-4 sm:w-5 sm:h-5 text-violet-400"></i>';
@@ -1518,7 +1487,6 @@ async function analyzeTradeFile(input) {
         html += '</div>';
         html += '</div>';
         
-        // Projected Improvement
         html += '<div class="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">';
         html += '<p class="text-sm text-emerald-400">';
         html += '<i data-lucide="trending-up" class="w-4 h-4 inline mr-2"></i>';
@@ -1526,7 +1494,7 @@ async function analyzeTradeFile(input) {
         html += '</p>';
         html += '</div>';
         
-        html += '</div>'; // End container
+        html += '</div>';
         
         resultDiv.innerHTML = html;
         lucide.createIcons();
@@ -1670,7 +1638,6 @@ async function askMentor() {
     
     const chat = document.getElementById('chatHistory');
     
-    // Add user message
     let userHtml = '<div class="flex gap-3 flex-row-reverse">';
     userHtml += '<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">';
     userHtml += '<i data-lucide="user" class="w-4 h-4 sm:w-5 sm:h-5 text-slate-300"></i>';
@@ -1686,7 +1653,6 @@ async function askMentor() {
     chat.scrollTop = chat.scrollHeight;
     lucide.createIcons();
     
-    // Show typing indicator
     const typingId = 'typing-' + Date.now();
     let typingHtml = '<div id="' + typingId + '" class="flex gap-3">';
     typingHtml += '<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">';
@@ -1705,15 +1671,17 @@ async function askMentor() {
     chat.scrollTop = chat.scrollHeight;
     
     try {
-        const response = await apiCall('/mentorship/personalized?message=' + encodeURIComponent(message), {
+        const response = await apiCall('/mentorship/personalized', {
             method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: 'message=' + encodeURIComponent(message) + '&context_type=general'
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                message: message,
+                context_type: 'general'
+            })
         });
         
         const data = await response.json();
         
-        // Remove typing indicator
         const typingEl = document.getElementById(typingId);
         if (typingEl) typingEl.remove();
         
@@ -1786,7 +1754,6 @@ function renderBlog(content) {
     html += '</div>';
     html += '</div>';
     
-    // Categories
     html += '<div class="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide" id="blogCategories">';
     html += '<button onclick="filterBlog(\'all\')" class="px-4 py-2 bg-blue-500 rounded-full text-white text-sm whitespace-nowrap">All</button>';
     html += '<button onclick="filterBlog(\'strategy\')" class="px-4 py-2 bg-slate-800 rounded-full text-slate-300 text-sm whitespace-nowrap">Strategy</button>';
@@ -1795,7 +1762,6 @@ function renderBlog(content) {
     html += '<button onclick="filterBlog(\'technical-analysis\')" class="px-4 py-2 bg-slate-800 rounded-full text-slate-300 text-sm whitespace-nowrap">Technical Analysis</button>';
     html += '</div>';
     
-    // Posts Grid
     html += '<div id="blogPosts" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">';
     html += '<p class="text-slate-500 col-span-full text-center py-12">Loading articles...</p>';
     html += '</div>';
@@ -1865,7 +1831,6 @@ async function loadBlogPosts(category, search) {
 }
 
 function filterBlog(category) {
-    // Update active button
     const buttons = document.querySelectorAll('#blogCategories button');
     buttons.forEach(function(btn) {
         if (btn.textContent.toLowerCase().includes(category.replace('-', ' ')) || (category === 'all' && btn.textContent === 'All')) {
@@ -1955,7 +1920,6 @@ function renderAdmin(content) {
     html += '</div>';
     html += '</div>';
     
-    // Stats Grid
     html += '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8" id="adminStats">';
     html += '<div class="metric-card rounded-xl p-4 sm:p-6"><div class="text-slate-400 text-xs sm:text-sm mb-1">Total Users</div><div class="text-2xl sm:text-3xl font-bold text-white">-</div></div>';
     html += '<div class="metric-card rounded-xl p-4 sm:p-6"><div class="text-slate-400 text-xs sm:text-sm mb-1">Total Trades</div><div class="text-2xl sm:text-3xl font-bold text-white">-</div></div>';
@@ -1963,7 +1927,6 @@ function renderAdmin(content) {
     html += '<div class="metric-card rounded-xl p-4 sm:p-6"><div class="text-slate-400 text-xs sm:text-sm mb-1">Avg Trader Score</div><div class="text-2xl sm:text-3xl font-bold text-white">-</div></div>';
     html += '</div>';
     
-    // Quick Actions
     html += '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">';
     
     html += '<div class="glass rounded-xl p-4 sm:p-6">';
@@ -2002,7 +1965,6 @@ function renderAdmin(content) {
     
     html += '</div>';
     
-    // Dynamic Admin Section
     html += '<div id="adminSection" class="glass rounded-xl p-4 sm:p-6 hidden"></div>';
     
     html += '</div>';
@@ -2046,7 +2008,6 @@ async function loadAdminStats() {
         
         statsDiv.innerHTML = html;
         
-        // Recent activity
         const activityDiv = document.getElementById('recentActivity');
         let activityHtml = '';
         
@@ -2119,7 +2080,6 @@ function renderBlogEditor(container) {
     html += '</div>';
     html += '</div>';
     
-    // Editor with toolbar
     html += '<div>';
     html += '<label class="block text-sm font-medium text-slate-400 mb-2">Content</label>';
     html += '<div class="glass rounded-xl overflow-hidden">';
@@ -2162,7 +2122,6 @@ function renderBlogEditor(container) {
     lucide.createIcons();
 }
 
-// Media upload in blog editor
 async function uploadMedia(file) {
     const formData = new FormData();
     formData.append('file', file);
@@ -2175,16 +2134,14 @@ async function uploadMedia(file) {
     });
     
     const data = await response.json();
-    return data.url; // Use this URL in your editor
+    return data.url;
 }
 
-// Insert image into blog content
 function insertImage(url) {
     const editor = document.getElementById('editor');
     editor.value += '<img src="' + url + '" alt="Image" class="w-full rounded-lg my-4">';
 }
 
-// Prompt for image upload
 function insertImagePrompt() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -2203,7 +2160,6 @@ function insertImagePrompt() {
     input.click();
 }
 
-// Simple text formatting
 function formatText(type) {
     const editor = document.getElementById('editor');
     const start = editor.selectionStart;
@@ -2226,6 +2182,7 @@ function formatText(type) {
     editor.value = editor.value.substring(0, start) + replacement + editor.value.substring(end);
 }
 
+// UPDATED: Save blog post with JSON
 async function saveBlogPost(e) {
     e.preventDefault();
     const form = e.target;
@@ -2234,18 +2191,17 @@ async function saveBlogPost(e) {
     btn.textContent = 'Saving...';
     
     try {
-        const formData = new URLSearchParams();
-        formData.append('title', form.title.value);
-        formData.append('content', form.content.value);
-        formData.append('category', form.category.value);
-        formData.append('status', form.status.value);
-        if (form.excerpt.value) formData.append('excerpt', form.excerpt.value);
-        if (form.tags.value) formData.append('tags', form.tags.value);
-        
         const response = await apiCall('/admin/blog/posts', {
             method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: formData.toString()
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                title: form.title.value,
+                content: form.content.value,
+                category: form.category.value,
+                status: form.status.value,
+                excerpt: form.excerpt.value || null,
+                tags: form.tags.value ? form.tags.value.split(',').map(t => t.trim()) : []
+            })
         });
         
         const data = await response.json();
@@ -2342,14 +2298,14 @@ async function renderUsersList(container) {
         html += '</button>';
         html += '</div>';
         
-        if (!data.users || data.users.length === 0) {
+        if (!data || data.length === 0) {
             html += '<p class="text-slate-500">No users found</p>';
             container.innerHTML = html;
             return;
         }
         
         html += '<div class="space-y-3">';
-        data.users.forEach(function(user) {
+        data.forEach(function(user) {
             const date = new Date(user.created_at);
             html += '<div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-slate-800/50 rounded-lg gap-3">';
             html += '<div class="flex items-center gap-3">';
@@ -2408,13 +2364,13 @@ async function loadMediaFiles() {
         const data = await response.json();
         const container = document.getElementById('mediaGrid');
         
-        if (!data.media || data.media.length === 0) {
+        if (!data || data.length === 0) {
             container.innerHTML = '<p class="text-slate-500 col-span-full">No media files</p>';
             return;
         }
         
         let html = '';
-        data.media.forEach(function(file) {
+        data.forEach(function(file) {
             const isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(file.file_type.toLowerCase());
             
             html += '<div class="aspect-square bg-slate-800 rounded-lg overflow-hidden relative group cursor-pointer" onclick="copyMediaUrl(\'' + file.url + '\')">';
@@ -2456,7 +2412,7 @@ async function uploadMediaFile(input) {
         
         const data = await response.json();
         
-        if (data.success) {
+        if (response.ok) {
             alert('Media uploaded: ' + data.url);
             loadMediaFiles();
         } else {
