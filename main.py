@@ -3,6 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.routing import APIRouter
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 import asyncpg
@@ -18,6 +19,11 @@ import csv
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 import shutil
+
+# Import new routers and tools - ONLY for blog system
+from blog_routes import blog_router
+from media_routes import media_router
+import ai_blog_tools  # AI tools for blog
 
 app = FastAPI(title="Pipways API")
 
@@ -442,6 +448,15 @@ async def startup():
     # ========== AUTO-MIGRATION ==========
     migrations = [
         ("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE", "is_admin column"),
+        # New migrations ONLY for blog upgrades
+        ("ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS content_json JSONB", "content_json column"),
+        ("ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS seo_score INTEGER", "seo_score column"),
+        ("ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS reading_time INTEGER", "reading_time column"),
+        ("ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS ai_generated BOOLEAN DEFAULT FALSE", "ai_generated column"),
+        ("ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS focus_keyword VARCHAR(255)", "focus_keyword column"),
+        ("ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS canonical_url VARCHAR(255)", "canonical_url column"),
+        ("ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS og_image TEXT", "og_image column"),
+        ("ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP", "scheduled_at column"),
     ]
     
     for sql, description in migrations:
@@ -792,104 +807,83 @@ async def analyze_chart(
                 "analysis": None,
                 "raw_response": None,
                 "error": error,
-                "image_data": base64_image
             }
         
-        parsed_analysis = parse_analysis_response(analysis_text)
+        try:
+            # Extract JSON from response
+            json_match = re.search(r'\{.*\}', analysis_text, re.DOTALL)
+            if json_match:
+                analysis = json.loads(json_match.group())
+            else:
+                analysis = {"raw": analysis_text}
+        except Exception as e:
+            analysis = {"raw": analysis_text, "parse_error": str(e)}
         
         user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
-        await conn.execute(
-            "INSERT INTO chart_analyses (user_id, image_data, analysis_result) VALUES ($1, $2, $3)",
-            user["id"], base64_image, json.dumps(parsed_analysis)
-        )
+        
+        analysis_id = await conn.fetchval("""
+            INSERT INTO chart_analyses (user_id, image_data, analysis_result)
+            VALUES ($1, $2, $3) RETURNING id
+        """, user["id"], base64_image, json.dumps(analysis))
         
         return {
             "success": True,
-            "analysis": parsed_analysis,
-            "raw_response": analysis_text,
-            "image_data": base64_image,
-            "error": None
+            "analysis_id": analysis_id,
+            "analysis": analysis,
+            "message": "Chart analyzed and saved"
         }
-        
+    except HTTPException:
+        raise
     except Exception as e:
-        return {
-            "success": False,
-            "analysis": None,
-            "raw_response": None,
-            "error": str(e),
-            "image_data": None
-        }
-
-def parse_analysis_response(analysis_text):
-    try:
-        json_match = re.search(r'\{.*\}', analysis_text, re.DOTALL)
-        if json_match:
-            return json.loads(json_match.group())
-    except:
-        pass
-    
-    return {
-        "pair": "Unknown",
-        "direction": "Unknown",
-        "setup_quality": "N/A",
-        "entry_price": "N/A",
-        "stop_loss": "N/A",
-        "take_profit": "N/A",
-        "risk_reward": "N/A",
-        "analysis": analysis_text,
-        "key_levels": [],
-        "recommendations": "Please review manually"
-    }
+        raise HTTPException(status_code=500, detail=f"Chart analysis failed: {str(e)}")
 
 @app.get("/chart-analyses")
-async def get_chart_analyses(current_user: str = Depends(get_current_user), conn=Depends(get_db)):
+async def get_chart_analyses(
+    current_user: str = Depends(get_current_user),
+    conn=Depends(get_db)
+):
     try:
         user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
         analyses = await conn.fetch(
-            "SELECT id, analysis_result, created_at FROM chart_analyses WHERE user_id = $1 ORDER BY created_at DESC",
+            "SELECT id, created_at, analysis_result FROM chart_analyses WHERE user_id = $1 ORDER BY created_at DESC",
             user["id"]
         )
         return [dict(a) for a in analyses]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch analyses: {str(e)}")
 
-# ==================== ADVANCED TRADE ANALYSIS UPLOAD ====================
+# ==================== TRADE ANALYSIS ====================
 
-@app.post("/analyze-trade-file")
-async def analyze_trade_file(
+@app.post("/analyze-trades")
+async def analyze_trades(
     file: UploadFile = File(...),
     current_user: str = Depends(get_current_user),
     conn=Depends(get_db)
 ):
-    """
-    Upload and analyze trading results from PDF, DOC, CSV, screenshots, etc.
-    """
     try:
         contents = await file.read()
-        file_size = len(contents)
+        if len(contents) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail="File too large")
         
-        if file_size > MAX_FILE_SIZE:
-            raise HTTPException(status_code=413, detail="File too large (max 50MB)")
+        file_type = file.content_type
+        ext = Path(file.filename).suffix.lower()
+        if file_type not in ALLOWED_TRADE_FILE_TYPES and ext not in ALLOWED_TRADE_FILE_TYPES.values():
+            raise HTTPException(status_code=400, detail="Unsupported file type")
         
-        # Detect file type
-        file_type = file.content_type or "application/octet-stream"
-        
-        if file_type not in ALLOWED_TRADE_FILE_TYPES:
-            # Try to detect from extension
-            ext = Path(file.filename).suffix.lower()
-            type_map = {
-                '.pdf': 'application/pdf',
-                '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                '.doc': 'application/msword',
-                '.csv': 'text/csv',
-                '.xls': 'application/vnd.ms-excel',
-                '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                '.png': 'image/png',
-                '.jpg': 'image/jpeg',
-                '.jpeg': 'image/jpeg',
-                '.webp': 'image/webp'
-            }
-            file_type = type_map.get(ext, file_type)
+        # Normalize file_type based on extension if needed
+        type_map = {
+            '.pdf': 'application/pdf',
+            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            '.doc': 'application/msword',
+            '.csv': 'text/csv',
+            '.xls': 'application/vnd.ms-excel',
+            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.webp': 'image/webp'
+        }
+        file_type = type_map.get(ext, file_type)
         
         # Extract data based on file type
         extracted_data = {}
@@ -1052,352 +1046,6 @@ async def mentor_chat(
 ):
     """Legacy mentor chat - redirects to personalized version"""
     return await get_personalized_mentorship_endpoint(message, "general", current_user, conn)
-
-# ==================== BLOG SYSTEM (SEO-OPTIMIZED) ====================
-
-@app.get("/blog/posts", response_class=JSONResponse)
-async def get_blog_posts(
-    page: int = Query(1, ge=1),
-    per_page: int = Query(10, ge=1, le=50),
-    category: Optional[str] = None,
-    tag: Optional[str] = None,
-    status: Optional[str] = "published",
-    search: Optional[str] = None,
-    conn=Depends(get_db)
-):
-    """Get blog posts with filtering and pagination"""
-    try:
-        offset = (page - 1) * per_page
-        params = []
-        where_clauses = []
-        
-        if status:
-            where_clauses.append(f"status = ${len(params)+1}")
-            params.append(status)
-        
-        if category:
-            where_clauses.append(f"category = ${len(params)+1}")
-            params.append(category)
-        
-        if tag:
-            where_clauses.append(f"${len(params)+1} = ANY(tags)")
-            params.append(tag)
-        
-        if search:
-            where_clauses.append(f"(title ILIKE ${len(params)+1} OR content ILIKE ${len(params)+1} OR excerpt ILIKE ${len(params)+1})")
-            params.append(f"%{search}%")
-        
-        where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
-        
-        # Get posts
-        posts = await conn.fetch(f"""
-            SELECT id, title, slug, excerpt, featured_image, category, tags,
-                   meta_title, meta_description, published_at, view_count, created_at
-            FROM blog_posts
-            WHERE {where_sql}
-            ORDER BY published_at DESC NULLS LAST
-            LIMIT ${len(params)+1} OFFSET ${len(params)+2}
-        """, *params, per_page, offset)
-        
-        # Get total count
-        count_result = await conn.fetchrow(f"""
-            SELECT COUNT(*) as total FROM blog_posts WHERE {where_sql}
-        """, *params[:-2] if len(params) > 2 else [])
-        
-        total = count_result['total'] if count_result else 0
-        
-        return {
-            "posts": [dict(p) for p in posts],
-            "pagination": {
-                "page": page,
-                "per_page": per_page,
-                "total": total,
-                "total_pages": (total + per_page - 1) // per_page
-            }
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/blog/post/{slug}", response_class=JSONResponse)
-async def get_blog_post(
-    slug: str,
-    conn=Depends(get_db)
-):
-    """Get single blog post by slug"""
-    try:
-        post = await conn.fetchrow("""
-            SELECT * FROM blog_posts WHERE slug = $1 AND status = 'published'
-        """, slug)
-        
-        if not post:
-            raise HTTPException(status_code=404, detail="Post not found")
-        
-        # Increment view count
-        await conn.execute("""
-            UPDATE blog_posts SET view_count = view_count + 1 WHERE id = $1
-        """, post['id'])
-        
-        return dict(post)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/admin/blog/posts")
-async def create_blog_post(
-    title: str = Form(...),
-    content: str = Form(...),
-    excerpt: Optional[str] = Form(None),
-    featured_image: Optional[str] = Form(None),
-    meta_title: Optional[str] = Form(None),
-    meta_description: Optional[str] = Form(None),
-    meta_keywords: Optional[str] = Form(None),
-    category: Optional[str] = Form(None),
-    tags: Optional[str] = Form(None),
-    status: str = Form("draft"),
-    current_user: str = Depends(get_current_admin),
-    conn=Depends(get_db)
-):
-    """Create new blog post (admin only)"""
-    try:
-        # Create slug from title
-        slug = re.sub(r'[^\w\s-]', '', title.lower()).strip()
-        slug = re.sub(r'[-\s]+', '-', slug)
-        
-        # Ensure unique slug
-        existing = await conn.fetchrow("SELECT id FROM blog_posts WHERE slug = $1", slug)
-        if existing:
-            slug = f"{slug}-{uuid.uuid4().hex[:8]}"
-        
-        # Process tags
-        tag_list = [t.strip() for t in tags.split(',')] if tags else []
-        
-        # Auto-generate excerpt if not provided
-        if not excerpt:
-            excerpt = content[:200] + "..." if len(content) > 200 else content
-        
-        # Auto-generate meta if not provided
-        if not meta_title:
-            meta_title = title[:70]
-        if not meta_description:
-            meta_description = excerpt[:160]
-        
-        published_at = datetime.utcnow() if status == 'published' else None
-        
-        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
-        
-        post_id = await conn.fetchval("""
-            INSERT INTO blog_posts 
-            (title, slug, content, excerpt, featured_image, meta_title, meta_description,
-             meta_keywords, author_id, category, tags, status, published_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-            RETURNING id
-        """,
-            title, slug, content, excerpt, featured_image, meta_title, meta_description,
-            meta_keywords, user["id"], category, tag_list, status, published_at
-        )
-        
-        return {
-            "success": True,
-            "post_id": post_id,
-            "slug": slug,
-            "message": "Post created successfully"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.put("/admin/blog/posts/{post_id}")
-async def update_blog_post(
-    post_id: int,
-    title: Optional[str] = Form(None),
-    content: Optional[str] = Form(None),
-    excerpt: Optional[str] = Form(None),
-    featured_image: Optional[str] = Form(None),
-    meta_title: Optional[str] = Form(None),
-    meta_description: Optional[str] = Form(None),
-    meta_keywords: Optional[str] = Form(None),
-    category: Optional[str] = Form(None),
-    tags: Optional[str] = Form(None),
-    status: Optional[str] = Form(None),
-    current_user: str = Depends(get_current_admin),
-    conn=Depends(get_db)
-):
-    """Update blog post (admin only)"""
-    try:
-        # Build update dynamically
-        updates = []
-        params = []
-        
-        if title:
-            updates.append("title = $" + str(len(params)+1))
-            params.append(title)
-            # Update slug if title changes
-            new_slug = re.sub(r'[^\w\s-]', '', title.lower()).strip()
-            new_slug = re.sub(r'[-\s]+', '-', new_slug)
-            updates.append("slug = $" + str(len(params)+1))
-            params.append(f"{new_slug}-{uuid.uuid4().hex[:8]}")
-        if content:
-            updates.append("content = $" + str(len(params)+1))
-            params.append(content)
-        if excerpt:
-            updates.append("excerpt = $" + str(len(params)+1))
-            params.append(excerpt)
-        if featured_image:
-            updates.append("featured_image = $" + str(len(params)+1))
-            params.append(featured_image)
-        if meta_title:
-            updates.append("meta_title = $" + str(len(params)+1))
-            params.append(meta_title)
-        if meta_description:
-            updates.append("meta_description = $" + str(len(params)+1))
-            params.append(meta_description)
-        if meta_keywords:
-            updates.append("meta_keywords = $" + str(len(params)+1))
-            params.append(meta_keywords)
-        if category:
-            updates.append("category = $" + str(len(params)+1))
-            params.append(category)
-        if tags:
-            updates.append("tags = $" + str(len(params)+1))
-            params.append([t.strip() for t in tags.split(',')])
-        if status:
-            updates.append("status = $" + str(len(params)+1))
-            params.append(status)
-            if status == 'published':
-                updates.append("published_at = $" + str(len(params)+1))
-                params.append(datetime.utcnow())
-        
-        if not updates:
-            raise HTTPException(status_code=400, detail="No fields to update")
-        
-        updates.append("updated_at = $" + str(len(params)+1))
-        params.append(datetime.utcnow())
-        params.append(post_id)
-        
-        await conn.execute(f"""
-            UPDATE blog_posts SET {', '.join(updates)} WHERE id = ${len(params)}
-        """, *params)
-        
-        return {"success": True, "message": "Post updated successfully"}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/admin/blog/posts/{post_id}")
-async def delete_blog_post(
-    post_id: int,
-    current_user: str = Depends(get_current_admin),
-    conn=Depends(get_db)
-):
-    """Delete blog post (admin only)"""
-    try:
-        await conn.execute("DELETE FROM blog_posts WHERE id = $1", post_id)
-        return {"success": True, "message": "Post deleted successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# ==================== MEDIA MANAGEMENT ====================
-
-@app.post("/admin/media/upload")
-async def upload_media(
-    file: UploadFile = File(...),
-    alt_text: Optional[str] = Form(None),
-    current_user: str = Depends(get_current_admin),
-    conn=Depends(get_db)
-):
-    """Upload media file (admin only)"""
-    try:
-        contents = await file.read()
-        file_size = len(contents)
-        
-        if file_size > MAX_FILE_SIZE:
-            raise HTTPException(status_code=413, detail="File too large")
-        
-        # Get file extension
-        ext = Path(file.filename).suffix.lower()
-        
-        # Generate unique filename
-        unique_filename = f"{uuid.uuid4()}{ext}"
-        file_path = MEDIA_DIR / unique_filename
-        
-        # Save file
-        with open(file_path, "wb") as f:
-            f.write(contents)
-        
-        # Determine file type
-        file_type = ext.replace('.', '')
-        
-        # Save to database
-        user = await conn.fetchrow("SELECT id FROM users WHERE email = $1", current_user)
-        
-        media_id = await conn.fetchval("""
-            INSERT INTO media_files 
-            (filename, original_name, file_path, file_type, file_size, mime_type, alt_text, uploaded_by)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id
-        """,
-            unique_filename,
-            file.filename,
-            str(file_path),
-            file_type,
-            file_size,
-            file.content_type or "application/octet-stream",
-            alt_text,
-            user["id"]
-        )
-        
-        return {
-            "success": True,
-            "media_id": media_id,
-            "filename": unique_filename,
-            "url": f"/media/{unique_filename}",
-            "size": file_size
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/admin/media")
-async def list_media(
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
-    current_user: str = Depends(get_current_admin),
-    conn=Depends(get_db)
-):
-    """List all media files (admin only)"""
-    try:
-        offset = (page - 1) * per_page
-        media = await conn.fetch("""
-            SELECT m.*, u.name as uploaded_by_name
-            FROM media_files m
-            JOIN users u ON m.uploaded_by = u.id
-            ORDER BY m.created_at DESC
-            LIMIT $1 OFFSET $2
-        """, per_page, offset)
-        
-        count = await conn.fetchrow("SELECT COUNT(*) as total FROM media_files")
-        
-        return {
-            "media": [dict(m) for m in media],
-            "pagination": {
-                "page": page,
-                "per_page": per_page,
-                "total": count['total'] if count else 0
-            }
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/media/{filename}")
-async def serve_media(filename: str):
-    """Serve media file"""
-    file_path = MEDIA_DIR / filename
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found")
-    
-    return FileResponse(file_path)
 
 # ==================== ADMIN DASHBOARD ====================
 
@@ -1630,6 +1278,10 @@ except Exception as e:
 @app.get("/webinars", response_class=HTMLResponse)
 async def webinar_app_root():
     return FileResponse("static/webinars/index.html")
+
+# Include upgraded blog and media routers - ONLY addition for blog system
+app.include_router(blog_router)
+app.include_router(media_router)
 
 if __name__ == "__main__":
     import uvicorn
