@@ -1,3 +1,30 @@
+# Add these imports at the TOP of your existing main.py, after other imports
+from dependencies import get_db, get_current_user, get_current_admin  # Replace existing definitions
+from blog_routes import blog_router
+from media_routes import media_router
+
+# Add these lines near the end of your file, BEFORE if __name__ == "__main__":
+# Include blog and media routers
+app.include_router(blog_router, prefix="/blog")
+app.include_router(media_router, prefix="/media")
+
+# Also add this to your startup event to create the media_files table
+# Add inside your existing @app.on_event("startup") function:
+
+await conn.execute("""
+    CREATE TABLE IF NOT EXISTS media_files (
+        id SERIAL PRIMARY KEY,
+        filename VARCHAR(255) NOT NULL,
+        original_name VARCHAR(255) NOT NULL,
+        file_path TEXT NOT NULL,
+        file_type VARCHAR(50) NOT NULL,
+        file_size INTEGER NOT NULL,
+        mime_type VARCHAR(100),
+        alt_text VARCHAR(255),
+        uploaded_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+""")
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, status, Form, Query, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
