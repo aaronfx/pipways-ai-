@@ -1,8 +1,15 @@
 """
 Pipways Trading Platform - Main Application
-Secure, production-ready FastAPI application
 """
 import os
+import sys
+from pathlib import Path
+
+# Ensure project root is in Python path
+project_root = Path(__file__).parent.absolute()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 import logging
 from contextlib import asynccontextmanager
 
@@ -11,7 +18,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from core import init_db, close_db, get_settings
+# Import core modules with fallback
+try:
+    from core import init_db, close_db, get_settings
+except ImportError as e:
+    print(f"Import error from core: {e}")
+    # Direct imports if package import fails
+    from core.database import init_db, close_db
+    from core.config import get_settings
+
 from routers import auth_router, blog_router, trades_router, media_router
 
 # Configure logging
@@ -24,7 +39,6 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
-    # Startup
     logger.info("Starting up Pipways Trading Platform...")
     try:
         await init_db()
@@ -35,7 +49,6 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Shutdown
     logger.info("Shutting down...")
     await close_db()
     logger.info("Database disconnected")
@@ -51,7 +64,7 @@ app = FastAPI(
 # Get settings
 settings = get_settings()
 
-# Configure CORS - Restrictive in production
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -111,7 +124,6 @@ async def get_config():
 # Error handlers
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
-    """Handle HTTP exceptions"""
     return {
         "error": True,
         "status_code": exc.status_code,
@@ -120,7 +132,6 @@ async def http_exception_handler(request, exc):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
-    """Handle unexpected exceptions"""
     logger.error(f"Unexpected error: {exc}", exc_info=True)
     return {
         "error": True,
