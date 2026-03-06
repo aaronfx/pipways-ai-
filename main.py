@@ -1,27 +1,21 @@
 """
-Pipways Trading Platform - Monolithic Version (No package imports)
-All core functionality included in single file for Render deployment
+Pipways Trading Platform - Fixed Authentication Version
 """
 import os
 import sys
 import logging
 import asyncpg
-import base64
-import requests
-import imghdr
-import uuid
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Union
+from typing import Optional, List, Dict
 from contextlib import asynccontextmanager
 from functools import lru_cache
-from decimal import Decimal
 
-from fastapi import FastAPI, HTTPException, status, Depends, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, status, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordRequestForm
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, EmailStr
 from pydantic_settings import BaseSettings
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -31,33 +25,20 @@ from passlib.context import CryptContext
 # ==========================================
 
 class Settings(BaseSettings):
-    """Application settings"""
     DATABASE_URL: str = "postgresql://user:pass@localhost/pipways"
-    SECRET_KEY: str = "change-this-in-production-min-32-characters"
+    SECRET_KEY: str = "change-this-in-production-min-32-characters-long"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
-    MAX_UPLOAD_SIZE: int = 5 * 1024 * 1024
-    ALLOWED_EXTENSIONS: set = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
-    OPENROUTER_API_KEY: str = ""
-    ZOOM_ACCOUNT_ID: str = ""
-    ZOOM_CLIENT_ID: str = ""
-    ZOOM_CLIENT_SECRET: str = ""
+    ALLOWED_ORIGINS: str = "*"
     ENV: str = "development"
-    DEBUG: bool = False
     PORT: int = 8000
 
     @property
     def cors_origins(self) -> List[str]:
         return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
 
-    @property
-    def is_production(self) -> bool:
-        return self.ENV.lower() == "production"
-
     class Config:
         env_file = ".env"
-        case_sensitive = True
 
 @lru_cache()
 def get_settings() -> Settings:
@@ -70,8 +51,6 @@ settings = get_settings()
 # ==========================================
 
 class Database:
-    """Database connection manager"""
-
     def __init__(self):
         self.pool: Optional[asyncpg.Pool] = None
 
@@ -114,7 +93,7 @@ async def close_db():
 # ==========================================
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-security_bearer = HTTPBearer()
+security_bearer = HTTPBearer(auto_error=False)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
@@ -122,51 +101,45 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(data: dict) -> str:
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-
-    to_encode.update({"exp": expire, "iat": datetime.utcnow(), "type": "access"})
+    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire, "iat": datetime.utcnow()})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 def decode_token(token: str) -> Optional[dict]:
+    if not token:
+        return None
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if not payload.get("sub"):
+            return None
         return payload
     except JWTError:
         return None
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security_bearer)):
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
     token = credentials.credentials
     payload = decode_token(token)
 
     if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
-
-    return {"user_id": user_id, "email": payload.get("email"), "role": payload.get("role")}
-
-async def get_current_admin(current_user: dict = Depends(get_current_user)):
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
-    return current_user
+    return {
+        "user_id": payload.get("sub"),
+        "email": payload.get("email"),
+        "role": payload.get("role")
+    }
 
 # ==========================================
 # FASTAPI APP
 # ==========================================
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
@@ -176,55 +149,74 @@ async def lifespan(app: FastAPI):
     logger.info("Database connected")
     yield
     await close_db()
-    logger.info("Database disconnected")
+    logger.info("Shutdown complete")
 
-app = FastAPI(
-    title="Pipways Trading Platform",
-    version="2.0.0",
-    lifespan=lifespan
-)
+app = FastAPI(title="Pipways", version="2.0.0", lifespan=lifespan)
 
+# CORS - Allow all for now to debug
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ==========================================
-# ROUTERS
+# AUTH ROUTES
 # ==========================================
 
-# Auth Router
 @app.post("/api/auth/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    """Login endpoint - returns JWT token"""
+    logger.info(f"Login attempt for: {form_data.username}")
+
     user = await db.fetchrow(
         "SELECT id, email, password_hash, full_name, role, is_active FROM users WHERE email = $1",
         form_data.username
     )
 
-    if not user or not verify_password(form_data.password, user["password_hash"]):
+    if not user:
+        logger.warning(f"User not found: {form_data.username}")
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+
+    if not verify_password(form_data.password, user["password_hash"]):
+        logger.warning(f"Invalid password for: {form_data.username}")
         raise HTTPException(status_code=401, detail="Incorrect email or password")
 
     if not user["is_active"]:
-        raise HTTPException(status_code=403, detail="User account is disabled")
+        raise HTTPException(status_code=403, detail="Account disabled")
 
     access_token = create_access_token(
-        data={"sub": str(user["id"]), "email": user["email"], "role": user["role"]}
+        data={
+            "sub": str(user["id"]),
+            "email": user["email"],
+            "role": user["role"]
+        }
     )
+
+    logger.info(f"Login successful for: {form_data.username}")
 
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": {"id": user["id"], "email": user["email"], "full_name": user["full_name"], "role": user["role"]}
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "full_name": user["full_name"],
+            "role": user["role"]
+        }
     }
 
 @app.post("/api/auth/register")
 async def register(user_data: dict):
+    """Register new user"""
     email = user_data.get("email")
     password = user_data.get("password")
     full_name = user_data.get("full_name")
+
+    if not all([email, password, full_name]):
+        raise HTTPException(status_code=400, detail="Missing required fields")
 
     existing = await db.fetchrow("SELECT id FROM users WHERE email = $1", email)
     if existing:
@@ -233,30 +225,47 @@ async def register(user_data: dict):
     hashed_password = get_password_hash(password)
 
     user = await db.fetchrow(
-        "INSERT INTO users (email, password_hash, full_name, role, is_active) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, full_name, role, is_active",
+        """INSERT INTO users (email, password_hash, full_name, role, is_active) 
+           VALUES ($1, $2, $3, $4, $5) 
+           RETURNING id, email, full_name, role, is_active""",
         email, hashed_password, full_name, "user", True
     )
     return dict(user)
 
-# Trades Router
+# ==========================================
+# TRADE ROUTES (Protected)
+# ==========================================
+
 @app.get("/api/trades/")
 async def list_trades(current_user: dict = Depends(get_current_user)):
-    rows = await db.fetch("SELECT * FROM trades WHERE user_id = $1 ORDER BY entry_date DESC", int(current_user["user_id"]))
+    """List user's trades"""
+    rows = await db.fetch(
+        "SELECT * FROM trades WHERE user_id = $1 ORDER BY entry_date DESC",
+        int(current_user["user_id"])
+    )
     return [dict(row) for row in rows]
 
 @app.post("/api/trades/")
 async def create_trade(trade: dict, current_user: dict = Depends(get_current_user)):
+    """Create new trade"""
     result = await db.fetchrow(
         """INSERT INTO trades (user_id, symbol, direction, entry_price, quantity, entry_date, strategy, setup_notes, status) 
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *""",
-        int(current_user["user_id"]), trade["symbol"].upper(), trade["direction"], 
-        trade["entry_price"], trade["quantity"], trade["entry_date"],
-        trade.get("strategy"), trade.get("setup_notes"), "open"
+        int(current_user["user_id"]), 
+        trade.get("symbol", "").upper(), 
+        trade.get("direction"), 
+        trade.get("entry_price"), 
+        trade.get("quantity"), 
+        trade.get("entry_date", datetime.utcnow().isoformat()),
+        trade.get("strategy"), 
+        trade.get("setup_notes"), 
+        "open"
     )
     return dict(result)
 
 @app.get("/api/trades/stats")
 async def get_trade_stats(current_user: dict = Depends(get_current_user)):
+    """Get trading statistics"""
     stats = await db.fetchrow(
         """SELECT 
             COUNT(*) as total_trades,
@@ -267,44 +276,35 @@ async def get_trade_stats(current_user: dict = Depends(get_current_user)):
     )
     return dict(stats)
 
-# Blog Router
+# ==========================================
+# BLOG ROUTES (Public)
+# ==========================================
+
 @app.get("/api/blog/posts")
 async def list_posts():
-    rows = await db.fetch("SELECT * FROM blog_posts WHERE status = 'published' ORDER BY created_at DESC")
+    """List published blog posts"""
+    rows = await db.fetch(
+        "SELECT * FROM blog_posts WHERE status = 'published' ORDER BY created_at DESC"
+    )
     return [dict(row) for row in rows]
 
 @app.get("/api/blog/posts/{slug}")
 async def get_post(slug: str):
+    """Get single blog post"""
     post = await db.fetchrow("SELECT * FROM blog_posts WHERE slug = $1", slug)
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     return dict(post)
 
-# Media Router
-os.makedirs("uploads", exist_ok=True)
+# ==========================================
+# STATIC FILES & ROOT
+# ==========================================
 
-@app.post("/api/media/upload")
-async def upload_image(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in settings.ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="Invalid file type")
-
-    contents = await file.read(settings.MAX_UPLOAD_SIZE + 1)
-    if len(contents) > settings.MAX_UPLOAD_SIZE:
-        raise HTTPException(status_code=413, detail="File too large")
-
-    unique_name = f"{uuid.uuid4()}{ext}"
-    file_path = os.path.join("uploads", unique_name)
-
-    with open(file_path, "wb") as f:
-        f.write(contents)
-
-    return {"filename": unique_name, "url": f"/uploads/{unique_name}"}
-
-# Static files
 if os.path.exists("frontend"):
     app.mount("/static", StaticFiles(directory="frontend"), name="static")
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+if os.path.exists("uploads"):
+    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")
 async def root():
@@ -315,6 +315,14 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+
+# Error handlers
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
 
 if __name__ == "__main__":
     import uvicorn
