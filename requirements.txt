@@ -1,8 +1,10 @@
+# Updated: 2026-03-06-v2 - Force Render rebuild
 fastapi==0.109.2
 uvicorn[standard]==0.27.1
 asyncpg==0.29.0
 PyJWT==2.8.0
-passlib[bcrypt]==1.7.4
+passlib==1.7.4
+bcrypt==4.1.2
 python-multipart==0.0.9
 pydantic[email]==2.6.1
 pydantic-settings==2.1.0
