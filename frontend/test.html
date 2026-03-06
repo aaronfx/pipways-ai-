@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pipways Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 50px; background: #f0f0f0; }
+        .box { background: white; padding: 30px; border-radius: 10px; max-width: 600px; margin: 0 auto; }
+        h1 { color: #333; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div class="box">
+        <h1>Pipways Connection Test</h1>
+        <p>If you see this page, the frontend is being served correctly!</p>
+        <p id="status">Checking API connection...</p>
+        <div id="content"></div>
+
+        <hr style="margin: 30px 0;">
+        <h2>Login Test</h2>
+        <form id="test-form">
+            <input type="email" id="email" placeholder="Email" value="admin@pipways.com" style="padding: 10px; margin: 5px; width: 200px;"><br>
+            <input type="password" id="password" placeholder="Password" value="admin123" style="padding: 10px; margin: 5px; width: 200px;"><br>
+            <button type="submit" style="padding: 10px 20px; margin: 5px; cursor: pointer;">Test Login</button>
+        </form>
+        <div id="login-result"></div>
+    </div>
+
+    <script>
+        // Test API connection
+        var API_BASE = window.location.origin;
+
+        fetch(API_BASE + '/health')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                document.getElementById('status').innerHTML = '<span class="success">✓ API Connected! Status: ' + data.status + '</span>';
+            })
+            .catch(function(e) {
+                document.getElementById('status').innerHTML = '<span class="error">✗ API Error: ' + e.message + '</span>';
+            });
+
+        // Test login
+        document.getElementById('test-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var resultDiv = document.getElementById('login-result');
+            resultDiv.innerHTML = 'Testing login...';
+
+            var formData = new FormData();
+            formData.append('username', document.getElementById('email').value);
+            formData.append('password', document.getElementById('password').value);
+
+            fetch(API_BASE + '/api/auth/login', {
+                method: 'POST',
+                body: formData
+            })
+            .then(function(r) {
+                if (!r.ok) throw new Error('Login failed: ' + r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                resultDiv.innerHTML = '<span class="success">✓ Login successful! Token received: ' + data.access_token.substring(0, 20) + '...</span>';
+            })
+            .catch(function(e) {
+                resultDiv.innerHTML = '<span class="error">✗ ' + e.message + '</span>';
+            });
+        });
+    </script>
+</body>
+</html>
