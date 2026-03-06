@@ -1,633 +1,273 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pipways Trading Platform</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .card-hover { transition: all 0.3s ease; }
-        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.15); }
-        .hidden { display: none !important; }
-    </style>
-<base target="_blank">
-</head>
-<body class="bg-gray-50">
-    <nav class="bg-white shadow-sm border-b">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <h1 class="text-2xl font-bold text-indigo-600">Pipways</h1>
-                </div>
-                <div class="flex items-center space-x-4" id="nav-items">
-                    <button onclick="showSection('dashboard')" class="nav-btn text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Dashboard</button>
-                    <button onclick="showSection('journal')" class="nav-btn text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Journal</button>
-                    <button onclick="showSection('blog')" class="nav-btn text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Blog</button>
-                    <div id="auth-section" class="flex items-center gap-2">
-                        <button onclick="showModal('login')" class="text-indigo-600 hover:text-indigo-700 px-3 py-2 rounded-md text-sm font-medium">Login</button>
-                        <button onclick="showModal('register')" class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700">Register</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
+"""
+Pipways Trading Platform - Root Path Version
+"""
+import os
+import sys
+import logging
+import asyncpg
+from datetime import datetime, timedelta
+from typing import Optional, List, Dict
+from contextlib import asynccontextmanager
+from functools import lru_cache
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <section id="dashboard-section" class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div class="bg-white rounded-lg shadow p-6 card-hover">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-600">Total Trades</p>
-                            <p class="text-2xl font-bold text-gray-900" id="stat-total">0</p>
-                        </div>
-                        <i data-lucide="activity" class="h-8 w-8 text-indigo-600"></i>
-                    </div>
-                </div>
-                <div class="bg-white rounded-lg shadow p-6 card-hover">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-600">Win Rate</p>
-                            <p class="text-2xl font-bold text-green-600" id="stat-winrate">0%</p>
-                        </div>
-                        <i data-lucide="trending-up" class="h-8 w-8 text-green-600"></i>
-                    </div>
-                </div>
-                <div class="bg-white rounded-lg shadow p-6 card-hover">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-600">Total PnL</p>
-                            <p class="text-2xl font-bold" id="stat-pnl">$0.00</p>
-                        </div>
-                        <i data-lucide="dollar-sign" class="h-8 w-8 text-blue-600"></i>
-                    </div>
-                </div>
-                <div class="bg-white rounded-lg shadow p-6 card-hover">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-600">Avg Return</p>
-                            <p class="text-2xl font-bold" id="stat-return">0%</p>
-                        </div>
-                        <i data-lucide="percent" class="h-8 w-8 text-purple-600"></i>
-                    </div>
-                </div>
-            </div>
+from fastapi import FastAPI, HTTPException, status, Depends, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordRequestForm
+from pydantic import BaseModel, Field, EmailStr
+from pydantic_settings import BaseSettings
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 
-            <div class="bg-white rounded-lg shadow">
-                <div class="px-6 py-4 border-b flex justify-between items-center">
-                    <h3 class="text-lg font-semibold text-gray-900">Recent Trades</h3>
-                    <button onclick="showModal('add-trade')" class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm hover:bg-indigo-700">Add Trade</button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Direction</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entry</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">PnL</th>
-                            </tr>
-                        </thead>
-                        <tbody id="trades-table-body" class="bg-white divide-y divide-gray-200">
-                            <tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Loading...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
+# Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-        <section id="journal-section" class="hidden space-y-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-2xl font-bold text-gray-900">Trading Journal</h2>
-                <button onclick="showModal('add-trade')" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 flex items-center gap-2">
-                    <i data-lucide="plus" class="h-4 w-4"></i> New Trade
-                </button>
-            </div>
-            <div id="journal-entries" class="grid gap-4">
-                <div class="text-center text-gray-500 py-8">Loading...</div>
-            </div>
-        </section>
+# Settings
+class Settings(BaseSettings):
+    DATABASE_URL: str = "postgresql://user:pass@localhost/pipways"
+    SECRET_KEY: str = "change-this-in-production-min-32-characters-long"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ALLOWED_ORIGINS: str = "*"
+    ENV: str = "development"
+    PORT: int = 8000
 
-        <section id="blog-section" class="hidden space-y-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-2xl font-bold text-gray-900">Trading Blog</h2>
-            </div>
-            <div id="blog-posts" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div class="text-center text-gray-500 py-8 col-span-3">Loading...</div>
-            </div>
-        </section>
-    </main>
+    @property
+    def cors_origins(self) -> List[str]:
+        if self.ALLOWED_ORIGINS == "*":
+            return ["*"]
+        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
 
-    <div id="login-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
-            <h3 class="text-2xl font-bold mb-4">Login</h3>
-            <form id="login-form" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" id="login-email" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500" value="admin@pipways.com">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" id="login-password" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500" value="admin123">
-                </div>
-                <div id="login-error" class="text-red-600 text-sm hidden"></div>
-                <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">Login</button>
-                <button type="button" onclick="hideModal('login')" class="w-full bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 mt-2">Cancel</button>
-            </form>
-            <p class="mt-4 text-center text-sm text-gray-600">
-                Do not have an account? 
-                <button onclick="hideModal('login'); showModal('register')" class="text-indigo-600 hover:text-indigo-700 font-medium">Register</button>
-            </p>
-        </div>
-    </div>
+    class Config:
+        env_file = ".env"
 
-    <div id="register-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
-            <h3 class="text-2xl font-bold mb-4">Create Account</h3>
-            <form id="register-form" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                    <input type="text" id="register-name" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500" placeholder="John Doe">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" id="register-email" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500" placeholder="you@example.com">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" id="register-password" required minlength="6" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500" placeholder="Min 6 characters">
-                </div>
-                <div id="register-error" class="text-red-600 text-sm hidden"></div>
-                <div id="register-success" class="text-green-600 text-sm hidden"></div>
-                <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">Create Account</button>
-                <button type="button" onclick="hideModal('register')" class="w-full bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 mt-2">Cancel</button>
-            </form>
-            <p class="mt-4 text-center text-sm text-gray-600">
-                Already have an account? 
-                <button onclick="hideModal('register'); showModal('login')" class="text-indigo-600 hover:text-indigo-700 font-medium">Login</button>
-            </p>
-        </div>
-    </div>
+@lru_cache()
+def get_settings() -> Settings:
+    return Settings()
 
-    <div id="add-trade-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-        <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 my-8">
-            <h3 class="text-2xl font-bold mb-4">Add New Trade</h3>
-            <form id="trade-form" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Symbol</label>
-                        <input type="text" id="trade-symbol" required placeholder="EURUSD" class="w-full border rounded-lg px-4 py-2 uppercase">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Direction</label>
-                        <select id="trade-direction" class="w-full border rounded-lg px-4 py-2">
-                            <option value="long">Long</option>
-                            <option value="short">Short</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Entry Price</label>
-                        <input type="number" step="0.00001" id="trade-entry" required class="w-full border rounded-lg px-4 py-2">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                        <input type="number" step="0.01" id="trade-quantity" required class="w-full border rounded-lg px-4 py-2">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Strategy</label>
-                    <input type="text" id="trade-strategy" placeholder="e.g., Breakout" class="w-full border rounded-lg px-4 py-2">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Setup Notes</label>
-                    <textarea id="trade-notes" rows="3" class="w-full border rounded-lg px-4 py-2"></textarea>
-                </div>
-                <div class="flex gap-2">
-                    <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">Save Trade</button>
-                    <button type="button" onclick="hideModal('add-trade')" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
+settings = get_settings()
 
-    <script>
-        // ES5 Compatible JavaScript - No ES6 features
-        var API_BASE = window.location.origin.indexOf('localhost') !== -1 
-            ? 'http://localhost:8000' 
-            : window.location.origin;
+# Database
+class Database:
+    def __init__(self):
+        self.pool: Optional[asyncpg.Pool] = None
 
-        console.log('API Base:', API_BASE);
+    async def connect(self):
+        if not self.pool:
+            self.pool = await asyncpg.create_pool(
+                settings.DATABASE_URL,
+                min_size=2,
+                max_size=10,
+                command_timeout=60
+            )
 
-        var currentUser = null;
-        var authToken = localStorage.getItem('token');
+    async def disconnect(self):
+        if self.pool:
+            await self.pool.close()
+            self.pool = None
 
-        console.log('Initial token:', authToken ? 'found' : 'not found');
+    async def fetch(self, query: str, *args):
+        async with self.pool.acquire() as conn:
+            return await conn.fetch(query, *args)
 
-        document.addEventListener('DOMContentLoaded', function() {
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
+    async def fetchrow(self, query: str, *args):
+        async with self.pool.acquire() as conn:
+            return await conn.fetchrow(query, *args)
 
-            if (authToken) {
-                updateAuthUI();
-                loadDashboard();
-            } else {
-                showSection('blog');
-            }
+    async def execute(self, query: str, *args):
+        async with self.pool.acquire() as conn:
+            return await conn.execute(query, *args)
 
-            loadBlogPosts();
-        });
+db = Database()
 
-        function showSection(section) {
-            if ((section === 'dashboard' || section === 'journal') && !authToken) {
-                showModal('login');
-                return;
-            }
+async def init_db():
+    await db.connect()
 
-            var sections = document.querySelectorAll('main > section');
-            for (var i = 0; i < sections.length; i++) {
-                sections[i].classList.add('hidden');
-            }
+async def close_db():
+    await db.disconnect()
 
-            var sectionEl = document.getElementById(section + '-section');
-            if (sectionEl) {
-                sectionEl.classList.remove('hidden');
-            }
+# Security
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security_bearer = HTTPBearer(auto_error=False)
 
-            if (section === 'dashboard') loadDashboard();
-            if (section === 'journal') loadJournal();
-            if (section === 'blog') loadBlogPosts();
-        }
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
 
-        function showModal(modal) {
-            var el = document.getElementById(modal + '-modal');
-            if (el) el.classList.remove('hidden');
-        }
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
 
-        function hideModal(modal) {
-            var el = document.getElementById(modal + '-modal');
-            if (el) el.classList.add('hidden');
+def create_access_token(data: dict) -> str:
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire, "iat": datetime.utcnow()})
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return encoded_jwt
 
-            var errorDiv = document.getElementById(modal + '-error');
-            if (errorDiv) {
-                errorDiv.classList.add('hidden');
-                errorDiv.textContent = '';
-            }
-        }
+def decode_token(token: str) -> Optional[dict]:
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if not payload.get("sub"):
+            return None
+        return payload
+    except JWTError:
+        return None
 
-        // Login Form
-        var loginForm = document.getElementById('login-form');
-        if (loginForm) {
-            loginForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                console.log('Login submitted');
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security_bearer)):
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
-                var email = document.getElementById('login-email').value;
-                var password = document.getElementById('login-password').value;
-                var errorDiv = document.getElementById('login-error');
+    token = credentials.credentials
+    payload = decode_token(token)
 
-                var formData = new FormData();
-                formData.append('username', email);
-                formData.append('password', password);
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-                fetch(API_BASE + '/api/auth/login', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(function(response) {
-                    console.log('Login status:', response.status);
-                    if (!response.ok) {
-                        return response.json().then(function(err) {
-                            throw new Error(err.detail || 'Login failed');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(function(data) {
-                    console.log('Login success');
-                    authToken = data.access_token;
-                    localStorage.setItem('token', authToken);
-                    currentUser = data.user;
+    return {
+        "user_id": payload.get("sub"),
+        "email": payload.get("email"),
+        "role": payload.get("role")
+    }
 
-                    updateAuthUI();
-                    hideModal('login');
-                    showSection('dashboard');
-                })
-                .catch(function(error) {
-                    console.error('Login error:', error);
-                    errorDiv.textContent = error.message;
-                    errorDiv.classList.remove('hidden');
-                });
-            });
-        }
+# FastAPI App
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Starting up...")
+    await init_db()
+    logger.info("Ready")
+    yield
+    await close_db()
+    logger.info("Shutdown")
 
-        // Register Form
-        var registerForm = document.getElementById('register-form');
-        if (registerForm) {
-            registerForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                console.log('Register submitted');
+app = FastAPI(title="Pipways", version="2.0.0", lifespan=lifespan)
 
-                var fullName = document.getElementById('register-name').value;
-                var email = document.getElementById('register-email').value;
-                var password = document.getElementById('register-password').value;
-                var errorDiv = document.getElementById('register-error');
-                var successDiv = document.getElementById('register-success');
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-                fetch(API_BASE + '/api/auth/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        email: email,
-                        password: password,
-                        full_name: fullName
-                    })
-                })
-                .then(function(response) {
-                    console.log('Register status:', response.status);
-                    if (!response.ok) {
-                        return response.json().then(function(err) {
-                            throw new Error(err.detail || 'Registration failed');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(function(data) {
-                    console.log('Register success');
-                    errorDiv.classList.add('hidden');
-                    successDiv.textContent = 'Account created! Please login.';
-                    successDiv.classList.remove('hidden');
+# ==========================================
+# KEY CHANGE: Serve index.html from ROOT
+# ==========================================
 
-                    registerForm.reset();
+@app.get("/")
+async def root():
+    """Serve index.html from root directory"""
+    logger.info("Root URL accessed")
 
-                    setTimeout(function() {
-                        hideModal('register');
-                        showModal('login');
-                        successDiv.classList.add('hidden');
-                    }, 2000);
-                })
-                .catch(function(error) {
-                    console.error('Register error:', error);
-                    successDiv.classList.add('hidden');
-                    errorDiv.textContent = error.message;
-                    errorDiv.classList.remove('hidden');
-                });
-            });
-        }
+    # Try root directory first
+    if os.path.exists("index.html"):
+        logger.info("Serving index.html from root")
+        return FileResponse("index.html")
 
-        function updateAuthUI() {
-            var authSection = document.getElementById('auth-section');
-            if (authToken) {
-                var userName = currentUser && currentUser.full_name ? currentUser.full_name : 'User';
-                authSection.innerHTML = '<span class="text-gray-700">' + userName + '</span><button onclick="logout()" class="text-red-600 hover:text-red-700 ml-4 font-medium">Logout</button>';
-            } else {
-                authSection.innerHTML = '<button onclick="showModal('login')" class="text-indigo-600 hover:text-indigo-700 px-3 py-2 rounded-md text-sm font-medium">Login</button><button onclick="showModal('register')" class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700">Register</button>';
-            }
-        }
+    # Fallback to frontend directory
+    if os.path.exists("frontend/index.html"):
+        logger.info("Serving index.html from frontend/")
+        return FileResponse("frontend/index.html")
 
-        function logout() {
-            localStorage.removeItem('token');
-            authToken = null;
-            currentUser = null;
-            updateAuthUI();
-            showSection('blog');
-        }
+    logger.warning("index.html not found")
+    return {"message": "Pipways API", "error": "index.html not found in root or frontend/"}
 
-        function apiRequest(url, options) {
-            options = options || {};
-            var headers = { 'Content-Type': 'application/json' };
+# Mount static files if they exist
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
-            if (authToken) {
-                headers['Authorization'] = 'Bearer ' + authToken;
-            }
+if os.path.exists("uploads"):
+    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-            if (options.headers) {
-                for (var key in options.headers) {
-                    headers[key] = options.headers[key];
-                }
-            }
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
 
-            return fetch(url, {
-                method: options.method || 'GET',
-                headers: headers,
-                body: options.body
-            })
-            .then(function(response) {
-                if (response.status === 401) {
-                    localStorage.removeItem('token');
-                    authToken = null;
-                    updateAuthUI();
-                    showModal('login');
-                    throw new Error('Session expired');
-                }
-                return response;
-            });
-        }
+# Auth Routes
+@app.post("/api/auth/login")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    logger.info(f"Login attempt: {form_data.username}")
 
-        function loadDashboard() {
-            if (!authToken) return;
+    user = await db.fetchrow(
+        "SELECT id, email, password_hash, full_name, role, is_active FROM users WHERE email = $1",
+        form_data.username
+    )
 
-            apiRequest(API_BASE + '/api/trades/stats')
-            .then(function(response) { return response.json(); })
-            .then(function(stats) {
-                document.getElementById('stat-total').textContent = stats.total_trades || 0;
+    if not user or not verify_password(form_data.password, user["password_hash"]):
+        logger.warning(f"Login failed for: {form_data.username}")
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
 
-                var winRate = stats.total_trades > 0 
-                    ? Math.round((stats.winning_trades / stats.total_trades) * 100) 
-                    : 0;
-                document.getElementById('stat-winrate').textContent = winRate + '%';
+    if not user["is_active"]:
+        raise HTTPException(status_code=403, detail="Account disabled")
 
-                var pnl = parseFloat(stats.total_pnl) || 0;
-                var pnlEl = document.getElementById('stat-pnl');
-                pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
-                pnlEl.className = 'text-2xl font-bold ' + (pnl >= 0 ? 'text-green-600' : 'text-red-600');
-            })
-            .catch(function(error) {
-                console.error('Dashboard error:', error);
-            });
+    access_token = create_access_token(
+        data={"sub": str(user["id"]), "email": user["email"], "role": user["role"]}
+    )
 
-            apiRequest(API_BASE + '/api/trades/?limit=5')
-            .then(function(response) { return response.json(); })
-            .then(function(trades) {
-                renderTradesTable(trades);
-            })
-            .catch(function(error) {
-                console.error('Trades error:', error);
-            });
-        }
+    logger.info(f"Login success: {form_data.username}")
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {"id": user["id"], "email": user["email"], "full_name": user["full_name"], "role": user["role"]}
+    }
 
-        function renderTradesTable(trades) {
-            var tbody = document.getElementById('trades-table-body');
-            if (!trades || trades.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No trades yet</td></tr>';
-                return;
-            }
+class UserRegister(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=6)
+    full_name: str = Field(..., min_length=2)
 
-            var html = '';
-            for (var i = 0; i < trades.length; i++) {
-                var t = trades[i];
-                var isLong = t.direction && t.direction.toLowerCase() === 'long';
-                var directionIcon = isLong
-                    ? '<span class="text-green-600 flex items-center gap-1"><i data-lucide="trending-up" class="h-4 w-4"></i> Long</span>' 
-                    : '<span class="text-red-600 flex items-center gap-1"><i data-lucide="trending-down" class="h-4 w-4"></i> Short</span>';
+@app.post("/api/auth/register")
+async def register(user_data: UserRegister):
+    logger.info(f"Register attempt: {user_data.email}")
 
-                var pnl = parseFloat(t.pnl) || 0;
-                var pnlClass = pnl >= 0 ? 'text-green-600' : 'text-red-600';
-                var pnlText = pnl !== 0 ? (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2) : '-';
+    existing = await db.fetchrow("SELECT id FROM users WHERE email = $1", user_data.email)
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
 
-                html += '<tr class="hover:bg-gray-50">' +
-                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + new Date(t.entry_date).toLocaleDateString() + '</td>' +
-                    '<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">' + t.symbol + '</td>' +
-                    '<td class="px-6 py-4 whitespace-nowrap text-sm">' + directionIcon + '</td>' +
-                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + parseFloat(t.entry_price).toFixed(5) + '</td>' +
-                    '<td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ' + (t.status === 'closed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800') + '">' + t.status + '</span></td>' +
-                    '<td class="px-6 py-4 whitespace-nowrap text-sm font-medium ' + pnlClass + '">' + pnlText + '</td>' +
-                '</tr>';
-            }
+    hashed_password = get_password_hash(user_data.password)
 
-            tbody.innerHTML = html;
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        }
+    user = await db.fetchrow(
+        "INSERT INTO users (email, password_hash, full_name, role, is_active) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, full_name, role, is_active",
+        user_data.email, hashed_password, user_data.full_name, "user", True
+    )
 
-        function loadJournal() {
-            if (!authToken) return;
+    logger.info(f"Register success: {user_data.email}")
+    return {"message": "User created", "user": dict(user)}
 
-            apiRequest(API_BASE + '/api/trades/')
-            .then(function(response) { return response.json(); })
-            .then(function(trades) {
-                renderJournal(trades);
-            })
-            .catch(function(error) {
-                console.error('Journal error:', error);
-            });
-        }
+# Trade Routes
+@app.get("/api/trades/")
+async def list_trades(current_user: dict = Depends(get_current_user)):
+    rows = await db.fetch("SELECT * FROM trades WHERE user_id = $1 ORDER BY entry_date DESC", int(current_user["user_id"]))
+    return [dict(row) for row in rows]
 
-        function renderJournal(trades) {
-            var container = document.getElementById('journal-entries');
-            if (!trades || trades.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-500 py-8">No journal entries yet</div>';
-                return;
-            }
+@app.post("/api/trades/")
+async def create_trade(trade: dict, current_user: dict = Depends(get_current_user)):
+    result = await db.fetchrow(
+        "INSERT INTO trades (user_id, symbol, direction, entry_price, quantity, entry_date, strategy, setup_notes, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *",
+        int(current_user["user_id"]), trade.get("symbol", "").upper(), trade.get("direction"), 
+        trade.get("entry_price"), trade.get("quantity"), trade.get("entry_date", datetime.utcnow().isoformat()),
+        trade.get("strategy"), trade.get("setup_notes"), "open"
+    )
+    return dict(result)
 
-            var html = '';
-            for (var i = 0; i < trades.length; i++) {
-                var t = trades[i];
-                html += '<div class="bg-white rounded-lg shadow p-6 card-hover">' +
-                    '<div class="flex justify-between items-start">' +
-                        '<div>' +
-                            '<h4 class="text-lg font-semibold">' + t.symbol + ' - ' + t.direction.toUpperCase() + '</h4>' +
-                            '<p class="text-sm text-gray-600">' + new Date(t.entry_date).toLocaleString() + '</p>' +
-                        '</div>' +
-                        '<span class="px-3 py-1 rounded-full text-sm ' + (t.status === 'closed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800') + '">' + t.status + '</span>' +
-                    '</div>' +
-                    '<div class="mt-4 grid grid-cols-3 gap-4 text-sm">' +
-                        '<div><span class="text-gray-600">Entry:</span> <span class="font-medium">' + parseFloat(t.entry_price).toFixed(5) + '</span></div>' +
-                        '<div><span class="text-gray-600">Exit:</span> <span class="font-medium">' + (t.exit_price ? parseFloat(t.exit_price).toFixed(5) : '-') + '</span></div>' +
-                        '<div><span class="text-gray-600">PnL:</span> <span class="font-medium ' + ((t.pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600') + '">' + (t.pnl ? ((t.pnl >= 0 ? '+' : '') + '$' + parseFloat(t.pnl).toFixed(2)) : '-') + '</span></div>' +
-                    '</div>' +
-                    (t.setup_notes ? '<div class="mt-4 text-sm text-gray-700"><strong>Notes:</strong> ' + t.setup_notes + '</div>' : '') +
-                '</div>';
-            }
+@app.get("/api/trades/stats")
+async def get_trade_stats(current_user: dict = Depends(get_current_user)):
+    stats = await db.fetchrow(
+        "SELECT COUNT(*) as total_trades, COUNT(CASE WHEN pnl > 0 THEN 1 END) as winning_trades, COALESCE(SUM(pnl), 0) as total_pnl FROM trades WHERE user_id = $1 AND status = 'closed'",
+        int(current_user["user_id"])
+    )
+    return dict(stats)
 
-            container.innerHTML = html;
-        }
+# Blog Routes
+@app.get("/api/blog/posts")
+async def list_posts():
+    rows = await db.fetch("SELECT * FROM blog_posts WHERE status = 'published' ORDER BY created_at DESC")
+    return [dict(row) for row in rows]
 
-        // Add Trade Form
-        var tradeForm = document.getElementById('trade-form');
-        if (tradeForm) {
-            tradeForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                if (!authToken) {
-                    showModal('login');
-                    return;
-                }
-
-                var tradeData = {
-                    symbol: document.getElementById('trade-symbol').value.toUpperCase(),
-                    direction: document.getElementById('trade-direction').value,
-                    entry_price: parseFloat(document.getElementById('trade-entry').value),
-                    quantity: parseFloat(document.getElementById('trade-quantity').value),
-                    entry_date: new Date().toISOString(),
-                    strategy: document.getElementById('trade-strategy').value,
-                    setup_notes: document.getElementById('trade-notes').value
-                };
-
-                apiRequest(API_BASE + '/api/trades/', {
-                    method: 'POST',
-                    body: JSON.stringify(tradeData)
-                })
-                .then(function(response) {
-                    if (response.ok) {
-                        hideModal('add-trade');
-                        tradeForm.reset();
-                        loadDashboard();
-                    } else {
-                        return response.json().then(function(err) {
-                            alert(err.detail || 'Failed to save trade');
-                        });
-                    }
-                })
-                .catch(function(error) {
-                    console.error('Trade save error:', error);
-                    alert('Failed to save trade: ' + error.message);
-                });
-            });
-        }
-
-        function loadBlogPosts() {
-            fetch(API_BASE + '/api/blog/posts')
-            .then(function(response) { return response.json(); })
-            .then(function(posts) {
-                renderBlogPosts(posts);
-            })
-            .catch(function(error) {
-                console.error('Blog error:', error);
-            });
-        }
-
-        function renderBlogPosts(posts) {
-            var container = document.getElementById('blog-posts');
-            if (!posts || posts.length === 0) {
-                container.innerHTML = '<div class="col-span-3 text-center text-gray-500 py-8">No articles yet</div>';
-                return;
-            }
-
-            var html = '';
-            for (var i = 0; i < posts.length; i++) {
-                var p = posts[i];
-                html += '<article class="bg-white rounded-lg shadow overflow-hidden card-hover">' +
-                    '<div class="h-48 bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center text-white text-4xl font-bold">P</div>' +
-                    '<div class="p-6">' +
-                        '<div class="flex items-center gap-2 text-sm text-gray-600 mb-2">' +
-                            '<span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded">' + p.category + '</span>' +
-                            '<span>•</span>' +
-                            '<span>' + new Date(p.created_at).toLocaleDateString() + '</span>' +
-                        '</div>' +
-                        '<h3 class="text-xl font-bold text-gray-900 mb-2">' + p.title + '</h3>' +
-                        '<p class="text-gray-600 text-sm">' + (p.excerpt || p.content.substring(0, 150)) + '...</p>' +
-                    '</div>' +
-                '</article>';
-            }
-
-            container.innerHTML = html;
-        }
-
-        // Close modals on outside click
-        window.onclick = function(event) {
-            if (event.target.classList.contains('fixed')) {
-                event.target.classList.add('hidden');
-            }
-        }
-    </script>
-</body>
-</html>
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", settings.PORT))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
