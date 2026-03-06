@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipways Trading Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.15); }
+    </style>
+<base target="_blank">
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-indigo-600">Pipways</h1>
+                </div>
+                <div class="flex items-center space-x-4" id="nav-items">
+                    <button onclick="showSection('dashboard')" class="nav-btn text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Dashboard</button>
+                    <button onclick="showSection('journal')" class="nav-btn text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Journal</button>
+                    <button onclick="showSection('blog')" class="nav-btn text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Blog</button>
+                    <button onclick="showSection('webinars')" class="nav-btn text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Webinars</button>
+                    <div id="auth-section">
+                        <button onclick="showModal('login')" class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700">Login</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="bg-white rounded-lg shadow p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Total Trades</p>
+                            <p class="text-2xl font-bold text-gray-900" id="stat-total">0</p>
+                        </div>
+                        <i data-lucide="activity" class="h-8 w-8 text-indigo-600"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Win Rate</p>
+                            <p class="text-2xl font-bold text-green-600" id="stat-winrate">0%</p>
+                        </div>
+                        <i data-lucide="trending-up" class="h-8 w-8 text-green-600"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Total P&L</p>
+                            <p class="text-2xl font-bold" id="stat-pnl">$0.00</p>
+                        </div>
+                        <i data-lucide="dollar-sign" class="h-8 w-8 text-blue-600"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Avg Return</p>
+                            <p class="text-2xl font-bold" id="stat-return">0%</p>
+                        </div>
+                        <i data-lucide="percent" class="h-8 w-8 text-purple-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Trades -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-gray-900">Recent Trades</h3>
+                    <button onclick="showModal('add-trade')" class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm hover:bg-indigo-700">Add Trade</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Direction</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entry</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Exit</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">P&L</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trades-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Trades loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Trading Journal Section -->
+        <section id="journal-section" class="hidden space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-gray-900">Trading Journal</h2>
+                <button onclick="showModal('add-trade')" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 flex items-center gap-2">
+                    <i data-lucide="plus" class="h-4 w-4"></i> New Trade
+                </button>
+            </div>
+            <div id="journal-entries" class="grid gap-4">
+                <!-- Journal entries loaded dynamically -->
+            </div>
+        </section>
+
+        <!-- Blog Section -->
+        <section id="blog-section" class="hidden space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-gray-900">Trading Blog</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="blog-search" placeholder="Search articles..." class="border rounded-lg px-4 py-2">
+                    <button onclick="loadBlogPosts()" class="bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200">
+                        <i data-lucide="search" class="h-4 w-4"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="blog-posts" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Blog posts loaded dynamically -->
+            </div>
+        </section>
+
+        <!-- Webinars Section -->
+        <section id="webinars-section" class="hidden space-y-6">
+            <h2 class="text-2xl font-bold text-gray-900">Upcoming Webinars</h2>
+            <div id="webinars-list" class="grid gap-4">
+                <!-- Webinars loaded dynamically -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <h3 class="text-2xl font-bold mb-4">Login</h3>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="login-email" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="login-password" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div id="login-error" class="text-red-600 text-sm hidden"></div>
+                <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">Login</button>
+                <button type="button" onclick="hideModal('login')" class="w-full bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 mt-2">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Trade Modal -->
+    <div id="add-trade-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+        <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 my-8">
+            <h3 class="text-2xl font-bold mb-4">Add New Trade</h3>
+            <form id="trade-form" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Symbol</label>
+                        <input type="text" id="trade-symbol" required placeholder="EURUSD" class="w-full border rounded-lg px-4 py-2 uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Direction</label>
+                        <select id="trade-direction" class="w-full border rounded-lg px-4 py-2">
+                            <option value="long">Long</option>
+                            <option value="short">Short</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Entry Price</label>
+                        <input type="number" step="0.00001" id="trade-entry" required class="w-full border rounded-lg px-4 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                        <input type="number" step="0.01" id="trade-quantity" required class="w-full border rounded-lg px-4 py-2">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Strategy</label>
+                    <input type="text" id="trade-strategy" placeholder="e.g., Breakout, Support/Resistance" class="w-full border rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Setup Notes</label>
+                    <textarea id="trade-notes" rows="3" class="w-full border rounded-lg px-4 py-2"></textarea>
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">Save Trade</button>
+                    <button type="button" onclick="hideModal('add-trade')" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration - Dynamic based on environment
+        const API_BASE = window.location.origin.includes('localhost') 
+            ? 'http://localhost:8000' 
+            : window.location.origin;
+
+        // State management
+        let currentUser = null;
+        let authToken = localStorage.getItem('token');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            if (authToken) {
+                loadUserData();
+            }
+            loadDashboard();
+            loadBlogPosts();
+        });
+
+        // Navigation
+        function showSection(section) {
+            // Hide all sections
+            document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+            // Show selected
+            document.getElementById(`${section}-section`).classList.remove('hidden');
+
+            // Load section data
+            if (section === 'dashboard') loadDashboard();
+            if (section === 'journal') loadJournal();
+            if (section === 'blog') loadBlogPosts();
+            if (section === 'webinars') loadWebinars();
+        }
+
+        // Modal management
+        function showModal(modal) {
+            document.getElementById(`${modal}-modal`).classList.remove('hidden');
+        }
+
+        function hideModal(modal) {
+            document.getElementById(`${modal}-modal`).classList.add('hidden');
+            // Clear form errors
+            const errorDiv = document.getElementById(`${modal}-error`);
+            if (errorDiv) errorDiv.classList.add('hidden');
+        }
+
+        // Authentication
+        document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const formData = new FormData();
+                formData.append('username', email);
+                formData.append('password', password);
+
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Login failed');
+                }
+
+                const data = await response.json();
+                authToken = data.access_token;
+                localStorage.setItem('token', authToken);
+                currentUser = data.user;
+
+                updateAuthUI();
+                hideModal('login');
+                loadDashboard();
+
+            } catch (error) {
+                const errorDiv = document.getElementById('login-error');
+                errorDiv.textContent = error.message;
+                errorDiv.classList.remove('hidden');
+            }
+        });
+
+        function updateAuthUI() {
+            const authSection = document.getElementById('auth-section');
+            if (currentUser) {
+                authSection.innerHTML = `
+                    <span class="text-gray-700">${currentUser.full_name}</span>
+                    <button onclick="logout()" class="text-red-600 hover:text-red-700 ml-4">Logout</button>
+                `;
+            } else {
+                authSection.innerHTML = `
+                    <button onclick="showModal('login')" class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700">Login</button>
+                `;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            authToken = null;
+            currentUser = null;
+            updateAuthUI();
+            showSection('dashboard');
+        }
+
+        async function loadUserData() {
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (response.ok) {
+                    currentUser = await response.json();
+                    updateAuthUI();
+                } else {
+                    logout();
+                }
+            } catch (error) {
+                console.error('Failed to load user:', error);
+            }
+        }
+
+        // Dashboard
+        async function loadDashboard() {
+            if (!authToken) return;
+
+            try {
+                // Load stats
+                const statsRes = await fetch(`${API_BASE}/api/trades/stats`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (statsRes.ok) {
+                    const stats = await statsRes.json();
+                    document.getElementById('stat-total').textContent = stats.total_trades || 0;
+                    document.getElementById('stat-winrate').textContent = 
+                        stats.total_trades > 0 
+                            ? Math.round((stats.winning_trades / stats.total_trades) * 100) + '%'
+                            : '0%';
+
+                    const pnl = parseFloat(stats.total_pnl) || 0;
+                    const pnlEl = document.getElementById('stat-pnl');
+                    pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
+                    pnlEl.className = `text-2xl font-bold ${pnl >= 0 ? 'text-green-600' : 'text-red-600'}`;
+
+                    document.getElementById('stat-return').textContent = 
+                        parseFloat(stats.return_percent || 0).toFixed(2) + '%';
+                }
+
+                // Load recent trades
+                const tradesRes = await fetch(`${API_BASE}/api/trades/?limit=5`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (tradesRes.ok) {
+                    const trades = await tradesRes.json();
+                    renderTradesTable(trades);
+                }
+            } catch (error) {
+                console.error('Dashboard load error:', error);
+            }
+        }
+
+        function renderTradesTable(trades) {
+            const tbody = document.getElementById('trades-table-body');
+            if (!trades || trades.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">No trades yet</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = trades.map(t => {
+                // FIXED: Corrected ternary operator syntax
+                const directionIcon = t.direction?.toLowerCase() === 'long' 
+                    ? '<span class="text-green-600 flex items-center gap-1"><i data-lucide="trending-up" class="h-4 w-4"></i> Long</span>' 
+                    : '<span class="text-red-600 flex items-center gap-1"><i data-lucide="trending-down" class="h-4 w-4"></i> Short</span>';
+
+                const pnl = parseFloat(t.pnl) || 0;
+                const pnlClass = pnl >= 0 ? 'text-green-600' : 'text-red-600';
+                const pnlText = pnl !== 0 ? (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2) : '-';
+
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ${new Date(t.entry_date).toLocaleDateString()}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${t.symbol}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">${directionIcon}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${parseFloat(t.entry_price).toFixed(5)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ${t.exit_price ? parseFloat(t.exit_price).toFixed(5) : '-'}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${pnlClass}">${pnlText}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                ${t.status === 'closed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                                ${t.status}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        // Journal
+        async function loadJournal() {
+            if (!authToken) {
+                showModal('login');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/trades/`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (response.ok) {
+                    const trades = await response.json();
+                    renderJournal(trades);
+                }
+            } catch (error) {
+                console.error('Journal load error:', error);
+            }
+        }
+
+        function renderJournal(trades) {
+            const container = document.getElementById('journal-entries');
+            if (!trades || trades.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-8">No journal entries yet</div>';
+                return;
+            }
+
+            container.innerHTML = trades.map(t => `
+                <div class="bg-white rounded-lg shadow p-6 card-hover">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="text-lg font-semibold">${t.symbol} - ${t.direction.toUpperCase()}</h4>
+                            <p class="text-sm text-gray-600">${new Date(t.entry_date).toLocaleString()}</p>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-sm ${t.status === 'closed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                            ${t.status}
+                        </span>
+                    </div>
+                    <div class="mt-4 grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-600">Entry:</span>
+                            <span class="font-medium">${parseFloat(t.entry_price).toFixed(5)}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">Exit:</span>
+                            <span class="font-medium">${t.exit_price ? parseFloat(t.exit_price).toFixed(5) : '-'}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">P&L:</span>
+                            <span class="font-medium ${(t.pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'}">
+                                ${t.pnl ? (t.pnl >= 0 ? '+' : '') + '$' + parseFloat(t.pnl).toFixed(2) : '-'}
+                            </span>
+                        </div>
+                    </div>
+                    ${t.setup_notes ? `<div class="mt-4 text-sm text-gray-700"><strong>Notes:</strong> ${t.setup_notes}</div>` : ''}
+                    ${t.lessons ? `<div class="mt-2 text-sm text-blue-700 bg-blue-50 p-3 rounded"><strong>Lesson:</strong> ${t.lessons}</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        // Add Trade
+        document.getElementById('trade-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!authToken) {
+                showModal('login');
+                return;
+            }
+
+            const tradeData = {
+                symbol: document.getElementById('trade-symbol').value.toUpperCase(),
+                direction: document.getElementById('trade-direction').value,
+                entry_price: parseFloat(document.getElementById('trade-entry').value),
+                quantity: parseFloat(document.getElementById('trade-quantity').value),
+                entry_date: new Date().toISOString(),
+                strategy: document.getElementById('trade-strategy').value,
+                setup_notes: document.getElementById('trade-notes').value,
+                status: 'open'
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/trades/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(tradeData)
+                });
+
+                if (response.ok) {
+                    hideModal('add-trade');
+                    document.getElementById('trade-form').reset();
+                    loadDashboard();
+                    if (!document.getElementById('journal-section').classList.contains('hidden')) {
+                        loadJournal();
+                    }
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to save trade');
+                }
+            } catch (error) {
+                console.error('Trade save error:', error);
+                alert('Failed to save trade');
+            }
+        });
+
+        // Blog
+        async function loadBlogPosts() {
+            try {
+                const search = document.getElementById('blog-search')?.value || '';
+                const url = new URL(`${API_BASE}/api/blog/posts`);
+                url.searchParams.append('status', 'published');
+                if (search) url.searchParams.append('search', search);
+
+                const response = await fetch(url);
+                if (response.ok) {
+                    const posts = await response.json();
+                    renderBlogPosts(posts);
+                }
+            } catch (error) {
+                console.error('Blog load error:', error);
+            }
+        }
+
+        function renderBlogPosts(posts) {
+            const container = document.getElementById('blog-posts');
+            if (!posts || posts.length === 0) {
+                container.innerHTML = '<div class="col-span-3 text-center text-gray-500 py-8">No articles yet</div>';
+                return;
+            }
+
+            container.innerHTML = posts.map(p => `
+                <article class="bg-white rounded-lg shadow overflow-hidden card-hover cursor-pointer" onclick="showBlogPost('${p.slug}')">
+                    ${p.featured_image ? `<img src="${p.featured_image}" alt="${p.title}" class="w-full h-48 object-cover">` : 
+                    '<div class="w-full h-48 bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center text-white text-4xl font-bold">P</div>'}
+                    <div class="p-6">
+                        <div class="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                            <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded">${p.category}</span>
+                            <span>•</span>
+                            <span>${new Date(p.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">${p.title}</h3>
+                        <p class="text-gray-600 text-sm line-clamp-3">${p.excerpt || p.content.substring(0, 150)}...</p>
+                        <div class="mt-4 flex items-center justify-between">
+                            <span class="text-sm text-gray-500">By ${p.author_name}</span>
+                            <span class="text-indigo-600 text-sm font-medium">Read more →</span>
+                        </div>
+                    </div>
+                </article>
+            `).join('');
+        }
+
+        function showBlogPost(slug) {
+            // Navigate to blog post detail (implement as needed)
+            window.open(`${API_BASE}/api/blog/posts/${slug}`, '_blank');
+        }
+
+        // Webinars
+        async function loadWebinars() {
+            try {
+                const response = await fetch(`${API_BASE}/api/webinars`);
+                if (response.ok) {
+                    const webinars = await response.json();
+                    renderWebinars(webinars);
+                }
+            } catch (error) {
+                console.error('Webinars load error:', error);
+                document.getElementById('webinars-list').innerHTML = 
+                    '<div class="text-center text-gray-500 py-8">Webinars temporarily unavailable</div>';
+            }
+        }
+
+        function renderWebinars(webinars) {
+            const container = document.getElementById('webinars-list');
+            if (!webinars || webinars.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-8">No upcoming webinars</div>';
+                return;
+            }
+
+            container.innerHTML = webinars.map(w => `
+                <div class="bg-white rounded-lg shadow p-6 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-semibold">${w.topic}</h3>
+                        <p class="text-sm text-gray-600">${new Date(w.start_time).toLocaleString()}</p>
+                        <p class="text-sm text-gray-500">Duration: ${w.duration} minutes</p>
+                    </div>
+                    <button class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Register</button>
+                </div>
+            `).join('');
+        }
+
+        // Close modals on outside click
+        window.onclick = function(event) {
+            if (event.target.classList.contains('fixed')) {
+                event.target.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
