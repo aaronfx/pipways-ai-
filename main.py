@@ -125,15 +125,75 @@ async def debug_info():
 async def health_check():
     return {"status": "healthy"}
 
-# Setup page
+# Setup page - MUST be before the / route
 @app.get("/setup", response_class=HTMLResponse)
 async def setup_page():
     """Serve the setup page"""
-    setup_path = project_root / "setup.html"
-    if setup_path.exists():
-        with open(setup_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Setup page not found</h1>")
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Pipways Setup</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
+            <h1 class="text-3xl font-bold text-center mb-2 text-purple-600">Pipways Setup</h1>
+            <p class="text-gray-600 text-center mb-6">Initialize your database</p>
+
+            <div id="status" class="mb-4 p-4 rounded-lg hidden"></div>
+
+            <button onclick="runSetup()" 
+                class="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 transition">
+                Initialize Database
+            </button>
+
+            <div class="mt-6 text-center">
+                <a href="/" class="text-purple-600 hover:underline">Go to Login Page</a>
+            </div>
+
+            <div class="mt-4 text-sm text-gray-500 text-center">
+                <p class="font-bold">Default Login:</p>
+                <p>Email: admin@pipways.com</p>
+                <p>Password: admin123</p>
+            </div>
+        </div>
+
+        <script>
+            function showStatus(message, isError) {
+                const status = document.getElementById("status");
+                status.textContent = message;
+                status.className = "mb-4 p-4 rounded-lg " + (isError ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700");
+                status.classList.remove("hidden");
+            }
+
+            async function runSetup() {
+                try {
+                    showStatus("Setting up database...", false);
+
+                    const response = await fetch("/api/setup", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" }
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        showStatus("Success! " + data.message + " Default user: " + data.default_user, false);
+                    } else {
+                        showStatus("Error: " + (data.detail || "Unknown error"), true);
+                    }
+                } catch (error) {
+                    showStatus("Error: " + error.message, true);
+                }
+            }
+        </script>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
 
 # Create tables endpoint (for easy setup)
 @app.post("/api/setup")
@@ -337,7 +397,7 @@ async def get_blog_posts():
         posts = await conn.fetch("SELECT * FROM blog_posts ORDER BY created_at DESC")
         return [dict(p) for p in posts]
 
-# Serve frontend
+# Serve frontend - MUST be last
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
     possible_paths = [
@@ -352,7 +412,23 @@ async def serve_frontend():
             with open(path, "r", encoding="utf-8") as f:
                 return HTMLResponse(content=f.read())
 
-    return HTMLResponse(content="<h1>Error: index.html not found</h1>", status_code=404)
+    # Return inline HTML if file not found
+    return HTMLResponse(content="""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Pipways AI</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body class="bg-gray-100 min-h-screen flex items-center justify-center">
+        <div class="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
+            <h1 class="text-2xl font-bold mb-4">Pipways AI</h1>
+            <p class="mb-4">Index file not found. Please upload index.html</p>
+            <a href="/setup" class="text-purple-600 hover:underline">Go to Setup Page</a>
+        </div>
+    </body>
+    </html>
+    """)
 
 if __name__ == "__main__":
     import uvicorn
