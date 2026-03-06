@@ -1,5 +1,5 @@
 """
-Pipways Trading Platform - Debug Version
+Pipways Trading Platform - Root Path Version
 """
 import os
 import sys
@@ -13,7 +13,7 @@ from functools import lru_cache
 from fastapi import FastAPI, HTTPException, status, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field, EmailStr
 from pydantic_settings import BaseSettings
@@ -21,7 +21,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 # Logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Settings
@@ -56,14 +56,12 @@ class Database:
 
     async def connect(self):
         if not self.pool:
-            logger.info(f"Connecting to database...")
             self.pool = await asyncpg.create_pool(
                 settings.DATABASE_URL,
                 min_size=2,
                 max_size=10,
                 command_timeout=60
             )
-            logger.info("Database connected")
 
     async def disconnect(self):
         if self.pool:
@@ -155,46 +153,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static files
-if os.path.exists("frontend"):
-    logger.info(f"Mounting frontend directory: {os.path.abspath('frontend')}")
-    app.mount("/static", StaticFiles(directory="frontend"), name="static")
+# ==========================================
+# KEY CHANGE: Serve index.html from ROOT
+# ==========================================
 
-# Routes
 @app.get("/")
 async def root():
-    """Serve the main frontend"""
+    """Serve index.html from root directory"""
     logger.info("Root URL accessed")
-    index_path = "frontend/index.html"
-    if os.path.exists(index_path):
-        logger.info(f"Serving {index_path}")
-        return FileResponse(index_path)
-    logger.warning(f"{index_path} not found")
-    return {"message": "Pipways API", "version": "2.0.0", "frontend": "not found"}
 
-@app.get("/test")
-async def test_page():
-    """Serve test page"""
-    test_path = "frontend/test.html"
-    if os.path.exists(test_path):
-        return FileResponse(test_path)
-    return {"error": "test.html not found"}
+    # Try root directory first
+    if os.path.exists("index.html"):
+        logger.info("Serving index.html from root")
+        return FileResponse("index.html")
+
+    # Fallback to frontend directory
+    if os.path.exists("frontend/index.html"):
+        logger.info("Serving index.html from frontend/")
+        return FileResponse("frontend/index.html")
+
+    logger.warning("index.html not found")
+    return {"message": "Pipways API", "error": "index.html not found in root or frontend/"}
+
+# Mount static files if they exist
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
+if os.path.exists("uploads"):
+    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
-
-@app.get("/debug")
-async def debug_info():
-    """Debug endpoint to check configuration"""
-    return {
-        "frontend_exists": os.path.exists("frontend"),
-        "index_exists": os.path.exists("frontend/index.html"),
-        "test_exists": os.path.exists("frontend/test.html"),
-        "cwd": os.getcwd(),
-        "files_in_cwd": os.listdir(".") if os.path.exists(".") else "N/A",
-        "files_in_frontend": os.listdir("frontend") if os.path.exists("frontend") else "N/A"
-    }
 
 # Auth Routes
 @app.post("/api/auth/login")
@@ -280,4 +270,4 @@ async def list_posts():
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", settings.PORT))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, log_level="debug")
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
