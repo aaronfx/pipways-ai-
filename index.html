@@ -2,1567 +2,732 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pipways - Institutional Trader Development</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipways - Blog Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-
-    <!-- Editor.js and plugins - Using specific versions for stability -->
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.28.2/dist/editorjs.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.7.0/dist/bundle.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@1.8.0/dist/bundle.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/paragraph@2.10.0/dist/bundle.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@1.8.0/dist/bundle.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/image@2.8.1/dist/bundle.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@2.5.0/dist/bundle.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/code@2.8.0/dist/bundle.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@2.2.1/dist/bundle.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@2.5.3/dist/bundle.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@1.3.0/dist/bundle.umd.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@2.2.1/dist/bundle.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/marker@1.3.0/dist/bundle.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-        * { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-
-        .gradient-text {
-            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .glass {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .glass-strong {
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 40px -10px rgba(59, 130, 246, 0.5);
-        }
-
-        .sidebar-link {
-            transition: all 0.2s ease;
-        }
-
-        .sidebar-link:hover, .sidebar-link.active {
-            background: rgba(59, 130, 246, 0.1);
-            color: #60a5fa;
-        }
-
-        .nav-btn.active {
-            background: rgba(59, 130, 246, 0.2);
-            color: #60a5fa;
-        }
-
-        /* Editor.js Critical Styles - MUST HAVE */
-        .codex-editor {
-            background: #1e293b;
-            border-radius: 0.5rem;
-            min-height: 400px;
-            position: relative;
-        }
-
-        /* Force editor to be visible */
-        .codex-editor__redactor {
-            padding-bottom: 100px !important;
-            min-height: 300px !important;
-        }
-
-        .ce-block {
-            padding: 0.5em 0;
-        }
-
-        .ce-block__content {
-            max-width: 100%;
-            position: relative;
-        }
-
-        .ce-paragraph {
-            color: #e2e8f0;
-            font-size: 16px;
-            line-height: 1.6;
-            padding: 0.5em 0;
-        }
-
-        /* Toolbar must be visible */
-        .ce-toolbar {
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: 0;
-            z-index: 10;
-        }
-
-        .ce-toolbar__content {
-            max-width: 100%;
-        }
-
-        .ce-toolbar__actions {
-            right: 10px;
-            display: flex;
-            align-items: center;
-        }
-
-        .ce-toolbar__plus {
-            color: #94a3b8;
-        }
-
-        .ce-toolbar__plus:hover {
-            color: #60a5fa;
-        }
-
-        /* Inline toolbar */
-        .ce-inline-toolbar {
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 6px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 100;
-        }
-
-        .ce-inline-toolbar__buttons {
-            display: flex;
-        }
-
-        .ce-inline-tool {
-            color: #e2e8f0;
-            padding: 8px;
-        }
-
-        .ce-inline-tool:hover {
-            background: #334155;
-        }
-
-        /* Popover/Toolbox */
-        .ce-popover {
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            color: #e2e8f0;
-        }
-
-        .ce-popover__item {
-            color: #e2e8f0;
-        }
-
-        .ce-popover__item:hover {
-            background: #334155;
-        }
-
-        .ce-popover__item-icon {
-            background: #334155;
-        }
-
-        /* Conversion toolbar */
-        .ce-conversion-toolbar {
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-
-        .ce-conversion-tool {
-            color: #e2e8f0;
-        }
-
-        .ce-conversion-tool:hover {
-            background: #334155;
-        }
-
-        .ce-conversion-tool__icon {
-            background: #334155;
-        }
-
-        /* Block selection */
-        .ce-block--selected .ce-block__content {
-            background: rgba(59, 130, 246, 0.1);
-            border-radius: 4px;
-        }
-
-        /* Header styles */
-        .ce-header {
-            color: #f8fafc;
-            font-weight: 600;
-            padding: 0.5em 0;
-        }
-
-        h1.ce-header { font-size: 2em; }
-        h2.ce-header { font-size: 1.75em; }
-        h3.ce-header { font-size: 1.5em; }
-        h4.ce-header { font-size: 1.25em; }
-
-        /* List styles */
-        .cdx-list {
-            color: #e2e8f0;
-            padding-left: 1.5em;
-        }
-
-        .cdx-list__item {
-            padding: 0.3em 0;
-        }
-
-        /* Quote styles */
-        .cdx-quote {
-            border-left: 3px solid #60a5fa;
-            padding-left: 1em;
-            margin: 1em 0;
-        }
-
-        .cdx-quote__text {
-            color: #e2e8f0;
-            font-style: italic;
-        }
-
-        /* Code styles */
-        .cdx-code {
-            background: #0f172a;
-            border-radius: 6px;
-            padding: 1em;
-            font-family: 'Monaco', 'Menlo', monospace;
-            font-size: 14px;
-            color: #e2e8f0;
-            overflow-x: auto;
-        }
-
-        /* Image styles */
-        .cdx-image {
-            margin: 1em 0;
-        }
-
-        .cdx-image__picture img {
-            max-width: 100%;
-            border-radius: 8px;
-        }
-
-        /* Delimiter */
-        .ce-delimiter {
-            text-align: center;
-            color: #475569;
-            font-size: 1.5em;
-            letter-spacing: 0.5em;
-            padding: 1em 0;
-        }
-
-        /* Placeholder */
-        .ce-paragraph[data-placeholder]:empty::before {
-            content: attr(data-placeholder);
-            color: #64748b;
-            font-style: italic;
-            pointer-events: none;
-        }
-
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #0f172a;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 3px;
-        }
-
-        /* Mobile optimizations */
-        @media (max-width: 1024px) {
-            .ce-toolbar__actions {
-                right: 5px;
-            }
-        }
-
-        @media screen and (max-width: 768px) {
-            input, select, textarea {
-                font-size: 16px;
-            }
-
-            .codex-editor {
-                min-height: 300px;
-            }
-        }
-
-        /* Modal animation */
-        .modal-enter {
-            animation: modalFadeIn 0.3s ease;
-        }
-
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        /* Loading state */
-        .editor-loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 300px;
-            color: #64748b;
-        }
-
-        /* Error state */
-        .editor-error {
-            padding: 2em;
-            text-align: center;
-            color: #ef4444;
-        }
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; }
+        .ce-block__content, .ce-toolbar__content { max-width: 900px; }
+        .codex-editor__redactor { padding-bottom: 100px !important; }
+        .ce-toolbar__plus, .ce-toolbar__settings-btn { color: #64748b; background: #1e293b; border-radius: 4px; }
+        .ce-toolbar__plus:hover, .ce-toolbar__settings-btn:hover { color: #e2e8f0; background: #334155; }
+        .ce-toolbox__button { color: #64748b; }
+        .ce-toolbox__button:hover { color: #e2e8f0; background: #334155; }
+        .cdx-search-field__input { background: #1e293b; color: #e2e8f0; border-color: #334155; }
+        .ce-popover__container { background: #1e293b; border-color: #334155; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); }
+        .ce-popover-item { color: #e2e8f0; }
+        .ce-popover-item:hover { background: #334155; }
+        .ce-inline-tool { color: #64748b; }
+        .ce-inline-tool:hover { color: #e2e8f0; background: #334155; }
+        .ce-conversion-tool__icon { color: #64748b; }
+        .ce-block--selected .ce-block__content { background: #1e293b; }
+        .cdx-block { padding: 0.5rem 0; }
+        .ce-header { color: #f8fafc; font-weight: 700; }
+        .cdx-list { padding-left: 1.5rem; }
+        .cdx-quote { border-left: 3px solid #3b82f6; padding-left: 1rem; font-style: italic; color: #94a3b8; }
+        .cdx-marker { background: rgba(59, 130, 246, 0.3); padding: 0 2px; }
+        .image-tool__image { border-radius: 8px; overflow: hidden; }
+        .image-tool__caption { color: #64748b; font-size: 0.875rem; }
+        .cdx-input { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+        .cdx-input:focus { border-color: #3b82f6; }
+        .tc-wrap { border-color: #334155; }
+        .tc-cell { border-color: #334155; background: #1e293b; }
+        .tc-row::after { background: #334155; }
+        .tc-add-column, .tc-add-row { background: #334155; color: #64748b; }
+        .tc-add-column:hover, .tc-add-row:hover { background: #475569; color: #e2e8f0; }
+        .ce-code__textarea { background: #1e293b; color: #e2e8f0; font-family: 'Monaco', 'Menlo', monospace; }
+        .ce-delimiter { color: #475569; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .slide-in { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
     </style>
 <base target="_blank">
 </head>
-<body class="bg-slate-950 text-slate-200 antialiased overflow-x-hidden">
-    <!-- Auth Screen -->
-    <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-        <div class="glass-strong rounded-2xl p-6 md:p-8 w-full max-w-md shadow-2xl mx-4">
-            <div class="text-center mb-6 md:mb-8">
-                <div class="w-14 h-14 md:w-16 md:h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
-                    <i data-lucide="trending-up" class="w-7 h-7 md:w-8 md:h-8 text-white"></i>
-                </div>
-                <h1 class="text-2xl md:text-3xl font-bold gradient-text mb-2">Pipways</h1>
-                <p class="text-slate-400 text-sm md:text-base">Institutional Trader Development</p>
-            </div>
-
-            <div id="auth-tabs" class="flex gap-2 mb-6 p-1 bg-slate-800/50 rounded-lg">
-                <button onclick="showAuthTab('login')" id="tab-login" class="flex-1 py-2.5 rounded-md bg-blue-500 text-white font-medium text-sm transition-all">Sign In</button>
-                <button onclick="showAuthTab('register')" id="tab-register" class="flex-1 py-2.5 rounded-md text-slate-400 hover:text-white font-medium text-sm transition-all">Register</button>
-            </div>
-
-            <!-- Login Form -->
-            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Email</label>
-                    <input type="email" name="email" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="admin@pipways.com">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Password</label>
-                    <input type="password" name="password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="••••••••">
-                </div>
-                <button type="submit" class="w-full btn-primary rounded-lg py-3 font-medium text-white shadow-lg">
-                    Sign In
-                </button>
-            </form>
-
-            <!-- Register Form -->
-            <form id="register-form" onsubmit="handleRegister(event)" class="hidden space-y-4">
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Full Name</label>
-                    <input type="text" name="name" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="John Doe">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Email</label>
-                    <input type="email" name="email" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="john@example.com">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Password</label>
-                    <input type="password" name="password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="••••••••">
-                    <p class="text-xs text-slate-500 mt-1">Max 72 characters</p>
-                </div>
-                <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 rounded-lg py-3 font-medium text-white shadow-lg transition-all">
-                    Create Account
-                </button>
-            </form>
-
-            <div id="auth-error" class="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm hidden"></div>
-
-            <div class="mt-6 p-4 bg-slate-800/30 rounded-lg border border-slate-700/50">
-                <p class="text-xs text-slate-500 font-medium mb-2 uppercase tracking-wider">Demo Credentials</p>
-                <div class="text-xs text-slate-400 space-y-1 font-mono">
-                    <p><span class="text-slate-500">Email:</span> admin@pipways.com</p>
-                    <p><span class="text-slate-500">Password:</span> admin123</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main App -->
-    <div id="app" class="hidden h-screen flex flex-col md:flex-row overflow-hidden">
-        <!-- Mobile Header -->
-        <div class="md:hidden flex items-center justify-between p-4 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 z-40">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
-                    <i data-lucide="trending-up" class="w-4 h-4 text-white"></i>
-                </div>
-                <span class="font-bold text-white">Pipways</span>
-            </div>
-            <button onclick="toggleMobileMenu()" class="p-2 text-slate-400 hover:text-white">
-                <i data-lucide="menu" class="w-6 h-6" id="mobile-menu-icon"></i>
-            </button>
-        </div>
-
-        <!-- Sidebar -->
-        <aside id="sidebar" class="fixed md:static inset-y-0 left-0 w-64 bg-slate-900/95 md:bg-slate-900/50 border-r border-slate-800 flex flex-col backdrop-blur-xl z-50 transform -translate-x-full md:translate-x-0 transition-transform duration-300">
-            <div class="p-4 md:p-6 border-b border-slate-800 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
-                        <i data-lucide="trending-up" class="w-4 h-4 md:w-5 md:h-5 text-white"></i>
+<body class="min-h-screen bg-slate-900">
+    <div id="app">
+        <!-- Login Screen -->
+        <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
+            <div class="bg-slate-800 rounded-2xl p-8 w-full max-w-md shadow-2xl">
+                <div class="text-center mb-8">
+                    <div class="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                     </div>
-                    <div class="hidden md:block">
-                        <h1 class="text-lg md:text-xl font-bold text-white">Pipways</h1>
-                        <p class="text-xs text-slate-500">Institutional Trader</p>
-                    </div>
+                    <h1 class="text-2xl font-bold text-white mb-2">Pipways Blog</h1>
+                    <p class="text-slate-400">Sign in to manage your content</p>
                 </div>
-                <button onclick="toggleMobileMenu()" class="md:hidden p-2 text-slate-400 hover:text-white">
-                    <i data-lucide="x" class="w-6 h-6"></i>
-                </button>
-            </div>
-
-            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
-                <button onclick="showPage('dashboard')" class="nav-btn sidebar-link active w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-                    <span>Dashboard</span>
-                </button>
-                <button onclick="showPage('journal')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-                    <i data-lucide="book-open" class="w-5 h-5"></i>
-                    <span>Trade Journal</span>
-                </button>
-                <button onclick="showPage('analysis')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-                    <i data-lucide="scan-eye" class="w-5 h-5"></i>
-                    <span>Chart Analysis</span>
-                </button>
-                <button onclick="showPage('trade-analysis')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-                    <i data-lucide="file-bar-chart" class="w-5 h-5"></i>
-                    <span>Trade Analysis</span>
-                </button>
-                <button onclick="showPage('discipline')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-                    <i data-lucide="shield-check" class="w-5 h-5"></i>
-                    <span>Discipline</span>
-                </button>
-                <button onclick="showPage('mentor')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-                    <i data-lucide="bot" class="w-5 h-5"></i>
-                    <span>AI Mentor</span>
-                </button>
-                <button onclick="showPage('blog')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-                    <i data-lucide="newspaper" class="w-5 h-5"></i>
-                    <span>Blog</span>
-                </button>
-                <button onclick="window.open('/webinars', '_blank')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
-                    <i data-lucide="video" class="w-5 h-5"></i>
-                    <span>Webinars</span>
-                </button>
-                <button onclick="showPage('admin')" class="nav-btn sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hidden" id="admin-nav">
-                    <i data-lucide="settings" class="w-5 h-5"></i>
-                    <span>Admin</span>
-                </button>
-            </nav>
-
-            <div class="p-4 border-t border-slate-800 space-y-3">
-                <div class="bg-slate-800/50 rounded-lg p-3 md:p-4">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-medium text-slate-400">Level 2</span>
-                        <span class="text-xs font-bold text-blue-400">65%</span>
+                <form id="loginForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Email</label>
+                        <input type="email" id="loginEmail" value="admin@pipways.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" placeholder="admin@pipways.com">
                     </div>
-                    <div class="w-full bg-slate-700 rounded-full h-2">
-                        <div class="bg-gradient-to-r from-blue-500 to-violet-500 h-2 rounded-full transition-all" style="width: 65%"></div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Password</label>
+                        <input type="password" id="loginPassword" value="admin123" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" placeholder="••••••••">
                     </div>
-                </div>
-                <button onclick="logout()" class="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium">
-                    <i data-lucide="log-out" class="w-4 h-4"></i>
-                    <span>Sign Out</span>
-                </button>
-            </div>
-        </aside>
-
-        <!-- Overlay for mobile menu -->
-        <div id="mobile-overlay" onclick="toggleMobileMenu()" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 hidden md:hidden"></div>
-
-        <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto bg-gradient-to-br from-slate-950 to-slate-900 w-full" id="content"></main>
-    </div>
-
-    <!-- Blog Editor Modal -->
-    <div id="blog-editor-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-50 overflow-y-auto">
-        <div class="min-h-screen px-4 py-4 md:py-8">
-            <div class="max-w-6xl mx-auto bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden modal-enter">
-                <!-- Header -->
-                <div class="flex justify-between items-center p-4 md:p-6 border-b border-slate-800 bg-slate-800/50">
-                    <h3 class="text-lg md:text-xl font-bold text-white flex items-center gap-2">
-                        <i data-lucide="file-text" class="w-5 h-5 text-blue-400"></i>
-                        <span id="editor-modal-title">New Blog Post</span>
-                    </h3>
-                    <button onclick="closeBlogEditor()" class="text-slate-400 hover:text-white transition-colors p-2 hover:bg-slate-800 rounded-lg">
-                        <i data-lucide="x" class="w-6 h-6"></i>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition duration-200 flex items-center justify-center gap-2">
+                        <span>Sign In</span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
                     </button>
+                </form>
+                <div class="mt-6 text-center">
+                    <p class="text-sm text-slate-500">Demo: admin@pipways.com / admin123</p>
                 </div>
+            </div>
+        </div>
 
-                <!-- Body -->
-                <div class="p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-                    <!-- Main Content -->
-                    <div class="lg:col-span-2 space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-400 mb-2">Title</label>
-                            <input type="text" id="blog-title" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none text-lg" placeholder="Post title">
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-slate-400 mb-2">Category</label>
-                                <select id="blog-category" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none">
-                                    <option value="Strategy">Strategy</option>
-                                    <option value="Psychology">Psychology</option>
-                                    <option value="Risk Management">Risk Management</option>
-                                    <option value="Technical Analysis">Technical Analysis</option>
-                                    <option value="Beginner Guides">Beginner Guides</option>
-                                </select>
+        <!-- Main App (Hidden until login) -->
+        <div id="mainApp" class="hidden">
+            <!-- Header -->
+            <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
+                <div class="container mx-auto px-4 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-slate-400 mb-2">Status</label>
-                                <select id="blog-status" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none">
-                                    <option value="draft">Draft</option>
-                                    <option value="published">Published</option>
-                                    <option value="scheduled">Scheduled</option>
-                                </select>
+                                <h1 class="text-xl font-bold text-white">Pipways Blog</h1>
+                                <p class="text-xs text-slate-400">Content Management</p>
                             </div>
                         </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-400 mb-2">Content</label>
-                            <div id="editorjs" class="bg-slate-800 border border-slate-700 rounded-lg min-h-[400px]"></div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-400 mb-2">Excerpt</label>
-                            <textarea id="blog-excerpt" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none resize-none" placeholder="Brief summary of the post"></textarea>
-                        </div>
-                    </div>
-
-                    <!-- Sidebar -->
-                    <div class="space-y-4">
-                        <!-- SEO -->
-                        <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                            <h4 class="font-medium text-white mb-4 flex items-center gap-2">
-                                <i data-lucide="search" class="w-4 h-4 text-slate-400"></i> SEO
-                            </h4>
-                            <div class="space-y-3">
-                                <div>
-                                    <label class="block text-xs font-medium text-slate-400 mb-1">Meta Title (<span id="meta-title-count">0</span>/70)</label>
-                                    <input type="text" id="blog-meta-title" maxlength="70" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none" placeholder="SEO title...">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-slate-400 mb-1">Meta Description (<span id="meta-desc-count">0</span>/160)</label>
-                                    <textarea id="blog-meta-desc" maxlength="160" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none resize-none" placeholder="SEO description..."></textarea>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-slate-400 mb-1">Focus Keyword</label>
-                                    <input type="text" id="blog-keyword" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none" placeholder="Primary keyword">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-slate-400 mb-1">Tags (comma separated)</label>
-                                    <input type="text" id="blog-tags" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none" placeholder="forex, trading, psychology">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-slate-400 mb-1">Featured Image URL</label>
-                                    <input type="text" id="blog-image" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none" placeholder="https://...">
-                                </div>
-                            </div>
-                            <button onclick="analyzeBlogSEO()" class="w-full mt-3 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2">
-                                <i data-lucide="bar-chart-2" class="w-4 h-4"></i> Analyze SEO
+                        <div class="flex items-center gap-3">
+                            <button onclick="createNewPost()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                <span class="hidden sm:inline">New Post</span>
                             </button>
-                            <div id="seo-score-container" class="mt-3 hidden">
-                                <div class="text-center p-3 bg-slate-800 rounded-lg">
-                                    <div id="seo-score-value" class="text-3xl font-bold">--</div>
-                                    <div class="text-xs text-slate-400">SEO Score</div>
+                            <button onclick="logout()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-medium transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content -->
+            <main class="container mx-auto px-4 py-6">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <!-- Sidebar - Posts List -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+                            <div class="p-4 border-b border-slate-700 bg-slate-800/50">
+                                <div class="flex items-center justify-between">
+                                    <h2 class="font-semibold text-white">Posts</h2>
+                                    <span id="postCount" class="bg-slate-700 text-slate-300 text-xs px-2 py-1 rounded-full">0</span>
+                                </div>
+                            </div>
+                            <div class="p-2">
+                                <div class="flex gap-2 mb-3">
+                                    <button onclick="filterPosts('all')" class="filter-btn flex-1 py-1.5 px-3 rounded-lg text-xs font-medium bg-blue-600 text-white transition" data-filter="all">All</button>
+                                    <button onclick="filterPosts('published')" class="filter-btn flex-1 py-1.5 px-3 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition" data-filter="published">Live</button>
+                                    <button onclick="filterPosts('draft')" class="filter-btn flex-1 py-1.5 px-3 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition" data-filter="draft">Draft</button>
+                                </div>
+                                <div id="postsList" class="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
+                                    <div class="text-center py-8 text-slate-500">
+                                        <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                        <p class="text-sm">No posts yet</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- AI Assistant -->
-                        <div class="bg-gradient-to-br from-violet-900/30 to-blue-900/30 rounded-lg p-4 border border-violet-700/30">
-                            <h4 class="font-medium text-white mb-4 flex items-center gap-2">
-                                <i data-lucide="sparkles" class="w-4 h-4 text-violet-400"></i> AI Assistant
-                            </h4>
-                            <div class="space-y-3">
-                                <input type="text" id="ai-topic" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none" placeholder="Topic (e.g., Risk Management)">
-                                <input type="text" id="ai-keywords" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none" placeholder="Keywords">
-                                <select id="ai-audience" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none">
-                                    <option value="beginner">Beginner Traders</option>
-                                    <option value="intermediate">Intermediate Traders</option>
-                                    <option value="advanced">Advanced Traders</option>
-                                </select>
-                                <select id="ai-tone" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none">
-                                    <option value="professional">Professional</option>
-                                    <option value="conversational">Conversational</option>
-                                    <option value="educational">Educational</option>
-                                    <option value="motivational">Motivational</option>
-                                </select>
-                                <button onclick="generateAIBlogContent()" class="w-full bg-violet-600 hover:bg-violet-500 text-white py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2">
-                                    <i data-lucide="wand-2" class="w-4 h-4"></i> Generate Content
-                                </button>
+                    <!-- Editor Area -->
+                    <div class="lg:col-span-3">
+                        <!-- Empty State -->
+                        <div id="emptyState" class="bg-slate-800 rounded-xl border border-slate-700 p-12 text-center">
+                            <div class="w-20 h-20 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg class="w-10 h-10 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            </div>
+                            <h3 class="text-xl font-semibold text-white mb-2">Create Your First Post</h3>
+                            <p class="text-slate-400 mb-6 max-w-md mx-auto">Start writing amazing content for your trading blog. Click the button below to begin.</p>
+                            <button onclick="createNewPost()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition inline-flex items-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                Create New Post
+                            </button>
+                        </div>
+
+                        <!-- Editor Form -->
+                        <div id="editorContainer" class="hidden bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+                            <!-- Editor Header -->
+                            <div class="p-6 border-b border-slate-700 bg-slate-800/50">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="flex items-center gap-2">
+                                        <span id="editorMode" class="bg-blue-600 text-white text-xs px-2 py-1 rounded font-medium">NEW POST</span>
+                                        <span id="lastSaved" class="text-slate-500 text-sm hidden">Last saved: Just now</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="openSEOPanel()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                                            SEO
+                                        </button>
+                                        <button onclick="openAIPanel()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                            AI Assist
+                                        </button>
+                                    </div>
+                                </div>
+                                <input type="text" id="postTitle" placeholder="Enter post title..." class="w-full bg-transparent text-3xl font-bold text-white placeholder-slate-500 border-none focus:outline-none focus:ring-0">
+                            </div>
+
+                            <!-- Editor Content -->
+                            <div class="p-6">
+                                <div id="editorjs" class="min-h-[500px]"></div>
+                            </div>
+
+                            <!-- Editor Footer -->
+                            <div class="p-6 border-t border-slate-700 bg-slate-800/50">
+                                <div class="flex flex-wrap items-center justify-between gap-4">
+                                    <div class="flex items-center gap-3">
+                                        <select id="postStatus" class="bg-slate-900 border border-slate-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500">
+                                            <option value="draft">Draft</option>
+                                            <option value="published">Published</option>
+                                        </select>
+                                        <input type="text" id="postTags" placeholder="Tags (comma separated)" class="bg-slate-900 border border-slate-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 hidden sm:block">
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <button onclick="cancelEdit()" class="bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-lg font-medium transition">Cancel</button>
+                                        <button onclick="savePost()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition flex items-center gap-2">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                            Save Post
+                                        </button>
+                                        <button onclick="deleteCurrentPost()" id="deleteBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition hidden">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+            </main>
+        </div>
+    </div>
 
-                <!-- Footer -->
-                <div class="flex flex-col sm:flex-row justify-end gap-3 p-4 md:p-6 border-t border-slate-800 bg-slate-800/30">
-                    <button onclick="closeBlogEditor()" class="w-full sm:w-auto px-6 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all order-3 sm:order-1">Cancel</button>
-                    <button onclick="saveBlogPost('draft')" class="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition-all order-2 sm:order-2">Save Draft</button>
-                    <button onclick="saveBlogPost('published')" class="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 order-1 sm:order-3">
-                        <i data-lucide="send" class="w-4 h-4"></i> Publish
-                    </button>
+    <!-- SEO Panel Modal -->
+    <div id="seoPanel" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-2xl border border-slate-700 w-full max-w-lg max-h-[90vh] overflow-hidden">
+            <div class="p-6 border-b border-slate-700 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-white">SEO Analysis</h3>
+                <button onclick="closeSEOPanel()" class="text-slate-400 hover:text-white transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <div id="seoScore" class="text-center mb-6">
+                    <div class="text-5xl font-bold text-blue-500 mb-2">--</div>
+                    <p class="text-slate-400">SEO Score</p>
+                </div>
+                <div id="seoSuggestions" class="space-y-3">
+                    <p class="text-slate-500 text-center">Click "Analyze" to check SEO</p>
+                </div>
+            </div>
+            <div class="p-6 border-t border-slate-700 bg-slate-800/50">
+                <button onclick="runSEOAnalysis()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition">Analyze Content</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Panel Modal -->
+    <div id="aiPanel" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-2xl border border-slate-700 w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <div class="p-6 border-b border-slate-700 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-white">AI Content Assistant</h3>
+                <button onclick="closeAIPanel()" class="text-slate-400 hover:text-white transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">What would you like help with?</label>
+                        <textarea id="aiPrompt" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500" placeholder="e.g., Write an introduction about forex trading strategies..."></textarea>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="generateWithAI('outline')" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg text-sm font-medium transition">Generate Outline</button>
+                        <button onclick="generateWithAI('introduction')" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg text-sm font-medium transition">Introduction</button>
+                        <button onclick="generateWithAI('content')" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg text-sm font-medium transition">Full Content</button>
+                    </div>
+                    <div id="aiResult" class="hidden">
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Generated Content</label>
+                        <div class="bg-slate-900 border border-slate-700 rounded-lg p-4 max-h-60 overflow-y-auto">
+                            <pre id="aiResultText" class="text-sm text-slate-300 whitespace-pre-wrap font-sans"></pre>
+                        </div>
+                        <button onclick="insertAIContent()" class="mt-3 w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-medium transition">Insert into Editor</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-4 right-4 left-4 md:left-auto transform translate-y-20 opacity-0 transition-all duration-300 z-50">
-        <div class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 shadow-2xl flex items-center gap-3">
-            <i id="toast-icon" data-lucide="check-circle" class="w-5 h-5 text-emerald-400 flex-shrink-0"></i>
-            <span id="toast-message" class="text-sm text-white">Success</span>
-        </div>
-    </div>
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
 
     <script>
+        // Configuration - Auto-detect API base URL
+        const API_BASE = window.location.hostname === 'localhost' 
+            ? 'http://localhost:8000' 
+            : (window.location.origin.includes('pipways-api') 
+                ? window.location.origin 
+                : 'https://pipways-api-nhem.onrender.com');
 
-        // API Configuration
-        const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8000' : 'https://pipways-api-nhem.onrender.com';
-        let currentUser = null;
-        let blogEditor = null;
-        let currentEditingPostId = null;
-        let mobileMenuOpen = false;
-        let editorInitialized = false;
+        let authToken = localStorage.getItem('pipways_token') || '';
+        let currentUser = JSON.parse(localStorage.getItem('pipways_user') || 'null');
+        let editor = null;
+        let currentPostId = null;
+        let posts = [];
+        let currentFilter = 'all';
+        let aiGeneratedContent = '';
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            lucide.createIcons();
-
-            // Check for existing token
-            const token = localStorage.getItem('token');
-            if (token) {
-                validateToken(token);
-            }
-
-            // Setup character counters
-            document.getElementById('blog-meta-title')?.addEventListener('input', updateCharCounters);
-            document.getElementById('blog-meta-desc')?.addEventListener('input', updateCharCounters);
-
-            // Close modal on escape
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    closeBlogEditor();
-                }
-            });
-
-            // Check if Editor.js loaded
-            if (typeof EditorJS === 'undefined') {
-                console.error('Editor.js failed to load from CDN');
+            if (authToken && currentUser) {
+                showMainApp();
+                loadPosts();
             } else {
-                console.log('Editor.js loaded successfully');
+                showLoginScreen();
             }
+
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
         });
 
-        // Mobile Menu Toggle
-        function toggleMobileMenu() {
-            mobileMenuOpen = !mobileMenuOpen;
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('mobile-overlay');
-            const icon = document.getElementById('mobile-menu-icon');
-
-            if (mobileMenuOpen) {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-                icon.setAttribute('data-lucide', 'x');
-            } else {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
-                icon.setAttribute('data-lucide', 'menu');
-            }
-            lucide.createIcons();
-        }
-
         // Auth Functions
-        function showAuthTab(tab) {
-            const loginBtn = document.getElementById('tab-login');
-            const registerBtn = document.getElementById('tab-register');
-
-            if (tab === 'login') {
-                loginBtn.className = 'flex-1 py-2.5 rounded-md bg-blue-500 text-white font-medium text-sm transition-all';
-                registerBtn.className = 'flex-1 py-2.5 rounded-md text-slate-400 hover:text-white font-medium text-sm transition-all';
-            } else {
-                loginBtn.className = 'flex-1 py-2.5 rounded-md text-slate-400 hover:text-white font-medium text-sm transition-all';
-                registerBtn.className = 'flex-1 py-2.5 rounded-md bg-blue-500 text-white font-medium text-sm transition-all';
-            }
-
-            document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
-            document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
-            document.getElementById('auth-error').classList.add('hidden');
-        }
-
         async function handleLogin(e) {
             e.preventDefault();
-            const formData = new FormData(e.target);
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
 
             try {
-                const response = await fetch(`${API_BASE}/auth/login`, {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
                     method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    localStorage.setItem('token', data.access_token);
-                    currentUser = data;
-                    showApp();
-                } else {
-                    showAuthError(data.detail || 'Login failed');
-                }
-            } catch (error) {
-                showAuthError('Network error. Please try again.');
-            }
-        }
-
-        async function handleRegister(e) {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-
-            try {
-                const response = await fetch(`${API_BASE}/auth/register`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    localStorage.setItem('token', data.access_token);
-                    currentUser = data;
-                    showApp();
-                } else {
-                    showAuthError(data.detail || 'Registration failed');
-                }
-            } catch (error) {
-                showAuthError('Network error. Please try again.');
-            }
-        }
-
-        function showAuthError(message) {
-            const errorEl = document.getElementById('auth-error');
-            errorEl.textContent = message;
-            errorEl.classList.remove('hidden');
-        }
-
-        async function validateToken(token) {
-            try {
-                const response = await fetch(`${API_BASE}/trades`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
                 });
 
                 if (response.ok) {
-                    currentUser = { token };
-                    showApp();
+                    const data = await response.json();
+                    authToken = data.access_token;
+                    currentUser = data.user;
+                    localStorage.setItem('pipways_token', authToken);
+                    localStorage.setItem('pipways_user', JSON.stringify(currentUser));
+                    showMainApp();
+                    loadPosts();
+                    showToast('Welcome back!', 'success');
                 } else {
-                    localStorage.removeItem('token');
+                    showToast('Invalid credentials', 'error');
                 }
             } catch (error) {
-                localStorage.removeItem('token');
+                showToast('Login failed', 'error');
             }
-        }
-
-        function showApp() {
-            document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('app').classList.remove('hidden');
-
-            if (currentUser?.is_admin) {
-                document.getElementById('admin-nav').classList.remove('hidden');
-            }
-
-            showPage('dashboard');
         }
 
         function logout() {
-            localStorage.removeItem('token');
+            authToken = '';
             currentUser = null;
-            document.getElementById('app').classList.add('hidden');
-            document.getElementById('auth-screen').classList.remove('hidden');
-            document.getElementById('login-form').reset();
-            document.getElementById('register-form').reset();
-            showAuthTab('login');
-
-            if (mobileMenuOpen) toggleMobileMenu();
+            localStorage.removeItem('pipways_token');
+            localStorage.removeItem('pipways_user');
+            showLoginScreen();
+            showToast('Logged out successfully', 'success');
         }
 
-        // Navigation
-        function showPage(page) {
-            if (mobileMenuOpen) toggleMobileMenu();
-
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-
-            if (event?.target?.closest('.nav-btn')) {
-                event.target.closest('.nav-btn').classList.add('active');
-            }
-
-            const content = document.getElementById('content');
-
-            switch(page) {
-                case 'dashboard':
-                    renderDashboard(content);
-                    break;
-                case 'journal':
-                    renderJournal(content);
-                    break;
-                case 'analysis':
-                    renderAnalysis(content);
-                    break;
-                case 'trade-analysis':
-                    renderTradeAnalysis(content);
-                    break;
-                case 'discipline':
-                    renderDiscipline(content);
-                    break;
-                case 'mentor':
-                    renderMentor(content);
-                    break;
-                case 'blog':
-                    renderBlog(content);
-                    break;
-                case 'admin':
-                    renderAdmin(content);
-                    break;
-            }
-
-            lucide.createIcons();
+        function showLoginScreen() {
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
         }
 
-        // Page Renderers
-        function renderDashboard(container) {
-            container.innerHTML = `
-                <div class="p-4 md:p-8">
-                    <div class="mb-6 md:mb-8">
-                        <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">Dashboard</h2>
-                        <p class="text-slate-400 text-sm md:text-base">Welcome back, ${currentUser?.name || 'Trader'}</p>
-                    </div>
-
-                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-                        <div class="glass rounded-xl p-4 md:p-6">
-                            <div class="flex items-center justify-between mb-3 md:mb-4">
-                                <div class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                                    <i data-lucide="trending-up" class="w-5 h-5 md:w-6 md:h-6 text-blue-400"></i>
-                                </div>
-                                <span class="text-xs text-emerald-400 font-medium">+12.5%</span>
-                            </div>
-                            <p class="text-slate-400 text-xs md:text-sm">Total P&L</p>
-                            <p class="text-xl md:text-2xl font-bold text-white">+2,450 pips</p>
-                        </div>
-
-                        <div class="glass rounded-xl p-4 md:p-6">
-                            <div class="flex items-center justify-between mb-3 md:mb-4">
-                                <div class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-violet-500/20 flex items-center justify-center">
-                                    <i data-lucide="target" class="w-5 h-5 md:w-6 md:h-6 text-violet-400"></i>
-                                </div>
-                                <span class="text-xs text-emerald-400 font-medium">+5%</span>
-                            </div>
-                            <p class="text-slate-400 text-xs md:text-sm">Win Rate</p>
-                            <p class="text-xl md:text-2xl font-bold text-white">68.5%</p>
-                        </div>
-
-                        <div class="glass rounded-xl p-4 md:p-6">
-                            <div class="flex items-center justify-between mb-3 md:mb-4">
-                                <div class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                                    <i data-lucide="shield" class="w-5 h-5 md:w-6 md:h-6 text-emerald-400"></i>
-                                </div>
-                                <span class="text-xs text-slate-400 font-medium">Stable</span>
-                            </div>
-                            <p class="text-slate-400 text-xs md:text-sm">Risk Score</p>
-                            <p class="text-xl md:text-2xl font-bold text-white">7.2/10</p>
-                        </div>
-
-                        <div class="glass rounded-xl p-4 md:p-6">
-                            <div class="flex items-center justify-between mb-3 md:mb-4">
-                                <div class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                                    <i data-lucide="flame" class="w-5 h-5 md:w-6 md:h-6 text-amber-400"></i>
-                                </div>
-                                <span class="text-xs text-red-400 font-medium">-2</span>
-                            </div>
-                            <p class="text-slate-400 text-xs md:text-sm">Current Streak</p>
-                            <p class="text-xl md:text-2xl font-bold text-white">3 losses</p>
-                        </div>
-                    </div>
-
-                    <div class="glass rounded-xl p-4 md:p-6">
-                        <h3 class="text-lg font-semibold text-white mb-4">Recent Activity</h3>
-                        <div class="space-y-3 md:space-y-4">
-                            <div class="flex items-center gap-3 md:gap-4 p-3 md:p-4 bg-slate-800/50 rounded-lg">
-                                <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                                    <i data-lucide="check" class="w-4 h-4 md:w-5 md:h-5 text-emerald-400"></i>
-                                </div>
-                                <div class="min-w-0">
-                                    <p class="text-white font-medium text-sm md:text-base truncate">Trade analyzed and graded A</p>
-                                    <p class="text-slate-400 text-xs md:text-sm">EURUSD Long - 2 hours ago</p>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-3 md:gap-4 p-3 md:p-4 bg-slate-800/50 rounded-lg">
-                                <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                                    <i data-lucide="message-square" class="w-4 h-4 md:w-5 md:h-5 text-blue-400"></i>
-                                </div>
-                                <div class="min-w-0">
-                                    <p class="text-white font-medium text-sm md:text-base truncate">New mentor insight received</p>
-                                    <p class="text-slate-400 text-xs md:text-sm">Risk management tip - 5 hours ago</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
+        function showMainApp() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
         }
 
-        function renderJournal(container) {
-            container.innerHTML = `
-                <div class="p-4 md:p-8">
-                    <h2 class="text-2xl md:text-3xl font-bold text-white mb-6 md:mb-8">Trade Journal</h2>
-                    <div class="glass rounded-xl p-6 md:p-8 text-center">
-                        <div class="w-14 h-14 md:w-16 md:h-16 mx-auto mb-4 rounded-lg bg-slate-800 flex items-center justify-center">
-                            <i data-lucide="book-open" class="w-7 h-7 md:w-8 md:h-8 text-slate-600"></i>
-                        </div>
-                        <p class="text-slate-400 text-sm md:text-base">Trade journal coming soon...</p>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        function renderAnalysis(container) {
-            container.innerHTML = `
-                <div class="p-4 md:p-8">
-                    <h2 class="text-2xl md:text-3xl font-bold text-white mb-6 md:mb-8">Chart Analysis</h2>
-                    <div class="glass rounded-xl p-6 md:p-8 text-center">
-                        <div class="w-14 h-14 md:w-16 md:h-16 mx-auto mb-4 rounded-lg bg-slate-800 flex items-center justify-center">
-                            <i data-lucide="scan-eye" class="w-7 h-7 md:w-8 md:h-8 text-slate-600"></i>
-                        </div>
-                        <p class="text-slate-400 text-sm md:text-base">Chart analysis coming soon...</p>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        function renderTradeAnalysis(container) {
-            container.innerHTML = `
-                <div class="p-4 md:p-8">
-                    <h2 class="text-2xl md:text-3xl font-bold text-white mb-6 md:mb-8">Trade Analysis</h2>
-                    <div class="glass rounded-xl p-6 md:p-8 text-center">
-                        <div class="w-14 h-14 md:w-16 md:h-16 mx-auto mb-4 rounded-lg bg-slate-800 flex items-center justify-center">
-                            <i data-lucide="file-bar-chart" class="w-7 h-7 md:w-8 md:h-8 text-slate-600"></i>
-                        </div>
-                        <p class="text-slate-400 text-sm md:text-base">Trade analysis coming soon...</p>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        function renderDiscipline(container) {
-            container.innerHTML = `
-                <div class="p-4 md:p-8">
-                    <h2 class="text-2xl md:text-3xl font-bold text-white mb-6 md:mb-8">Discipline</h2>
-                    <div class="glass rounded-xl p-6 md:p-8 text-center">
-                        <div class="w-14 h-14 md:w-16 md:h-16 mx-auto mb-4 rounded-lg bg-slate-800 flex items-center justify-center">
-                            <i data-lucide="shield-check" class="w-7 h-7 md:w-8 md:h-8 text-slate-600"></i>
-                        </div>
-                        <p class="text-slate-400 text-sm md:text-base">Discipline tracker coming soon...</p>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        function renderMentor(container) {
-            container.innerHTML = `
-                <div class="p-4 md:p-8">
-                    <h2 class="text-2xl md:text-3xl font-bold text-white mb-6 md:mb-8">AI Mentor</h2>
-                    <div class="glass rounded-xl p-6 md:p-8 text-center">
-                        <div class="w-14 h-14 md:w-16 md:h-16 mx-auto mb-4 rounded-lg bg-slate-800 flex items-center justify-center">
-                            <i data-lucide="bot" class="w-7 h-7 md:w-8 md:h-8 text-slate-600"></i>
-                        </div>
-                        <p class="text-slate-400 text-sm md:text-base">AI Mentor coming soon...</p>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        function renderBlog(container) {
-            container.innerHTML = `
-                <div class="p-4 md:p-8">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8">
-                        <div>
-                            <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">Blog</h2>
-                            <p class="text-slate-400 text-sm md:text-base">Manage your trading content</p>
-                        </div>
-                        ${currentUser?.is_admin ? `
-                        <button onclick="openBlogEditor()" class="btn-primary px-4 md:px-6 py-2.5 md:py-3 rounded-lg font-medium text-white flex items-center gap-2 text-sm md:text-base w-full sm:w-auto justify-center">
-                            <i data-lucide="plus" class="w-4 h-4 md:w-5 md:h-5"></i> New Post
-                        </button>
-                        ` : ''}
-                    </div>
-
-                    <div id="blog-posts-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                        <div class="col-span-full text-center py-12">
-                            <div class="w-12 h-12 mx-auto mb-4 rounded-lg bg-slate-800 flex items-center justify-center animate-pulse">
-                                <i data-lucide="loader-2" class="w-6 h-6 text-slate-600 animate-spin"></i>
-                            </div>
-                            <p class="text-slate-400">Loading posts...</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            loadBlogPosts();
-            lucide.createIcons();
-        }
-
-        async function loadBlogPosts() {
+        // Posts Management
+        async function loadPosts() {
             try {
-                const response = await fetch(`${API_BASE}/posts?per_page=12&status=published`);
+                const response = await fetch(`${API_BASE}/api/posts`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
                 const data = await response.json();
-
-                const container = document.getElementById('blog-posts-container');
-
-                if (!data.posts || data.posts.length === 0) {
-                    container.innerHTML = `
-                        <div class="col-span-full text-center py-12">
-                            <div class="w-14 h-14 md:w-16 md:h-16 mx-auto mb-4 rounded-lg bg-slate-800 flex items-center justify-center">
-                                <i data-lucide="file-x" class="w-7 h-7 md:w-8 md:h-8 text-slate-600"></i>
-                            </div>
-                            <p class="text-slate-400">No posts yet</p>
-                            ${currentUser?.is_admin ? `<p class="text-slate-500 text-sm mt-2">Click "New Post" to create your first article</p>` : ''}
-                        </div>
-                    `;
-                    lucide.createIcons();
-                    return;
-                }
-
-                container.innerHTML = data.posts.map(post => `
-                    <article class="glass rounded-xl overflow-hidden hover:border-blue-500/50 transition-all group cursor-pointer" onclick="${currentUser?.is_admin ? `editBlogPost(${post.id})` : ''}">
-                        ${post.featured_image ? `
-                        <div class="h-40 md:h-48 overflow-hidden">
-                            <img src="${post.featured_image}" alt="${post.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-                        </div>
-                        ` : `
-                        <div class="h-40 md:h-48 bg-slate-800 flex items-center justify-center">
-                            <i data-lucide="image" class="w-10 h-10 md:w-12 md:h-12 text-slate-600"></i>
-                        </div>
-                        `}
-                        <div class="p-4 md:p-5">
-                            <div class="flex items-center gap-2 mb-2 md:mb-3 flex-wrap">
-                                ${post.category ? `<span class="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full">${post.category}</span>` : ''}
-                                <span class="text-xs text-slate-500 capitalize">${post.status}</span>
-                            </div>
-                            <h3 class="font-semibold text-white mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors text-sm md:text-base">${post.title}</h3>
-                            <p class="text-xs md:text-sm text-slate-400 line-clamp-2 mb-3 md:mb-4">${post.excerpt || ''}</p>
-                            <div class="flex items-center justify-between text-xs text-slate-500">
-                                <span class="flex items-center gap-1">
-                                    <i data-lucide="clock" class="w-3 h-3"></i>
-                                    ${post.reading_time || 5} min read
-                                </span>
-                                <span class="flex items-center gap-1">
-                                    <i data-lucide="eye" class="w-3 h-3"></i>
-                                    ${post.view_count || 0}
-                                </span>
-                            </div>
-                        </div>
-                    </article>
-                `).join('');
-
-                lucide.createIcons();
+                posts = data.posts || [];
+                renderPostsList();
             } catch (error) {
-                console.error('Error loading posts:', error);
-                document.getElementById('blog-posts-container').innerHTML = `
-                    <div class="col-span-full text-center py-12">
-                        <div class="w-14 h-14 md:w-16 md:h-16 mx-auto mb-4 rounded-lg bg-red-500/20 flex items-center justify-center">
-                            <i data-lucide="alert-circle" class="w-7 h-7 md:w-8 md:h-8 text-red-400"></i>
-                        </div>
-                        <p class="text-red-400 text-sm md:text-base">Error loading posts</p>
-                        <button onclick="loadBlogPosts()" class="mt-4 text-blue-400 hover:text-blue-300 text-sm">Try again</button>
-                    </div>
-                `;
-                lucide.createIcons();
+                showToast('Failed to load posts', 'error');
             }
         }
 
-        function renderAdmin(container) {
-            if (!currentUser?.is_admin) {
+        function renderPostsList() {
+            const container = document.getElementById('postsList');
+            const filteredPosts = currentFilter === 'all' 
+                ? posts 
+                : posts.filter(p => p.status === currentFilter);
+
+            document.getElementById('postCount').textContent = filteredPosts.length;
+
+            if (filteredPosts.length === 0) {
                 container.innerHTML = `
-                    <div class="p-4 md:p-8">
-                        <div class="glass rounded-xl p-6 md:p-8 text-center">
-                            <div class="w-14 h-14 md:w-16 md:h-16 mx-auto mb-4 rounded-lg bg-red-500/20 flex items-center justify-center">
-                                <i data-lucide="lock" class="w-7 h-7 md:w-8 md:h-8 text-red-400"></i>
-                            </div>
-                            <p class="text-red-400 text-sm md:text-base">Admin access required</p>
-                        </div>
+                    <div class="text-center py-8 text-slate-500">
+                        <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <p class="text-sm">No ${currentFilter} posts</p>
                     </div>
                 `;
-                lucide.createIcons();
                 return;
             }
 
-            container.innerHTML = `
-                <div class="p-4 md:p-8 max-w-7xl mx-auto">
-                    <div class="mb-6 md:mb-8">
-                        <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">Admin Dashboard</h2>
-                        <p class="text-slate-400 text-sm md:text-base">Manage your platform</p>
+            container.innerHTML = filteredPosts.map(post => `
+                <div onclick="editPost(${post.id})" class="group p-3 rounded-lg cursor-pointer transition ${currentPostId === post.id ? 'bg-blue-600/20 border border-blue-600/50' : 'hover:bg-slate-700/50 border border-transparent'}">
+                    <div class="flex items-start justify-between mb-1">
+                        <h3 class="font-medium text-white text-sm line-clamp-2 flex-1 ${currentPostId === post.id ? 'text-blue-400' : 'group-hover:text-blue-400'}">${escapeHtml(post.title)}</h3>
+                        ${post.status === 'published' 
+                            ? '<span class="w-2 h-2 bg-green-500 rounded-full ml-2 flex-shrink-0" title="Published"></span>' 
+                            : '<span class="w-2 h-2 bg-yellow-500 rounded-full ml-2 flex-shrink-0" title="Draft"></span>'}
                     </div>
-
-                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
-                        <div class="glass rounded-xl p-4 md:p-6">
-                            <p class="text-slate-400 text-xs md:text-sm mb-1">Total Users</p>
-                            <p class="text-2xl md:text-3xl font-bold text-white" id="stat-users">-</p>
-                        </div>
-                        <div class="glass rounded-xl p-4 md:p-6">
-                            <p class="text-slate-400 text-xs md:text-sm mb-1">Total Trades</p>
-                            <p class="text-2xl md:text-3xl font-bold text-white" id="stat-trades">-</p>
-                        </div>
-                        <div class="glass rounded-xl p-4 md:p-6">
-                            <p class="text-slate-400 text-xs md:text-sm mb-1">Blog Posts</p>
-                            <p class="text-2xl md:text-3xl font-bold text-white" id="stat-posts">-</p>
-                        </div>
-                        <div class="glass rounded-xl p-4 md:p-6">
-                            <p class="text-slate-400 text-xs md:text-sm mb-1">Avg Trader Score</p>
-                            <p class="text-2xl md:text-3xl font-bold text-white" id="stat-score">-</p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-                        <div class="glass rounded-xl p-4 md:p-6">
-                            <h3 class="text-base md:text-lg font-semibold text-white mb-4">Content Management</h3>
-                            <div class="space-y-2 md:space-y-3">
-                                <button onclick="openBlogEditor()" class="w-full flex items-center gap-3 p-3 md:p-4 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-all text-left">
-                                    <i data-lucide="file-plus" class="w-4 h-4 md:w-5 md:h-5 text-blue-400 flex-shrink-0"></i>
-                                    <span class="text-white text-sm md:text-base">New Blog Post</span>
-                                </button>
-                                <button onclick="showPage('blog')" class="w-full flex items-center gap-3 p-3 md:p-4 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-all text-left">
-                                    <i data-lucide="image" class="w-4 h-4 md:w-5 md:h-5 text-violet-400 flex-shrink-0"></i>
-                                    <span class="text-white text-sm md:text-base">Media Library</span>
-                                </button>
-                                <button onclick="showPage('blog')" class="w-full flex items-center gap-3 p-3 md:p-4 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-all text-left">
-                                    <i data-lucide="list" class="w-4 h-4 md:w-5 md:h-5 text-emerald-400 flex-shrink-0"></i>
-                                    <span class="text-white text-sm md:text-base">Manage Posts</span>
-                                </button>
-                                <button onclick="window.open('/webinars', '_blank')" class="w-full flex items-center gap-3 p-3 md:p-4 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-all text-left">
-                                    <i data-lucide="video" class="w-4 h-4 md:w-5 md:h-5 text-amber-400 flex-shrink-0"></i>
-                                    <span class="text-white text-sm md:text-base">Webinars Dashboard</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="glass rounded-xl p-4 md:p-6">
-                            <h3 class="text-base md:text-lg font-semibold text-white mb-4">User Management</h3>
-                            <div class="space-y-2 md:space-y-3">
-                                <button class="w-full flex items-center gap-3 p-3 md:p-4 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-all text-left">
-                                    <i data-lucide="users" class="w-4 h-4 md:w-5 md:h-5 text-blue-400 flex-shrink-0"></i>
-                                    <span class="text-white text-sm md:text-base">All Users</span>
-                                </button>
-                                <button class="w-full flex items-center gap-3 p-3 md:p-4 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-all text-left">
-                                    <i data-lucide="bar-chart-2" class="w-4 h-4 md:w-5 md:h-5 text-violet-400 flex-shrink-0"></i>
-                                    <span class="text-white text-sm md:text-base">Analytics</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="glass rounded-xl p-4 md:p-6">
-                            <h3 class="text-base md:text-lg font-semibold text-white mb-4">Recent Activity</h3>
-                            <div id="recent-activity" class="text-slate-400 text-sm">Loading...</div>
-                        </div>
-                    </div>
+                    <p class="text-xs text-slate-500">${new Date(post.created_at).toLocaleDateString()}</p>
                 </div>
-            `;
-
-            loadAdminStats();
-            lucide.createIcons();
+            `).join('');
         }
 
-        async function loadAdminStats() {
-            try {
-                const response = await fetch(`${API_BASE}/admin/dashboard`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                });
-                const data = await response.json();
-
-                const usersEl = document.getElementById('stat-users');
-                const tradesEl = document.getElementById('stat-trades');
-                const postsEl = document.getElementById('stat-posts');
-                const scoreEl = document.getElementById('stat-score');
-
-                if (usersEl) usersEl.textContent = data.users?.total_users || 0;
-                if (tradesEl) tradesEl.textContent = data.trades?.total_trades || 0;
-                if (postsEl) postsEl.textContent = data.blog?.total_posts || 0;
-                if (scoreEl) scoreEl.textContent = data.analyses?.avg_trader_score ? 
-                    Math.round(data.analyses.avg_trader_score) + '/100' : '-';
-            } catch (error) {
-                console.error('Error loading stats:', error);
-            }
-        }
-
-        // Blog Editor Functions
-        function openBlogEditor(postId = null) {
-            currentEditingPostId = postId;
-
-            document.getElementById('editor-modal-title').textContent = postId ? 'Edit Blog Post' : 'New Blog Post';
-
-            const modal = document.getElementById('blog-editor-modal');
-            modal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-
-            resetBlogForm();
-
-            // Small delay to ensure DOM is ready
-            setTimeout(() => {
-                initBlogEditor();
-            }, 100);
-
-            if (postId) {
-                loadPostForEdit(postId);
-            }
-
-            lucide.createIcons();
-        }
-
-        function closeBlogEditor() {
-            const modal = document.getElementById('blog-editor-modal');
-            modal.classList.add('hidden');
-            document.body.style.overflow = '';
-            resetBlogForm();
-            currentEditingPostId = null;
-        }
-
-        function initBlogEditor() {
-            // Check if Editor.js is available
-            if (typeof EditorJS === 'undefined') {
-                console.error('Editor.js not loaded!');
-                showEditorError('Editor failed to load. Please refresh the page.');
-                return;
-            }
-
-            // If already initialized, just clear it
-            if (blogEditor) {
-                blogEditor.clear();
-                return;
-            }
-
-            const editorElement = document.getElementById('editorjs');
-            if (!editorElement) {
-                console.error('Editor holder element not found!');
-                return;
-            }
-
-            // Show loading state
-            editorElement.innerHTML = '<div class="editor-loading"><i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i> Loading editor...</div>';
-            lucide.createIcons();
-
-            try {
-                blogEditor = new EditorJS({
-                    holder: 'editorjs',
-                    tools: {
-                        header: {
-                            class: Header,
-                            config: { 
-                                levels: [1, 2, 3, 4, 5, 6], 
-                                defaultLevel: 2 
-                            }
-                        },
-                        list: { 
-                            class: List, 
-                            inlineToolbar: true 
-                        },
-                        paragraph: { 
-                            class: Paragraph, 
-                            inlineToolbar: true 
-                        },
-                        image: {
-                            class: ImageTool,
-                            config: {
-                                endpoints: {
-                                    byFile: `${API_BASE}/upload`,
-                                    byUrl: `${API_BASE}/upload-url`
-                                }
-                            }
-                        },
-                        quote: { 
-                            class: Quote, 
-                            inlineToolbar: true 
-                        },
-                        code: { 
-                            class: CodeTool 
-                        },
-                        table: { 
-                            class: Table, 
-                            inlineToolbar: true 
-                        },
-                        embed: {
-                            class: Embed,
-                            config: { 
-                                services: { 
-                                    youtube: true, 
-                                    twitter: true 
-                                } 
-                            }
-                        },
-                        delimiter: Delimiter
-                    },
-                    placeholder: 'Write your post content here... Click + to add headings, lists, images, and more',
-                    autofocus: false,
-                    onReady: () => {
-                        console.log('Editor.js is ready!');
-                        editorInitialized = true;
-                    },
-                    onChange: () => {
-                        console.log('Content changed');
-                    },
-                    onError: (error) => {
-                        console.error('Editor error:', error);
-                        showEditorError('Editor error: ' + error.message);
-                    }
-                });
-            } catch (error) {
-                console.error('Failed to initialize editor:', error);
-                showEditorError('Failed to initialize editor: ' + error.message);
-            }
-        }
-
-        function showEditorError(message) {
-            const editorElement = document.getElementById('editorjs');
-            if (editorElement) {
-                editorElement.innerHTML = `<div class="editor-error"><i data-lucide="alert-circle" class="w-8 h-8 mb-2"></i><p>${message}</p></div>`;
-                lucide.createIcons();
-            }
-        }
-
-        function resetBlogForm() {
-            document.getElementById('blog-title').value = '';
-            document.getElementById('blog-category').value = 'Strategy';
-            document.getElementById('blog-status').value = 'draft';
-            document.getElementById('blog-excerpt').value = '';
-            document.getElementById('blog-meta-title').value = '';
-            document.getElementById('blog-meta-desc').value = '';
-            document.getElementById('blog-keyword').value = '';
-            document.getElementById('blog-tags').value = '';
-            document.getElementById('blog-image').value = '';
-            document.getElementById('ai-topic').value = '';
-            document.getElementById('ai-keywords').value = '';
-            document.getElementById('seo-score-container')?.classList.add('hidden');
-
-            updateCharCounters();
-
-            if (blogEditor) {
-                blogEditor.clear();
-            }
-        }
-
-        async function loadPostForEdit(postId) {
-            try {
-                const response = await fetch(`${API_BASE}/admin/posts/${postId}`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                });
-                const post = await response.json();
-
-                document.getElementById('blog-title').value = post.title || '';
-                document.getElementById('blog-category').value = post.category || 'Strategy';
-                document.getElementById('blog-status').value = post.status || 'draft';
-                document.getElementById('blog-excerpt').value = post.excerpt || '';
-                document.getElementById('blog-meta-title').value = post.meta_title || '';
-                document.getElementById('blog-meta-desc').value = post.meta_description || '';
-                document.getElementById('blog-keyword').value = post.focus_keyword || '';
-                document.getElementById('blog-tags').value = post.tags ? post.tags.join(', ') : '';
-                document.getElementById('blog-image').value = post.featured_image || '';
-
-                updateCharCounters();
-
-                if (post.content_json && blogEditor) {
-                    await blogEditor.render(post.content_json);
+        function filterPosts(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.dataset.filter === filter) {
+                    btn.classList.remove('bg-slate-700', 'text-slate-300');
+                    btn.classList.add('bg-blue-600', 'text-white');
+                } else {
+                    btn.classList.remove('bg-blue-600', 'text-white');
+                    btn.classList.add('bg-slate-700', 'text-slate-300');
                 }
-            } catch (error) {
-                console.error('Error loading post:', error);
-                showToast('Error loading post', 'error');
+            });
+            renderPostsList();
+        }
+
+        // Editor Functions
+        function createNewPost() {
+            currentPostId = null;
+            document.getElementById('postTitle').value = '';
+            document.getElementById('postStatus').value = 'draft';
+            document.getElementById('postTags').value = '';
+            document.getElementById('editorMode').textContent = 'NEW POST';
+            document.getElementById('deleteBtn').classList.add('hidden');
+            document.getElementById('lastSaved').classList.add('hidden');
+
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('editorContainer').classList.remove('hidden');
+            document.getElementById('editorContainer').classList.add('fade-in');
+
+            initEditor();
+        }
+
+        function editPost(id) {
+            const post = posts.find(p => p.id === id);
+            if (!post) return;
+
+            currentPostId = id;
+            document.getElementById('postTitle').value = post.title;
+            document.getElementById('postStatus').value = post.status || 'draft';
+            document.getElementById('postTags').value = (post.tags || []).join(', ');
+            document.getElementById('editorMode').textContent = 'EDITING';
+            document.getElementById('deleteBtn').classList.remove('hidden');
+            document.getElementById('lastSaved').textContent = 'Last saved: ' + new Date(post.updated_at).toLocaleString();
+            document.getElementById('lastSaved').classList.remove('hidden');
+
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('editorContainer').classList.remove('hidden');
+            document.getElementById('editorContainer').classList.add('fade-in');
+
+            initEditor(post.content);
+            renderPostsList();
+        }
+
+        function initEditor(data = null) {
+            if (editor && typeof editor.destroy === 'function') {
+                editor.destroy();
             }
-        }
 
-        function updateCharCounters() {
-            const titleEl = document.getElementById('blog-meta-title');
-            const descEl = document.getElementById('blog-meta-desc');
+            const holder = document.getElementById('editorjs');
+            holder.innerHTML = '';
 
-            if (titleEl) document.getElementById('meta-title-count').textContent = titleEl.value.length;
-            if (descEl) document.getElementById('meta-desc-count').textContent = descEl.value.length;
-        }
-
-        async function saveBlogPost(status) {
-            try {
-                if (!blogEditor) {
-                    showToast('Editor not initialized', 'error');
-                    return;
+            editor = new EditorJS({
+                holder: 'editorjs',
+                data: data,
+                tools: {
+                    header: {
+                        class: Header,
+                        config: { levels: [1, 2, 3, 4, 5, 6], defaultLevel: 2 }
+                    },
+                    paragraph: { class: Paragraph, inlineToolbar: true },
+                    list: { class: List, inlineToolbar: true },
+                    image: {
+                        class: ImageTool,
+                        config: {
+                            endpoints: {
+                                byFile: `${API_BASE}/api/media/upload`,
+                                byUrl: `${API_BASE}/api/media/upload-url`
+                            },
+                            additionalRequestHeaders: { 'Authorization': `Bearer ${authToken}` }
+                        }
+                    },
+                    quote: { class: Quote, inlineToolbar: true },
+                    code: CodeTool,
+                    embed: {
+                        class: Embed,
+                        config: { services: { youtube: true, vimeo: true, twitter: true } }
+                    },
+                    delimiter: Delimiter,
+                    table: { class: Table, inlineToolbar: true },
+                    marker: Marker
+                },
+                placeholder: 'Start writing your amazing content here...',
+                autofocus: true,
+                onReady: () => {
+                    console.log('Editor.js is ready!');
+                },
+                onError: (error) => {
+                    console.error('Editor error:', error);
+                    showToast('Editor error occurred', 'error');
                 }
+            });
+        }
 
-                const content = await blogEditor.save();
+        async function savePost() {
+            const title = document.getElementById('postTitle').value.trim();
+            if (!title) {
+                showToast('Please enter a title', 'error');
+                document.getElementById('postTitle').focus();
+                return;
+            }
+
+            try {
+                const outputData = await editor.save();
+                const status = document.getElementById('postStatus').value;
+                const tags = document.getElementById('postTags').value;
 
                 const formData = new FormData();
-                formData.append('title', document.getElementById('blog-title').value);
-                formData.append('content_json', JSON.stringify(content));
-                formData.append('excerpt', document.getElementById('blog-excerpt').value);
-                formData.append('meta_title', document.getElementById('blog-meta-title').value);
-                formData.append('meta_description', document.getElementById('blog-meta-desc').value);
-                formData.append('focus_keyword', document.getElementById('blog-keyword').value);
-                formData.append('tags', document.getElementById('blog-tags').value);
-                formData.append('featured_image', document.getElementById('blog-image').value);
-                formData.append('category', document.getElementById('blog-category').value);
+                formData.append('title', title);
+                formData.append('content', JSON.stringify(outputData));
                 formData.append('status', status);
+                formData.append('tags', tags);
 
-                const url = currentEditingPostId 
-                    ? `${API_BASE}/admin/posts/${currentEditingPostId}`
-                    : `${API_BASE}/admin/posts`;
-                const method = currentEditingPostId ? 'PUT' : 'POST';
+                const url = currentPostId ? `${API_BASE}/api/posts/${currentPostId}` : `${API_BASE}/api/posts`;
+                const method = currentPostId ? 'PUT' : 'POST';
 
                 const response = await fetch(url, {
                     method: method,
-                    body: formData,
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` },
+                    body: formData
                 });
 
-                const result = await response.json();
-
-                if (result.success) {
-                    showToast(`Post ${currentEditingPostId ? 'updated' : 'created'} successfully!`, 'success');
-                    closeBlogEditor();
-                    // Refresh blog posts if on blog page
-                    if (document.getElementById('blog-posts-container')) {
-                        loadBlogPosts();
+                if (response.ok) {
+                    const result = await response.json();
+                    showToast(currentPostId ? 'Post updated!' : 'Post created!', 'success');
+                    await loadPosts();
+                    if (!currentPostId && result.post) {
+                        editPost(result.post.id);
+                    } else {
+                        document.getElementById('lastSaved').textContent = 'Last saved: Just now';
+                        document.getElementById('lastSaved').classList.remove('hidden');
                     }
                 } else {
-                    showToast(result.error || 'Error saving post', 'error');
+                    throw new Error('Save failed');
                 }
             } catch (error) {
-                console.error('Error saving post:', error);
-                showToast('Error saving post: ' + error.message, 'error');
+                console.error('Save error:', error);
+                showToast('Error saving post', 'error');
             }
         }
 
-        async function generateAIBlogContent() {
-            const btn = event.target;
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Generating...';
-            btn.disabled = true;
+        async function deleteCurrentPost() {
+            if (!currentPostId) return;
+            if (!confirm('Are you sure you want to delete this post? This cannot be undone.')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/posts/${currentPostId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (response.ok) {
+                    showToast('Post deleted', 'success');
+                    await loadPosts();
+                    cancelEdit();
+                } else {
+                    throw new Error('Delete failed');
+                }
+            } catch (error) {
+                showToast('Error deleting post', 'error');
+            }
+        }
+
+        function cancelEdit() {
+            document.getElementById('editorContainer').classList.add('hidden');
+            document.getElementById('emptyState').classList.remove('hidden');
+            currentPostId = null;
+            if (editor && typeof editor.destroy === 'function') {
+                editor.destroy();
+                editor = null;
+            }
+            renderPostsList();
+        }
+
+        // SEO Panel
+        function openSEOPanel() {
+            document.getElementById('seoPanel').classList.remove('hidden');
+        }
+
+        function closeSEOPanel() {
+            document.getElementById('seoPanel').classList.add('hidden');
+        }
+
+        async function runSEOAnalysis() {
+            const title = document.getElementById('postTitle').value;
+            if (!title) {
+                showToast('Please enter a title first', 'error');
+                return;
+            }
+
+            try {
+                const outputData = await editor.save();
+                const content = JSON.stringify(outputData);
+
+                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('content', content);
+                formData.append('keywords', document.getElementById('postTags').value);
+
+                const response = await fetch(`${API_BASE}/api/seo/analyze`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    document.getElementById('seoScore').innerHTML = `
+                        <div class="text-5xl font-bold ${result.score >= 70 ? 'text-green-500' : result.score >= 50 ? 'text-yellow-500' : 'text-red-500'} mb-2">${result.score}</div>
+                        <p class="text-slate-400">SEO Score</p>
+                        <p class="text-sm text-slate-500 mt-1">${result.word_count} words • ${result.readability} readability</p>
+                    `;
+
+                    document.getElementById('seoSuggestions').innerHTML = result.suggestions.map(s => `
+                        <div class="flex items-start gap-3 p-3 bg-slate-900 rounded-lg">
+                            <svg class="w-5 h-5 ${s.includes('Good') || s.includes('optimal') ? 'text-green-500' : 'text-yellow-500'} flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${s.includes('Good') || s.includes('optimal') ? 'M5 13l4 4L19 7' : 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'}"></path></svg>
+                            <span class="text-sm text-slate-300">${s}</span>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                showToast('SEO analysis failed', 'error');
+            }
+        }
+
+        // AI Panel
+        function openAIPanel() {
+            document.getElementById('aiPanel').classList.remove('hidden');
+        }
+
+        function closeAIPanel() {
+            document.getElementById('aiPanel').classList.add('hidden');
+            document.getElementById('aiResult').classList.add('hidden');
+            document.getElementById('aiPrompt').value = '';
+        }
+
+        async function generateWithAI(type) {
+            const prompt = document.getElementById('aiPrompt').value;
+            if (!prompt) {
+                showToast('Please enter a prompt', 'error');
+                return;
+            }
 
             try {
                 const formData = new FormData();
-                formData.append('topic', document.getElementById('ai-topic').value);
-                formData.append('keywords', document.getElementById('ai-keywords').value);
-                formData.append('audience', document.getElementById('ai-audience').value);
-                formData.append('tone', document.getElementById('ai-tone').value);
+                formData.append('prompt', prompt);
+                formData.append('content_type', type);
 
-                const response = await fetch(`${API_BASE}/admin/ai-generate`, {
+                const response = await fetch(`${API_BASE}/api/ai/generate`, {
                     method: 'POST',
-                    body: formData,
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` },
+                    body: formData
                 });
 
-                const result = await response.json();
+                if (response.ok) {
+                    const result = await response.json();
+                    aiGeneratedContent = result.data.content || JSON.stringify(result.data, null, 2);
 
-                if (result.success && result.content) {
-                    const content = result.content;
-                    document.getElementById('blog-title').value = content.title || '';
-                    document.getElementById('blog-meta-title').value = content.meta_title || '';
-                    document.getElementById('blog-meta-desc').value = content.meta_description || '';
-                    document.getElementById('blog-keyword').value = content.focus_keyword || '';
-                    document.getElementById('blog-excerpt').value = content.excerpt || '';
-
-                    if (content.content_blocks && blogEditor) {
-                        await blogEditor.render({ blocks: content.content_blocks });
-                    }
-
-                    updateCharCounters();
-                    showToast('AI content generated! Review before publishing.', 'success');
+                    document.getElementById('aiResultText').textContent = aiGeneratedContent;
+                    document.getElementById('aiResult').classList.remove('hidden');
                 }
             } catch (error) {
-                console.error('Error:', error);
-                showToast('Error generating content', 'error');
-            } finally {
-                btn.innerHTML = originalHTML;
-                btn.disabled = false;
-                lucide.createIcons();
+                showToast('AI generation failed', 'error');
             }
         }
 
-        async function analyzeBlogSEO() {
+        async function insertAIContent() {
+            if (!aiGeneratedContent || !editor) return;
+
             try {
-                if (!blogEditor) {
-                    showToast('Editor not initialized', 'error');
-                    return;
-                }
-
-                const content = await blogEditor.save();
-
-                const formData = new FormData();
-                formData.append('content_json', JSON.stringify(content));
-                formData.append('title', document.getElementById('blog-title').value);
-                formData.append('meta_description', document.getElementById('blog-meta-desc').value);
-                formData.append('focus_keyword', document.getElementById('blog-keyword').value);
-
-                const response = await fetch(`${API_BASE}/admin/analyze-seo`, {
-                    method: 'POST',
-                    body: formData,
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    const container = document.getElementById('seo-score-container');
-                    const value = document.getElementById('seo-score-value');
-
-                    container.classList.remove('hidden');
-                    value.textContent = result.seo_score;
-                    value.className = 'text-3xl font-bold ' + 
-                        (result.seo_score >= 80 ? 'text-emerald-400' : 
-                         result.seo_score >= 60 ? 'text-amber-400' : 'text-red-400');
-                }
+                await editor.blocks.insert('paragraph', { text: aiGeneratedContent });
+                closeAIPanel();
+                showToast('Content inserted', 'success');
             } catch (error) {
-                console.error('Error:', error);
-                showToast('Error analyzing SEO', 'error');
+                showToast('Failed to insert content', 'error');
             }
         }
 
-        // Toast Notification
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toast-message');
-            const toastIcon = document.getElementById('toast-icon');
+        // Utility Functions
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const colors = type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600';
+            const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
 
-            toastMessage.textContent = message;
+            toast.className = `${colors} text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 transform translate-x-full transition-transform duration-300`;
+            toast.innerHTML = `<span class="font-bold">${icon}</span><span>${message}</span>`;
 
-            if (type === 'error') {
-                toastIcon.setAttribute('data-lucide', 'alert-circle');
-                toastIcon.classList.remove('text-emerald-400');
-                toastIcon.classList.add('text-red-400');
-            } else {
-                toastIcon.setAttribute('data-lucide', 'check-circle');
-                toastIcon.classList.remove('text-red-400');
-                toastIcon.classList.add('text-emerald-400');
-            }
+            container.appendChild(toast);
 
-            lucide.createIcons();
-
-            toast.classList.remove('translate-y-20', 'opacity-0');
-
+            setTimeout(() => toast.classList.remove('translate-x-full'), 100);
             setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0');
+                toast.classList.add('translate-x-full');
+                setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Close modals on backdrop click
+        document.getElementById('seoPanel').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeSEOPanel();
+        });
+        document.getElementById('aiPanel').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeAIPanel();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                if (!document.getElementById('editorContainer').classList.contains('hidden')) {
+                    savePost();
+                }
+            }
+        });
     </script>
 </body>
 </html>
