@@ -1,109 +1,575 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Pipways - Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipways AI - Trading Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            padding: 50px; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-align: center;
-        }
-        .box { 
-            background: rgba(255,255,255,0.9); 
-            color: #333;
-            padding: 40px; 
-            border-radius: 10px; 
-            max-width: 600px; 
-            margin: 50px auto;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-        }
-        h1 { color: #667eea; margin-bottom: 10px; }
-        .btn {
-            background: #667eea;
-            color: white;
-            padding: 12px 30px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 10px;
-        }
-        .btn:hover { background: #764ba2; }
-        #message { margin-top: 20px; padding: 10px; border-radius: 5px; }
-        .success { background: #d4edda; color: #155724; }
-        .error { background: #f8d7da; color: #721c24; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .hidden { display: none !important; }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 <base target="_blank">
 </head>
-<body>
-    <div class="box">
-        <h1>✓ Pipways is Connected!</h1>
-        <p>If you see this page, the frontend is being served correctly.</p>
-        <p><strong>File:</strong> frontend/index.html</p>
-        <p><strong>Time:</strong> <span id="time"></span></p>
+<body class="bg-gray-100 min-h-screen">
+    <div id="app">
+        <!-- Navigation -->
+        <nav class="gradient-bg text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-chart-line text-2xl"></i>
+                    <span class="text-2xl font-bold">Pipways AI</span>
+                </div>
+                <div id="nav-links" class="hidden space-x-4">
+                    <button onclick="showDashboard()" class="hover:text-gray-200">Dashboard</button>
+                    <button onclick="showTrades()" class="hover:text-gray-200">Trades</button>
+                    <button onclick="showBlog()" class="hover:text-gray-200">Blog</button>
+                    <button onclick="logout()" class="bg-red-500 px-4 py-2 rounded hover:bg-red-600">Logout</button>
+                </div>
+            </div>
+        </nav>
 
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+        <!-- Login Page -->
+        <div id="login-page" class="min-h-screen flex items-center justify-center p-4">
+            <div class="glass max-w-md w-full rounded-2xl shadow-2xl p-8">
+                <div class="text-center mb-8">
+                    <i class="fas fa-chart-line text-5xl text-purple-600 mb-4"></i>
+                    <h1 class="text-3xl font-bold text-gray-800">Welcome Back</h1>
+                    <p class="text-gray-600 mt-2">Sign in to your trading account</p>
+                </div>
 
-        <h2>Test API Connection</h2>
-        <button class="btn" onclick="testAPI()">Test API</button>
-        <div id="message"></div>
+                <form id="login-form" onsubmit="handleLogin(event)">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
+                        <input type="email" id="login-email" required 
+                            class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:border-purple-500"
+                            placeholder="admin@pipways.com">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+                        <input type="password" id="login-password" required 
+                            class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:border-purple-500"
+                            placeholder="‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢">
+                    </div>
+                    <button type="submit" 
+                        class="w-full gradient-bg text-white font-bold py-3 rounded-lg hover:opacity-90 transition">
+                        Sign In
+                    </button>
+                </form>
 
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+                <div class="mt-6 text-center">
+                    <p class="text-gray-600">Don't have an account? 
+                        <button onclick="showRegister()" class="text-purple-600 font-bold hover:underline">Register</button>
+                    </p>
+                </div>
 
-        <h2>Quick Login</h2>
-        <input type="email" id="email" value="admin@pipways.com" style="padding: 10px; width: 200px; margin: 5px;"><br>
-        <input type="password" id="password" value="admin123" style="padding: 10px; width: 200px; margin: 5px;"><br>
-        <button class="btn" onclick="login()">Login</button>
+                <div id="login-error" class="hidden mt-4 p-4 bg-red-100 text-red-700 rounded-lg"></div>
+            </div>
+        </div>
+
+        <!-- Register Page -->
+        <div id="register-page" class="hidden min-h-screen flex items-center justify-center p-4">
+            <div class="glass max-w-md w-full rounded-2xl shadow-2xl p-8">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-gray-800">Create Account</h1>
+                    <p class="text-gray-600 mt-2">Start your trading journey</p>
+                </div>
+
+                <form id="register-form" onsubmit="handleRegister(event)">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Full Name</label>
+                        <input type="text" id="reg-name" required 
+                            class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:border-purple-500">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
+                        <input type="email" id="reg-email" required 
+                            class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:border-purple-500">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+                        <input type="password" id="reg-password" required minlength="6"
+                            class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:border-purple-500">
+                    </div>
+                    <button type="submit" 
+                        class="w-full gradient-bg text-white font-bold py-3 rounded-lg hover:opacity-90 transition">
+                        Create Account
+                    </button>
+                </form>
+
+                <div class="mt-6 text-center">
+                    <button onclick="showLogin()" class="text-purple-600 font-bold hover:underline">
+                        Already have an account? Sign In
+                    </button>
+                </div>
+
+                <div id="register-error" class="hidden mt-4 p-4 bg-red-100 text-red-700 rounded-lg"></div>
+                <div id="register-success" class="hidden mt-4 p-4 bg-green-100 text-green-700 rounded-lg"></div>
+            </div>
+        </div>
+
+        <!-- Dashboard Page -->
+        <div id="dashboard-page" class="hidden max-w-7xl mx-auto px-4 py-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-8">Dashboard</h1>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="glass rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm">Total Trades</p>
+                            <p id="stat-total" class="text-3xl font-bold text-purple-600">0</p>
+                        </div>
+                        <i class="fas fa-exchange-alt text-3xl text-purple-200"></i>
+                    </div>
+                </div>
+                <div class="glass rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm">Win Rate</p>
+                            <p id="stat-winrate" class="text-3xl font-bold text-green-600">0%</p>
+                        </div>
+                        <i class="fas fa-trophy text-3xl text-green-200"></i>
+                    </div>
+                </div>
+                <div class="glass rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm">Total P&L</p>
+                            <p id="stat-pnl" class="text-3xl font-bold text-blue-600">$0</p>
+                        </div>
+                        <i class="fas fa-dollar-sign text-3xl text-blue-200"></i>
+                    </div>
+                </div>
+                <div class="glass rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm">Avg Trade</p>
+                            <p id="stat-avg" class="text-3xl font-bold text-orange-600">$0</p>
+                        </div>
+                        <i class="fas fa-chart-bar text-3xl text-orange-200"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Recent Trades</h2>
+                <div id="recent-trades" class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left">Symbol</th>
+                                <th class="px-4 py-2 text-left">Position</th>
+                                <th class="px-4 py-2 text-left">Entry</th>
+                                <th class="px-4 py-2 text-left">Exit</th>
+                                <th class="px-4 py-2 text-left">P&L</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trades-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trades Page -->
+        <div id="trades-page" class="hidden max-w-7xl mx-auto px-4 py-8">
+            <div class="flex justify-between items-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-800">Trading Journal</h1>
+                <button onclick="showAddTrade()" 
+                    class="gradient-bg text-white px-6 py-3 rounded-lg font-bold hover:opacity-90">
+                    <i class="fas fa-plus mr-2"></i>Add Trade
+                </button>
+            </div>
+
+            <div id="add-trade-form" class="hidden glass rounded-xl shadow-lg p-6 mb-8">
+                <h2 class="text-xl font-bold mb-4">New Trade</h2>
+                <form onsubmit="handleAddTrade(event)">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <input type="text" id="trade-symbol" placeholder="Symbol (e.g., EURUSD)" required
+                            class="px-4 py-2 rounded-lg border focus:outline-none focus:border-purple-500">
+                        <select id="trade-position" required
+                            class="px-4 py-2 rounded-lg border focus:outline-none focus:border-purple-500">
+                            <option value="">Select Position</option>
+                            <option value="long">Long</option>
+                            <option value="short">Short</option>
+                        </select>
+                        <input type="number" id="trade-size" placeholder="Size" step="0.01" required
+                            class="px-4 py-2 rounded-lg border focus:outline-none focus:border-purple-500">
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <input type="number" id="trade-entry" placeholder="Entry Price" step="0.00001" required
+                            class="px-4 py-2 rounded-lg border focus:outline-none focus:border-purple-500">
+                        <input type="number" id="trade-exit" placeholder="Exit Price (optional)" step="0.00001"
+                            class="px-4 py-2 rounded-lg border focus:outline-none focus:border-purple-500">
+                        <input type="number" id="trade-pnl" placeholder="P&L (optional)" step="0.01"
+                            class="px-4 py-2 rounded-lg border focus:outline-none focus:border-purple-500">
+                    </div>
+                    <textarea id="trade-notes" placeholder="Notes..." rows="3"
+                        class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:border-purple-500 mb-4"></textarea>
+                    <div class="flex space-x-4">
+                        <button type="submit" class="gradient-bg text-white px-6 py-2 rounded-lg font-bold">Save Trade</button>
+                        <button type="button" onclick="hideAddTrade()" class="bg-gray-500 text-white px-6 py-2 rounded-lg">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="glass rounded-xl shadow-lg overflow-hidden">
+                <table class="w-full">
+                    <thead class="gradient-bg text-white">
+                        <tr>
+                            <th class="px-6 py-4 text-left">Date</th>
+                            <th class="px-6 py-4 text-left">Symbol</th>
+                            <th class="px-6 py-4 text-left">Position</th>
+                            <th class="px-6 py-4 text-left">Entry</th>
+                            <th class="px-6 py-4 text-left">Exit</th>
+                            <th class="px-6 py-4 text-left">Size</th>
+                            <th class="px-6 py-4 text-left">P&L</th>
+                        </tr>
+                    </thead>
+                    <tbody id="all-trades-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Blog Page -->
+        <div id="blog-page" class="hidden max-w-7xl mx-auto px-4 py-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-8">Trading Blog</h1>
+            <div id="blog-posts" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Blog posts will be loaded here -->
+            </div>
+        </div>
     </div>
 
     <script>
-        document.getElementById('time').textContent = new Date().toLocaleString();
-
+        // Global state
         var API_BASE = window.location.origin;
+        var token = localStorage.getItem("token");
+        var currentUser = null;
 
-        function testAPI() {
-            var msg = document.getElementById('message');
-            msg.innerHTML = 'Testing...';
-            msg.className = '';
+        console.log("API Base:", API_BASE);
+        console.log("Initial token:", token ? "found" : "not found");
 
-            fetch(API_BASE + '/health')
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    msg.innerHTML = '✓ API Connected! Status: ' + data.status;
-                    msg.className = 'success';
-                })
-                .catch(function(e) {
-                    msg.innerHTML = '✗ Error: ' + e.message;
-                    msg.className = 'error';
-                });
+        // Check if already logged in
+        if (token) {
+            console.log("Found token, checking validity...");
+            validateToken();
+        } else {
+            console.log("No token, showing login");
+            showLogin();
         }
 
-        function login() {
-            var msg = document.getElementById('message');
-            msg.innerHTML = 'Logging in...';
-
-            var formData = new FormData();
-            formData.append('username', document.getElementById('email').value);
-            formData.append('password', document.getElementById('password').value);
-
-            fetch(API_BASE + '/api/auth/login', {
-                method: 'POST',
-                body: formData
+        function validateToken() {
+            fetch(API_BASE + "/api/trades/stats", {
+                headers: { "Authorization": "Bearer " + token }
             })
-            .then(function(r) {
-                if (!r.ok) throw new Error('Login failed');
-                return r.json();
+            .then(function(res) {
+                if (res.ok) {
+                    console.log("Token valid, showing dashboard");
+                    showDashboard();
+                } else {
+                    console.log("Token invalid, clearing and showing login");
+                    logout();
+                }
+            })
+            .catch(function(err) {
+                console.error("Token validation error:", err);
+                logout();
+            });
+        }
+
+        function showLogin() {
+            hideAllPages();
+            document.getElementById("login-page").classList.remove("hidden");
+            document.getElementById("nav-links").classList.add("hidden");
+        }
+
+        function showRegister() {
+            hideAllPages();
+            document.getElementById("register-page").classList.remove("hidden");
+            document.getElementById("nav-links").classList.add("hidden");
+        }
+
+        function showDashboard() {
+            hideAllPages();
+            document.getElementById("dashboard-page").classList.remove("hidden");
+            document.getElementById("nav-links").classList.remove("hidden");
+            loadDashboardData();
+        }
+
+        function showTrades() {
+            hideAllPages();
+            document.getElementById("trades-page").classList.remove("hidden");
+            document.getElementById("nav-links").classList.remove("hidden");
+            loadTrades();
+        }
+
+        function showBlog() {
+            hideAllPages();
+            document.getElementById("blog-page").classList.remove("hidden");
+            document.getElementById("nav-links").classList.remove("hidden");
+            loadBlogPosts();
+        }
+
+        function hideAllPages() {
+            document.getElementById("login-page").classList.add("hidden");
+            document.getElementById("register-page").classList.add("hidden");
+            document.getElementById("dashboard-page").classList.add("hidden");
+            document.getElementById("trades-page").classList.add("hidden");
+            document.getElementById("blog-page").classList.add("hidden");
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            console.log("Login form submitted");
+
+            var email = document.getElementById("login-email").value;
+            var password = document.getElementById("login-password").value;
+            var errorDiv = document.getElementById("login-error");
+
+            errorDiv.classList.add("hidden");
+
+            console.log("Attempting login for:", email);
+
+            fetch(API_BASE + "/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: email, password: password })
+            })
+            .then(function(res) {
+                console.log("Login response status:", res.status);
+                if (!res.ok) {
+                    throw new Error("Invalid credentials");
+                }
+                return res.json();
             })
             .then(function(data) {
-                msg.innerHTML = '✓ Login successful!';
-                msg.className = 'success';
-                localStorage.setItem('token', data.access_token);
+                console.log("Login successful, storing token");
+                token = data.access_token;
+                currentUser = data.user;
+                localStorage.setItem("token", token);
+                localStorage.setItem("user", JSON.stringify(currentUser));
+                showDashboard();
             })
-            .catch(function(e) {
-                msg.innerHTML = '✗ ' + e.message;
-                msg.className = 'error';
+            .catch(function(err) {
+                console.error("Login error:", err);
+                errorDiv.textContent = "Invalid email or password";
+                errorDiv.classList.remove("hidden");
+            });
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            console.log("Register form submitted");
+
+            var name = document.getElementById("reg-name").value;
+            var email = document.getElementById("reg-email").value;
+            var password = document.getElementById("reg-password").value;
+            var errorDiv = document.getElementById("register-error");
+            var successDiv = document.getElementById("register-success");
+
+            errorDiv.classList.add("hidden");
+            successDiv.classList.add("hidden");
+
+            console.log("Attempting registration for:", email);
+
+            fetch(API_BASE + "/api/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: name, email: email, password: password })
+            })
+            .then(function(res) {
+                console.log("Register response status:", res.status);
+                if (!res.ok) {
+                    return res.json().then(function(data) {
+                        throw new Error(data.detail || "Registration failed");
+                    });
+                }
+                return res.json();
+            })
+            .then(function(data) {
+                console.log("Registration successful");
+                successDiv.textContent = "Registration successful! Please sign in.";
+                successDiv.classList.remove("hidden");
+                setTimeout(function() {
+                    showLogin();
+                }, 2000);
+            })
+            .catch(function(err) {
+                console.error("Registration error:", err);
+                errorDiv.textContent = err.message;
+                errorDiv.classList.remove("hidden");
+            });
+        }
+
+        function logout() {
+            console.log("Logging out");
+            token = null;
+            currentUser = null;
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            showLogin();
+        }
+
+        function loadDashboardData() {
+            console.log("Loading dashboard data");
+
+            // Load stats
+            fetch(API_BASE + "/api/trades/stats", {
+                headers: { "Authorization": "Bearer " + token }
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(stats) {
+                console.log("Stats loaded:", stats);
+                document.getElementById("stat-total").textContent = stats.total_trades || 0;
+                document.getElementById("stat-pnl").textContent = "$" + (stats.total_pnl || 0).toFixed(2);
+                document.getElementById("stat-avg").textContent = "$" + (stats.avg_pnl || 0).toFixed(2);
+
+                var winRate = stats.total_trades > 0 
+                    ? ((stats.winning_trades / stats.total_trades) * 100).toFixed(1)
+                    : 0;
+                document.getElementById("stat-winrate").textContent = winRate + "%";
+            })
+            .catch(function(err) {
+                console.error("Error loading stats:", err);
+            });
+
+            // Load recent trades
+            fetch(API_BASE + "/api/trades", {
+                headers: { "Authorization": "Bearer " + token }
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(trades) {
+                console.log("Trades loaded:", trades.length);
+                var tbody = document.getElementById("trades-tbody");
+                tbody.innerHTML = "";
+
+                trades.slice(0, 5).forEach(function(trade) {
+                    var row = document.createElement("tr");
+                    row.className = "border-b";
+                    var pnlClass = (trade.pnl || 0) >= 0 ? "text-green-600" : "text-red-600";
+                    var pnlSign = (trade.pnl || 0) >= 0 ? "+" : "";
+
+                    row.innerHTML = 
+                        "<td class=\"px-4 py-2\">" + trade.symbol + "</td>" +
+                        "<td class=\"px-4 py-2\"><span class=\"px-2 py-1 rounded text-xs " + 
+                        (trade.position === "long" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800") + 
+                        "\">" + trade.position.toUpperCase() + "</span></td>" +
+                        "<td class=\"px-4 py-2\">" + trade.entry_price + "</td>" +
+                        "<td class=\"px-4 py-2\">" + (trade.exit_price || "-") + "</td>" +
+                        "<td class=\"px-4 py-2 " + pnlClass + "\">" + pnlSign + "$" + (trade.pnl || 0).toFixed(2) + "</td>";
+
+                    tbody.appendChild(row);
+                });
+            })
+            .catch(function(err) {
+                console.error("Error loading trades:", err);
+            });
+        }
+
+        function loadTrades() {
+            console.log("Loading all trades");
+            fetch(API_BASE + "/api/trades", {
+                headers: { "Authorization": "Bearer " + token }
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(trades) {
+                var tbody = document.getElementById("all-trades-tbody");
+                tbody.innerHTML = "";
+
+                trades.forEach(function(trade) {
+                    var row = document.createElement("tr");
+                    row.className = "border-b hover:bg-gray-50";
+                    var pnlClass = (trade.pnl || 0) >= 0 ? "text-green-600" : "text-red-600";
+                    var pnlSign = (trade.pnl || 0) >= 0 ? "+" : "";
+
+                    row.innerHTML = 
+                        "<td class=\"px-6 py-4\">" + new Date(trade.created_at).toLocaleDateString() + "</td>" +
+                        "<td class=\"px-6 py-4 font-bold\">" + trade.symbol + "</td>" +
+                        "<td class=\"px-6 py-4\"><span class=\"px-2 py-1 rounded text-xs " + 
+                        (trade.position === "long" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800") + 
+                        "\">" + trade.position.toUpperCase() + "</span></td>" +
+                        "<td class=\"px-6 py-4\">" + trade.entry_price + "</td>" +
+                        "<td class=\"px-6 py-4\">" + (trade.exit_price || "-") + "</td>" +
+                        "<td class=\"px-6 py-4\">" + trade.size + "</td>" +
+                        "<td class=\"px-6 py-4 " + pnlClass + "\">" + pnlSign + "$" + (trade.pnl || 0).toFixed(2) + "</td>";
+
+                    tbody.appendChild(row);
+                });
+            })
+            .catch(function(err) {
+                console.error("Error loading trades:", err);
+            });
+        }
+
+        function showAddTrade() {
+            document.getElementById("add-trade-form").classList.remove("hidden");
+        }
+
+        function hideAddTrade() {
+            document.getElementById("add-trade-form").classList.add("hidden");
+        }
+
+        function handleAddTrade(e) {
+            e.preventDefault();
+
+            var trade = {
+                symbol: document.getElementById("trade-symbol").value,
+                position: document.getElementById("trade-position").value,
+                size: parseFloat(document.getElementById("trade-size").value),
+                entry_price: parseFloat(document.getElementById("trade-entry").value),
+                exit_price: document.getElementById("trade-exit").value ? parseFloat(document.getElementById("trade-exit").value) : null,
+                pnl: document.getElementById("trade-pnl").value ? parseFloat(document.getElementById("trade-pnl").value) : null,
+                notes: document.getElementById("trade-notes").value
+            };
+
+            fetch(API_BASE + "/api/trades", {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify(trade)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                hideAddTrade();
+                loadTrades();
+                document.getElementById("add-trade-form").querySelector("form").reset();
+            })
+            .catch(function(err) {
+                console.error("Error adding trade:", err);
+                alert("Failed to add trade");
+            });
+        }
+
+        function loadBlogPosts() {
+            console.log("Loading blog posts");
+            fetch(API_BASE + "/api/blog")
+            .then(function(res) { return res.json(); })
+            .then(function(posts) {
+                var container = document.getElementById("blog-posts");
+                container.innerHTML = "";
+
+                posts.forEach(function(post) {
+                    var card = document.createElement("div");
+                    card.className = "glass rounded-xl shadow-lg overflow-hidden";
+                    card.innerHTML = 
+                        "<div class=\"p-6\">" +
+                        "<h3 class=\"text-xl font-bold text-gray-800 mb-2\">" + post.title + "</h3>" +
+                        "<p class=\"text-gray-600 mb-4\">" + post.content.substring(0, 150) + "...</p>" +
+                        "<div class=\"flex justify-between items-center text-sm text-gray-500\">" +
+                        "<span>By " + (post.author || "Admin") + "</span>" +
+                        "<span>" + new Date(post.created_at).toLocaleDateString() + "</span>" +
+                        "</div></div>";
+                    container.appendChild(card);
+                });
+            })
+            .catch(function(err) {
+                console.error("Error loading blog:", err);
             });
         }
     </script>
