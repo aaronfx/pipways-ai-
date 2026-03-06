@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pipways - Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 50px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+        .box { 
+            background: rgba(255,255,255,0.9); 
+            color: #333;
+            padding: 40px; 
+            border-radius: 10px; 
+            max-width: 600px; 
+            margin: 50px auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        h1 { color: #667eea; margin-bottom: 10px; }
+        .btn {
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        .btn:hover { background: #764ba2; }
+        #message { margin-top: 20px; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div class="box">
+        <h1>✓ Pipways is Connected!</h1>
+        <p>If you see this page, the frontend is being served correctly.</p>
+        <p><strong>File:</strong> frontend/index.html</p>
+        <p><strong>Time:</strong> <span id="time"></span></p>
+
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+
+        <h2>Test API Connection</h2>
+        <button class="btn" onclick="testAPI()">Test API</button>
+        <div id="message"></div>
+
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+
+        <h2>Quick Login</h2>
+        <input type="email" id="email" value="admin@pipways.com" style="padding: 10px; width: 200px; margin: 5px;"><br>
+        <input type="password" id="password" value="admin123" style="padding: 10px; width: 200px; margin: 5px;"><br>
+        <button class="btn" onclick="login()">Login</button>
+    </div>
+
+    <script>
+        document.getElementById('time').textContent = new Date().toLocaleString();
+
+        var API_BASE = window.location.origin;
+
+        function testAPI() {
+            var msg = document.getElementById('message');
+            msg.innerHTML = 'Testing...';
+            msg.className = '';
+
+            fetch(API_BASE + '/health')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    msg.innerHTML = '✓ API Connected! Status: ' + data.status;
+                    msg.className = 'success';
+                })
+                .catch(function(e) {
+                    msg.innerHTML = '✗ Error: ' + e.message;
+                    msg.className = 'error';
+                });
+        }
+
+        function login() {
+            var msg = document.getElementById('message');
+            msg.innerHTML = 'Logging in...';
+
+            var formData = new FormData();
+            formData.append('username', document.getElementById('email').value);
+            formData.append('password', document.getElementById('password').value);
+
+            fetch(API_BASE + '/api/auth/login', {
+                method: 'POST',
+                body: formData
+            })
+            .then(function(r) {
+                if (!r.ok) throw new Error('Login failed');
+                return r.json();
+            })
+            .then(function(data) {
+                msg.innerHTML = '✓ Login successful!';
+                msg.className = 'success';
+                localStorage.setItem('token', data.access_token);
+            })
+            .catch(function(e) {
+                msg.innerHTML = '✗ ' + e.message;
+                msg.className = 'error';
+            });
+        }
+    </script>
+</body>
+</html>
