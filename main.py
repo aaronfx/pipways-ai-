@@ -1,5 +1,6 @@
 """
 Pipways Trading Platform - Complete Fixed Version
+Uses PyJWT instead of python-jose to avoid import issues
 """
 import os
 import sys
@@ -25,7 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
-import jwt
+import jwt as pyjwt  # Import PyJWT with alias to avoid conflicts
 import asyncpg
 
 # Configuration
@@ -123,21 +124,21 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = pyjwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     if not credentials:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = pyjwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         return email
-    except jwt.ExpiredSignatureError:
+    except pyjwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.JWTError:
+    except pyjwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 # Routes
@@ -392,7 +393,7 @@ async def test_page():
     <html>
     <head><title>Pipways Test</title></head>
     <body>
-        <h1>‚úì Backend is Working!</h1>
+        <h1>✓ Backend is Working!</h1>
         <p>If you see this, the API is running correctly.</p>
         <p>Try the <a href="/">main app</a></p>
         <p>API Health: <a href="/health">/health</a></p>
