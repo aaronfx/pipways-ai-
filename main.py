@@ -125,6 +125,16 @@ async def debug_info():
 async def health_check():
     return {"status": "healthy"}
 
+# Setup page
+@app.get("/setup", response_class=HTMLResponse)
+async def setup_page():
+    """Serve the setup page"""
+    setup_path = project_root / "setup.html"
+    if setup_path.exists():
+        with open(setup_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content="<h1>Setup page not found</h1>")
+
 # Create tables endpoint (for easy setup)
 @app.post("/api/setup")
 async def setup_database():
