@@ -1,5 +1,5 @@
 """
-Pipways Trading Platform - Fixed Backend
+Pipways Trading Platform - Debug Version
 """
 import os
 import sys
@@ -13,17 +13,18 @@ from functools import lru_cache
 from fastapi import FastAPI, HTTPException, status, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordRequestForm
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field, EmailStr
 from pydantic_settings import BaseSettings
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-# ==========================================
-# CONFIGURATION
-# ==========================================
+# Logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
+# Settings
 class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://user:pass@localhost/pipways"
     SECRET_KEY: str = "change-this-in-production-min-32-characters-long"
@@ -48,22 +49,21 @@ def get_settings() -> Settings:
 
 settings = get_settings()
 
-# ==========================================
-# DATABASE
-# ==========================================
-
+# Database
 class Database:
     def __init__(self):
         self.pool: Optional[asyncpg.Pool] = None
 
     async def connect(self):
         if not self.pool:
+            logger.info(f"Connecting to database...")
             self.pool = await asyncpg.create_pool(
                 settings.DATABASE_URL,
                 min_size=2,
                 max_size=10,
                 command_timeout=60
             )
+            logger.info("Database connected")
 
     async def disconnect(self):
         if self.pool:
@@ -90,10 +90,7 @@ async def init_db():
 async def close_db():
     await db.disconnect()
 
-# ==========================================
-# SECURITY
-# ==========================================
-
+# Security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security_bearer = HTTPBearer(auto_error=False)
 
@@ -137,38 +134,19 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         "role": payload.get("role")
     }
 
-# ==========================================
-# PYDANTIC MODELS
-# ==========================================
-
-class UserRegister(BaseModel):
-    email: EmailStr
-    password: str = Field(..., min_length=6)
-    full_name: str = Field(..., min_length=2)
-
-class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
-
-# ==========================================
-# FASTAPI APP
-# ==========================================
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
+# FastAPI App
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up...")
     await init_db()
-    logger.info("Database connected")
+    logger.info("Ready")
     yield
     await close_db()
-    logger.info("Shutdown complete")
+    logger.info("Shutdown")
 
 app = FastAPI(title="Pipways", version="2.0.0", lifespan=lifespan)
 
-# CORS - Very permissive for debugging
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -177,181 +155,129 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ==========================================
-# AUTH ROUTES
-# ==========================================
+# Static files
+if os.path.exists("frontend"):
+    logger.info(f"Mounting frontend directory: {os.path.abspath('frontend')}")
+    app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
+# Routes
+@app.get("/")
+async def root():
+    """Serve the main frontend"""
+    logger.info("Root URL accessed")
+    index_path = "frontend/index.html"
+    if os.path.exists(index_path):
+        logger.info(f"Serving {index_path}")
+        return FileResponse(index_path)
+    logger.warning(f"{index_path} not found")
+    return {"message": "Pipways API", "version": "2.0.0", "frontend": "not found"}
+
+@app.get("/test")
+async def test_page():
+    """Serve test page"""
+    test_path = "frontend/test.html"
+    if os.path.exists(test_path):
+        return FileResponse(test_path)
+    return {"error": "test.html not found"}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+
+@app.get("/debug")
+async def debug_info():
+    """Debug endpoint to check configuration"""
+    return {
+        "frontend_exists": os.path.exists("frontend"),
+        "index_exists": os.path.exists("frontend/index.html"),
+        "test_exists": os.path.exists("frontend/test.html"),
+        "cwd": os.getcwd(),
+        "files_in_cwd": os.listdir(".") if os.path.exists(".") else "N/A",
+        "files_in_frontend": os.listdir("frontend") if os.path.exists("frontend") else "N/A"
+    }
+
+# Auth Routes
 @app.post("/api/auth/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    """Login endpoint - returns JWT token"""
-    logger.info(f"Login attempt for: {form_data.username}")
+    logger.info(f"Login attempt: {form_data.username}")
 
     user = await db.fetchrow(
         "SELECT id, email, password_hash, full_name, role, is_active FROM users WHERE email = $1",
         form_data.username
     )
 
-    if not user:
-        logger.warning(f"User not found: {form_data.username}")
-        raise HTTPException(status_code=401, detail="Incorrect email or password")
-
-    if not verify_password(form_data.password, user["password_hash"]):
-        logger.warning(f"Invalid password for: {form_data.username}")
+    if not user or not verify_password(form_data.password, user["password_hash"]):
+        logger.warning(f"Login failed for: {form_data.username}")
         raise HTTPException(status_code=401, detail="Incorrect email or password")
 
     if not user["is_active"]:
         raise HTTPException(status_code=403, detail="Account disabled")
 
     access_token = create_access_token(
-        data={
-            "sub": str(user["id"]),
-            "email": user["email"],
-            "role": user["role"]
-        }
+        data={"sub": str(user["id"]), "email": user["email"], "role": user["role"]}
     )
 
-    logger.info(f"Login successful for: {form_data.username}")
-
+    logger.info(f"Login success: {form_data.username}")
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": {
-            "id": user["id"],
-            "email": user["email"],
-            "full_name": user["full_name"],
-            "role": user["role"]
-        }
+        "user": {"id": user["id"], "email": user["email"], "full_name": user["full_name"], "role": user["role"]}
     }
+
+class UserRegister(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=6)
+    full_name: str = Field(..., min_length=2)
 
 @app.post("/api/auth/register")
 async def register(user_data: UserRegister):
-    """Register new user"""
-    logger.info(f"Registration attempt for: {user_data.email}")
+    logger.info(f"Register attempt: {user_data.email}")
 
-    # Check if email exists
     existing = await db.fetchrow("SELECT id FROM users WHERE email = $1", user_data.email)
     if existing:
-        logger.warning(f"Email already registered: {user_data.email}")
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # Hash password
     hashed_password = get_password_hash(user_data.password)
 
-    try:
-        user = await db.fetchrow(
-            """INSERT INTO users (email, password_hash, full_name, role, is_active) 
-               VALUES ($1, $2, $3, $4, $5) 
-               RETURNING id, email, full_name, role, is_active""",
-            user_data.email, hashed_password, user_data.full_name, "user", True
-        )
+    user = await db.fetchrow(
+        "INSERT INTO users (email, password_hash, full_name, role, is_active) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, full_name, role, is_active",
+        user_data.email, hashed_password, user_data.full_name, "user", True
+    )
 
-        logger.info(f"Registration successful for: {user_data.email}")
-        return {
-            "message": "User created successfully",
-            "user": {
-                "id": user["id"],
-                "email": user["email"],
-                "full_name": user["full_name"],
-                "role": user["role"]
-            }
-        }
-    except Exception as e:
-        logger.error(f"Registration failed: {e}")
-        raise HTTPException(status_code=500, detail="Failed to create user")
+    logger.info(f"Register success: {user_data.email}")
+    return {"message": "User created", "user": dict(user)}
 
-# ==========================================
-# TRADE ROUTES (Protected)
-# ==========================================
-
+# Trade Routes
 @app.get("/api/trades/")
 async def list_trades(current_user: dict = Depends(get_current_user)):
-    """List user's trades"""
-    rows = await db.fetch(
-        "SELECT * FROM trades WHERE user_id = $1 ORDER BY entry_date DESC",
-        int(current_user["user_id"])
-    )
+    rows = await db.fetch("SELECT * FROM trades WHERE user_id = $1 ORDER BY entry_date DESC", int(current_user["user_id"]))
     return [dict(row) for row in rows]
 
 @app.post("/api/trades/")
 async def create_trade(trade: dict, current_user: dict = Depends(get_current_user)):
-    """Create new trade"""
     result = await db.fetchrow(
-        """INSERT INTO trades (user_id, symbol, direction, entry_price, quantity, entry_date, strategy, setup_notes, status) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *""",
-        int(current_user["user_id"]), 
-        trade.get("symbol", "").upper(), 
-        trade.get("direction"), 
-        trade.get("entry_price"), 
-        trade.get("quantity"), 
-        trade.get("entry_date", datetime.utcnow().isoformat()),
-        trade.get("strategy"), 
-        trade.get("setup_notes"), 
-        "open"
+        "INSERT INTO trades (user_id, symbol, direction, entry_price, quantity, entry_date, strategy, setup_notes, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *",
+        int(current_user["user_id"]), trade.get("symbol", "").upper(), trade.get("direction"), 
+        trade.get("entry_price"), trade.get("quantity"), trade.get("entry_date", datetime.utcnow().isoformat()),
+        trade.get("strategy"), trade.get("setup_notes"), "open"
     )
     return dict(result)
 
 @app.get("/api/trades/stats")
 async def get_trade_stats(current_user: dict = Depends(get_current_user)):
-    """Get trading statistics"""
     stats = await db.fetchrow(
-        """SELECT 
-            COUNT(*) as total_trades,
-            COUNT(CASE WHEN pnl > 0 THEN 1 END) as winning_trades,
-            COALESCE(SUM(pnl), 0) as total_pnl
-        FROM trades WHERE user_id = $1 AND status = 'closed'""",
+        "SELECT COUNT(*) as total_trades, COUNT(CASE WHEN pnl > 0 THEN 1 END) as winning_trades, COALESCE(SUM(pnl), 0) as total_pnl FROM trades WHERE user_id = $1 AND status = 'closed'",
         int(current_user["user_id"])
     )
     return dict(stats)
 
-# ==========================================
-# BLOG ROUTES (Public)
-# ==========================================
-
+# Blog Routes
 @app.get("/api/blog/posts")
 async def list_posts():
-    """List published blog posts"""
-    rows = await db.fetch(
-        "SELECT * FROM blog_posts WHERE status = 'published' ORDER BY created_at DESC"
-    )
+    rows = await db.fetch("SELECT * FROM blog_posts WHERE status = 'published' ORDER BY created_at DESC")
     return [dict(row) for row in rows]
-
-@app.get("/api/blog/posts/{slug}")
-async def get_post(slug: str):
-    """Get single blog post"""
-    post = await db.fetchrow("SELECT * FROM blog_posts WHERE slug = $1", slug)
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
-    return dict(post)
-
-# ==========================================
-# STATIC FILES & ROOT
-# ==========================================
-
-if os.path.exists("frontend"):
-    app.mount("/static", StaticFiles(directory="frontend"), name="static")
-
-if os.path.exists("uploads"):
-    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
-
-@app.get("/")
-async def root():
-    if os.path.exists("frontend/index.html"):
-        return FileResponse("frontend/index.html")
-    return {"message": "Pipways Trading Platform API", "version": "2.0.0"}
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
-
-# Error handlers
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.detail}
-    )
 
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", settings.PORT))
-    uvicorn.run("main:app", host="0.0.0.0", port=port)
+    uvicorn.run("main:app", host="0.0.0.0", port=port, log_level="debug")
