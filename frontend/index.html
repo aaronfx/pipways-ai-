@@ -12,6 +12,7 @@
         .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .card-hover { transition: all 0.3s ease; }
         .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.15); }
+        .hidden { display: none !important; }
     </style>
 <base target="_blank">
 </head>
@@ -27,7 +28,6 @@
                     <button onclick="showSection('dashboard')" class="nav-btn text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Dashboard</button>
                     <button onclick="showSection('journal')" class="nav-btn text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Journal</button>
                     <button onclick="showSection('blog')" class="nav-btn text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Blog</button>
-                    <button onclick="showSection('webinars')" class="nav-btn text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Webinars</button>
                     <div id="auth-section">
                         <button onclick="showModal('login')" class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700">Login</button>
                     </div>
@@ -38,6 +38,15 @@
 
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Auth Required Message -->
+        <div id="auth-required" class="hidden text-center py-12">
+            <i data-lucide="lock" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Authentication Required</h2>
+            <p class="text-gray-600 mb-4">Please log in to access this feature</p>
+            <button onclick="showModal('login')" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">Login</button>
+        </div>
+
         <!-- Dashboard Section -->
         <section id="dashboard-section" class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -93,13 +102,12 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Direction</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entry</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Exit</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">P&L</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">P&L</th>
                             </tr>
                         </thead>
                         <tbody id="trades-table-body" class="bg-white divide-y divide-gray-200">
-                            <!-- Trades loaded dynamically -->
+                            <tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -115,7 +123,7 @@
                 </button>
             </div>
             <div id="journal-entries" class="grid gap-4">
-                <!-- Journal entries loaded dynamically -->
+                <div class="text-center text-gray-500 py-8">Loading...</div>
             </div>
         </section>
 
@@ -123,23 +131,9 @@
         <section id="blog-section" class="hidden space-y-6">
             <div class="flex justify-between items-center">
                 <h2 class="text-2xl font-bold text-gray-900">Trading Blog</h2>
-                <div class="flex gap-2">
-                    <input type="text" id="blog-search" placeholder="Search articles..." class="border rounded-lg px-4 py-2">
-                    <button onclick="loadBlogPosts()" class="bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200">
-                        <i data-lucide="search" class="h-4 w-4"></i>
-                    </button>
-                </div>
             </div>
             <div id="blog-posts" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Blog posts loaded dynamically -->
-            </div>
-        </section>
-
-        <!-- Webinars Section -->
-        <section id="webinars-section" class="hidden space-y-6">
-            <h2 class="text-2xl font-bold text-gray-900">Upcoming Webinars</h2>
-            <div id="webinars-list" class="grid gap-4">
-                <!-- Webinars loaded dynamically -->
+                <div class="text-center text-gray-500 py-8 col-span-3">Loading...</div>
             </div>
         </section>
     </main>
@@ -151,11 +145,11 @@
             <form id="login-form" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" id="login-email" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500">
+                    <input type="email" id="login-email" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500" value="admin@pipways.com">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" id="login-password" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500">
+                    <input type="password" id="login-password" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500" value="admin123">
                 </div>
                 <div id="login-error" class="text-red-600 text-sm hidden"></div>
                 <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">Login</button>
@@ -194,7 +188,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Strategy</label>
-                    <input type="text" id="trade-strategy" placeholder="e.g., Breakout, Support/Resistance" class="w-full border rounded-lg px-4 py-2">
+                    <input type="text" id="trade-strategy" placeholder="e.g., Breakout" class="w-full border rounded-lg px-4 py-2">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Setup Notes</label>
@@ -209,56 +203,91 @@
     </div>
 
     <script>
-        // API Configuration - Dynamic based on environment
+        // ==========================================
+        // CONFIGURATION
+        // ==========================================
         const API_BASE = window.location.origin.includes('localhost') 
             ? 'http://localhost:8000' 
             : window.location.origin;
 
-        // State management
+        // ==========================================
+        // STATE MANAGEMENT
+        // ==========================================
         let currentUser = null;
         let authToken = localStorage.getItem('token');
 
-        // Initialize
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
+
+            // Check if already logged in
             if (authToken) {
-                loadUserData();
+                console.log('Token found in localStorage');
+                updateAuthUI();
+                loadDashboard();
+            } else {
+                console.log('No token found');
+                showModal('login');
             }
-            loadDashboard();
+
             loadBlogPosts();
         });
 
-        // Navigation
+        // ==========================================
+        // NAVIGATION
+        // ==========================================
         function showSection(section) {
+            // Check auth for protected sections
+            if ((section === 'dashboard' || section === 'journal') && !authToken) {
+                showModal('login');
+                return;
+            }
+
             // Hide all sections
             document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+            document.getElementById('auth-required').classList.add('hidden');
+
             // Show selected
-            document.getElementById(`${section}-section`).classList.remove('hidden');
+            const sectionEl = document.getElementById(`${section}-section`);
+            if (sectionEl) {
+                sectionEl.classList.remove('hidden');
+            }
 
             // Load section data
             if (section === 'dashboard') loadDashboard();
             if (section === 'journal') loadJournal();
             if (section === 'blog') loadBlogPosts();
-            if (section === 'webinars') loadWebinars();
         }
 
-        // Modal management
+        // ==========================================
+        // MODAL MANAGEMENT
+        // ==========================================
         function showModal(modal) {
             document.getElementById(`${modal}-modal`).classList.remove('hidden');
         }
 
         function hideModal(modal) {
             document.getElementById(`${modal}-modal`).classList.add('hidden');
-            // Clear form errors
             const errorDiv = document.getElementById(`${modal}-error`);
-            if (errorDiv) errorDiv.classList.add('hidden');
+            if (errorDiv) {
+                errorDiv.classList.add('hidden');
+                errorDiv.textContent = '';
+            }
         }
 
-        // Authentication
-        document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+        // ==========================================
+        // AUTHENTICATION
+        // ==========================================
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
+            const errorDiv = document.getElementById('login-error');
+
+            console.log('Attempting login...');
 
             try {
                 const formData = new FormData();
@@ -270,22 +299,32 @@
                     body: formData
                 });
 
+                console.log('Login response status:', response.status);
+
                 if (!response.ok) {
                     const error = await response.json();
                     throw new Error(error.detail || 'Login failed');
                 }
 
                 const data = await response.json();
+                console.log('Login successful, token received');
+
+                // Store token
                 authToken = data.access_token;
                 localStorage.setItem('token', authToken);
                 currentUser = data.user;
 
+                console.log('Token stored in localStorage');
+
+                // Update UI
                 updateAuthUI();
                 hideModal('login');
-                loadDashboard();
+
+                // Load dashboard
+                showSection('dashboard');
 
             } catch (error) {
-                const errorDiv = document.getElementById('login-error');
+                console.error('Login error:', error);
                 errorDiv.textContent = error.message;
                 errorDiv.classList.remove('hidden');
             }
@@ -293,10 +332,10 @@
 
         function updateAuthUI() {
             const authSection = document.getElementById('auth-section');
-            if (currentUser) {
+            if (currentUser || authToken) {
                 authSection.innerHTML = `
-                    <span class="text-gray-700">${currentUser.full_name}</span>
-                    <button onclick="logout()" class="text-red-600 hover:text-red-700 ml-4">Logout</button>
+                    <span class="text-gray-700">${currentUser?.full_name || 'User'}</span>
+                    <button onclick="logout()" class="text-red-600 hover:text-red-700 ml-4 font-medium">Logout</button>
                 `;
             } else {
                 authSection.innerHTML = `
@@ -306,61 +345,80 @@
         }
 
         function logout() {
+            console.log('Logging out...');
             localStorage.removeItem('token');
             authToken = null;
             currentUser = null;
             updateAuthUI();
-            showSection('dashboard');
+            showSection('blog'); // Show public section
         }
 
-        async function loadUserData() {
+        // ==========================================
+        // API HELPERS
+        // ==========================================
+        async function apiRequest(url, options = {}) {
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+
+            console.log(`API Request: ${url}`, { hasToken: !!authToken });
+
             try {
-                const response = await fetch(`${API_BASE}/api/auth/me`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
+                const response = await fetch(url, {
+                    ...options,
+                    headers
                 });
-                if (response.ok) {
-                    currentUser = await response.json();
+
+                if (response.status === 401) {
+                    console.error('Unauthorized - clearing token');
+                    localStorage.removeItem('token');
+                    authToken = null;
                     updateAuthUI();
-                } else {
-                    logout();
+                    showModal('login');
+                    throw new Error('Session expired. Please login again.');
                 }
+
+                return response;
             } catch (error) {
-                console.error('Failed to load user:', error);
+                console.error('API Request failed:', error);
+                throw error;
             }
         }
 
-        // Dashboard
+        // ==========================================
+        // DASHBOARD
+        // ==========================================
         async function loadDashboard() {
-            if (!authToken) return;
+            if (!authToken) {
+                console.log('No auth token, skipping dashboard load');
+                return;
+            }
 
             try {
                 // Load stats
-                const statsRes = await fetch(`${API_BASE}/api/trades/stats`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-
+                const statsRes = await apiRequest(`${API_BASE}/api/trades/stats`);
                 if (statsRes.ok) {
                     const stats = await statsRes.json();
                     document.getElementById('stat-total').textContent = stats.total_trades || 0;
-                    document.getElementById('stat-winrate').textContent = 
-                        stats.total_trades > 0 
-                            ? Math.round((stats.winning_trades / stats.total_trades) * 100) + '%'
-                            : '0%';
+
+                    const winRate = stats.total_trades > 0 
+                        ? Math.round((stats.winning_trades / stats.total_trades) * 100) 
+                        : 0;
+                    document.getElementById('stat-winrate').textContent = winRate + '%';
 
                     const pnl = parseFloat(stats.total_pnl) || 0;
                     const pnlEl = document.getElementById('stat-pnl');
                     pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
                     pnlEl.className = `text-2xl font-bold ${pnl >= 0 ? 'text-green-600' : 'text-red-600'}`;
-
-                    document.getElementById('stat-return').textContent = 
-                        parseFloat(stats.return_percent || 0).toFixed(2) + '%';
                 }
 
                 // Load recent trades
-                const tradesRes = await fetch(`${API_BASE}/api/trades/?limit=5`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-
+                const tradesRes = await apiRequest(`${API_BASE}/api/trades/?limit=5`);
                 if (tradesRes.ok) {
                     const trades = await tradesRes.json();
                     renderTradesTable(trades);
@@ -373,12 +431,11 @@
         function renderTradesTable(trades) {
             const tbody = document.getElementById('trades-table-body');
             if (!trades || trades.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">No trades yet</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No trades yet</td></tr>';
                 return;
             }
 
             tbody.innerHTML = trades.map(t => {
-                // FIXED: Corrected ternary operator syntax
                 const directionIcon = t.direction?.toLowerCase() === 'long' 
                     ? '<span class="text-green-600 flex items-center gap-1"><i data-lucide="trending-up" class="h-4 w-4"></i> Long</span>' 
                     : '<span class="text-red-600 flex items-center gap-1"><i data-lucide="trending-down" class="h-4 w-4"></i> Short</span>';
@@ -389,22 +446,14 @@
 
                 return `
                     <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            ${new Date(t.entry_date).toLocaleDateString()}
-                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${new Date(t.entry_date).toLocaleDateString()}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${t.symbol}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">${directionIcon}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${parseFloat(t.entry_price).toFixed(5)}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            ${t.exit_price ? parseFloat(t.exit_price).toFixed(5) : '-'}
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${t.status === 'closed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${t.status}</span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${pnlClass}">${pnlText}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                ${t.status === 'closed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
-                                ${t.status}
-                            </span>
-                        </td>
                     </tr>
                 `;
             }).join('');
@@ -412,18 +461,14 @@
             lucide.createIcons();
         }
 
-        // Journal
+        // ==========================================
+        // JOURNAL
+        // ==========================================
         async function loadJournal() {
-            if (!authToken) {
-                showModal('login');
-                return;
-            }
+            if (!authToken) return;
 
             try {
-                const response = await fetch(`${API_BASE}/api/trades/`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-
+                const response = await apiRequest(`${API_BASE}/api/trades/`);
                 if (response.ok) {
                     const trades = await response.json();
                     renderJournal(trades);
@@ -447,34 +492,22 @@
                             <h4 class="text-lg font-semibold">${t.symbol} - ${t.direction.toUpperCase()}</h4>
                             <p class="text-sm text-gray-600">${new Date(t.entry_date).toLocaleString()}</p>
                         </div>
-                        <span class="px-3 py-1 rounded-full text-sm ${t.status === 'closed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
-                            ${t.status}
-                        </span>
+                        <span class="px-3 py-1 rounded-full text-sm ${t.status === 'closed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${t.status}</span>
                     </div>
                     <div class="mt-4 grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                            <span class="text-gray-600">Entry:</span>
-                            <span class="font-medium">${parseFloat(t.entry_price).toFixed(5)}</span>
-                        </div>
-                        <div>
-                            <span class="text-gray-600">Exit:</span>
-                            <span class="font-medium">${t.exit_price ? parseFloat(t.exit_price).toFixed(5) : '-'}</span>
-                        </div>
-                        <div>
-                            <span class="text-gray-600">P&L:</span>
-                            <span class="font-medium ${(t.pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'}">
-                                ${t.pnl ? (t.pnl >= 0 ? '+' : '') + '$' + parseFloat(t.pnl).toFixed(2) : '-'}
-                            </span>
-                        </div>
+                        <div><span class="text-gray-600">Entry:</span> <span class="font-medium">${parseFloat(t.entry_price).toFixed(5)}</span></div>
+                        <div><span class="text-gray-600">Exit:</span> <span class="font-medium">${t.exit_price ? parseFloat(t.exit_price).toFixed(5) : '-'}</span></div>
+                        <div><span class="text-gray-600">P&L:</span> <span class="font-medium ${(t.pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'}">${t.pnl ? (t.pnl >= 0 ? '+' : '') + '$' + parseFloat(t.pnl).toFixed(2) : '-'}</span></div>
                     </div>
                     ${t.setup_notes ? `<div class="mt-4 text-sm text-gray-700"><strong>Notes:</strong> ${t.setup_notes}</div>` : ''}
-                    ${t.lessons ? `<div class="mt-2 text-sm text-blue-700 bg-blue-50 p-3 rounded"><strong>Lesson:</strong> ${t.lessons}</div>` : ''}
                 </div>
             `).join('');
         }
 
-        // Add Trade
-        document.getElementById('trade-form')?.addEventListener('submit', async (e) => {
+        // ==========================================
+        // ADD TRADE
+        // ==========================================
+        document.getElementById('trade-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!authToken) {
                 showModal('login');
@@ -488,17 +521,12 @@
                 quantity: parseFloat(document.getElementById('trade-quantity').value),
                 entry_date: new Date().toISOString(),
                 strategy: document.getElementById('trade-strategy').value,
-                setup_notes: document.getElementById('trade-notes').value,
-                status: 'open'
+                setup_notes: document.getElementById('trade-notes').value
             };
 
             try {
-                const response = await fetch(`${API_BASE}/api/trades/`, {
+                const response = await apiRequest(`${API_BASE}/api/trades/`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
                     body: JSON.stringify(tradeData)
                 });
 
@@ -515,19 +543,16 @@
                 }
             } catch (error) {
                 console.error('Trade save error:', error);
-                alert('Failed to save trade');
+                alert('Failed to save trade: ' + error.message);
             }
         });
 
-        // Blog
+        // ==========================================
+        // BLOG
+        // ==========================================
         async function loadBlogPosts() {
             try {
-                const search = document.getElementById('blog-search')?.value || '';
-                const url = new URL(`${API_BASE}/api/blog/posts`);
-                url.searchParams.append('status', 'published');
-                if (search) url.searchParams.append('search', search);
-
-                const response = await fetch(url);
+                const response = await fetch(`${API_BASE}/api/blog/posts`);
                 if (response.ok) {
                     const posts = await response.json();
                     renderBlogPosts(posts);
@@ -545,9 +570,8 @@
             }
 
             container.innerHTML = posts.map(p => `
-                <article class="bg-white rounded-lg shadow overflow-hidden card-hover cursor-pointer" onclick="showBlogPost('${p.slug}')">
-                    ${p.featured_image ? `<img src="${p.featured_image}" alt="${p.title}" class="w-full h-48 object-cover">` : 
-                    '<div class="w-full h-48 bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center text-white text-4xl font-bold">P</div>'}
+                <article class="bg-white rounded-lg shadow overflow-hidden card-hover">
+                    <div class="h-48 bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center text-white text-4xl font-bold">P</div>
                     <div class="p-6">
                         <div class="flex items-center gap-2 text-sm text-gray-600 mb-2">
                             <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded">${p.category}</span>
@@ -555,52 +579,9 @@
                             <span>${new Date(p.created_at).toLocaleDateString()}</span>
                         </div>
                         <h3 class="text-xl font-bold text-gray-900 mb-2">${p.title}</h3>
-                        <p class="text-gray-600 text-sm line-clamp-3">${p.excerpt || p.content.substring(0, 150)}...</p>
-                        <div class="mt-4 flex items-center justify-between">
-                            <span class="text-sm text-gray-500">By ${p.author_name}</span>
-                            <span class="text-indigo-600 text-sm font-medium">Read more →</span>
-                        </div>
+                        <p class="text-gray-600 text-sm">${p.excerpt || p.content.substring(0, 150)}...</p>
                     </div>
                 </article>
-            `).join('');
-        }
-
-        function showBlogPost(slug) {
-            // Navigate to blog post detail (implement as needed)
-            window.open(`${API_BASE}/api/blog/posts/${slug}`, '_blank');
-        }
-
-        // Webinars
-        async function loadWebinars() {
-            try {
-                const response = await fetch(`${API_BASE}/api/webinars`);
-                if (response.ok) {
-                    const webinars = await response.json();
-                    renderWebinars(webinars);
-                }
-            } catch (error) {
-                console.error('Webinars load error:', error);
-                document.getElementById('webinars-list').innerHTML = 
-                    '<div class="text-center text-gray-500 py-8">Webinars temporarily unavailable</div>';
-            }
-        }
-
-        function renderWebinars(webinars) {
-            const container = document.getElementById('webinars-list');
-            if (!webinars || webinars.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-500 py-8">No upcoming webinars</div>';
-                return;
-            }
-
-            container.innerHTML = webinars.map(w => `
-                <div class="bg-white rounded-lg shadow p-6 flex justify-between items-center">
-                    <div>
-                        <h3 class="text-lg font-semibold">${w.topic}</h3>
-                        <p class="text-sm text-gray-600">${new Date(w.start_time).toLocaleString()}</p>
-                        <p class="text-sm text-gray-500">Duration: ${w.duration} minutes</p>
-                    </div>
-                    <button class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Register</button>
-                </div>
             `).join('');
         }
 
