@@ -1,6 +1,5 @@
 """
 Pipways Trading Platform - Complete Fixed Version
-Uses PyJWT instead of python-jose to avoid import issues
 """
 import os
 import sys
@@ -26,7 +25,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
-import jwt as pyjwt  # Import PyJWT with alias to avoid conflicts
+
+# Try different JWT imports
+try:
+    import jwt as pyjwt
+    logger.info("Using PyJWT library")
+except ImportError:
+    try:
+        from jose import jwt as pyjwt
+        logger.info("Using python-jose library")
+    except ImportError:
+        logger.error("No JWT library found! Installing PyJWT...")
+        import subprocess
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "PyJWT==2.8.0"])
+        import jwt as pyjwt
+
 import asyncpg
 
 # Configuration
@@ -136,9 +149,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         if email is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         return email
-    except pyjwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except pyjwt.InvalidTokenError:
+    except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 # Routes
