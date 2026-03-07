@@ -1,13 +1,12 @@
 """
-Pipways Trading Platform - Production Version
+Pipways Trading Platform - Integrated Setup Version
 """
 import os
 import sys
-import json
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional
 from contextlib import asynccontextmanager
 
 logging.basicConfig(level=logging.INFO)
@@ -39,7 +38,7 @@ ALGORITHM = "HS256"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer(auto_error=False)
-db_pool: Optional[asyncpg.Pool] = None
+db_pool = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -82,86 +81,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ========== SETUP ROUTE (UNIQUE PATH) ==========
-@app.get("/init-db", response_class=HTMLResponse)
-async def init_db_page():
-    """Database initialization page"""
-    return HTMLResponse(content="""
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Initialize Database - Pipways</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gradient-to-br from-purple-600 to-blue-600 min-h-screen flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
-        <div class="text-center mb-6">
-            <div class="text-5xl mb-4">🚀</div>
-            <h1 class="text-3xl font-bold text-gray-800">Database Setup</h1>
-            <p class="text-gray-600 mt-2">Initialize your trading platform</p>
-        </div>
-
-        <div id="statusBox" class="hidden mb-4 p-4 rounded-lg text-center font-semibold"></div>
-
-        <button id="initBtn" onclick="initializeDB()" 
-            class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-4 px-6 rounded-xl hover:shadow-lg transform hover:scale-105 transition duration-200">
-            🔧 Initialize Database
-        </button>
-
-        <div class="mt-6 text-center space-y-2">
-            <a href="/" class="text-purple-600 hover:underline block">← Back to Login</a>
-        </div>
-
-        <div class="mt-6 p-4 bg-gray-100 rounded-lg text-sm">
-            <p class="font-bold text-gray-700 mb-2">Default Login After Setup:</p>
-            <p class="text-gray-600">Email: <span class="font-mono">admin@pipways.com</span></p>
-            <p class="text-gray-600">Password: <span class="font-mono">admin123</span></p>
-        </div>
-    </div>
-
-    <script>
-        function showStatus(msg, isError) {
-            const box = document.getElementById("statusBox");
-            box.textContent = msg;
-            box.className = "mb-4 p-4 rounded-lg text-center font-semibold " + 
-                (isError ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700");
-            box.classList.remove("hidden");
-        }
-
-        async function initializeDB() {
-            const btn = document.getElementById("initBtn");
-            btn.disabled = true;
-            btn.textContent = "Initializing...";
-            showStatus("Creating tables... Please wait", false);
-
-            try {
-                const res = await fetch("/api/init", { method: "POST" });
-                const data = await res.json();
-
-                if (res.ok) {
-                    showStatus("✅ " + data.message, false);
-                    btn.textContent = "Database Ready!";
-                    btn.classList.remove("from-green-500", "to-emerald-600");
-                    btn.classList.add("from-blue-500", "to-blue-600");
-                } else {
-                    showStatus("❌ Error: " + (data.detail || "Unknown"), true);
-                    btn.disabled = false;
-                    btn.textContent = "🔧 Try Again";
-                }
-            } catch (e) {
-                showStatus("❌ Network Error: " + e.message, true);
-                btn.disabled = false;
-                btn.textContent = "🔧 Try Again";
-            }
-        }
-    </script>
-</body>
-</html>
-    """)
-
-@app.post("/api/init")
-async def api_init():
-    """Initialize database tables"""
+# ========== SETUP API ENDPOINT ==========
+@app.post("/api/setup-db")
+async def setup_database():
+    """Create database tables and default user"""
     if not db_pool:
         raise HTTPException(status_code=500, detail="Database not connected")
 
@@ -209,23 +132,29 @@ async def api_init():
             ON CONFLICT (email) DO NOTHING
         """, "Admin User", "admin@pipways.com", hashed_pw, "admin")
 
-        return {"message": "Database initialized! You can now login."}
+        return {"message": "Database initialized! You can now login with admin@pipways.com / admin123"}
 
-# ========== DEBUG ENDPOINT ==========
-@app.get("/api/status")
-async def api_status():
-    info = {
-        "database_connected": db_pool is not None,
-        "timestamp": datetime.utcnow().isoformat()
-    }
-    if db_pool:
+@app.get("/api/check-db")
+async def check_database():
+    """Check if database is set up"""
+    if not db_pool:
+        return {"connected": False, "setup": False}
+
+    try:
         async with db_pool.acquire() as conn:
             tables = await conn.fetch("""
                 SELECT table_name FROM information_schema.tables 
-                WHERE table_schema = 'public'
+                WHERE table_schema = 'public' AND table_name = 'users'
             """)
-            info["tables"] = [t["table_name"] for t in tables]
-    return info
+            has_users = len(tables) > 0
+
+            if has_users:
+                count = await conn.fetchval("SELECT COUNT(*) FROM users")
+                return {"connected": True, "setup": True, "users": count}
+            else:
+                return {"connected": True, "setup": False, "users": 0}
+    except Exception as e:
+        return {"connected": True, "setup": False, "error": str(e)}
 
 # ========== AUTH ENDPOINTS ==========
 @app.post("/api/auth/login")
@@ -275,7 +204,6 @@ async def register(user_data: UserRegister):
 
         return {"message": "Registration successful", "user": dict(new_user)}
 
-# ========== API ENDPOINTS ==========
 @app.get("/api/trades")
 async def get_trades(credentials: HTTPAuthorizationCredentials = Depends(security)):
     if not credentials:
@@ -317,30 +245,184 @@ async def get_blog_posts():
 async def health_check():
     return {"status": "healthy"}
 
-# ========== FRONTEND (MUST BE LAST) ==========
+# ========== FRONTEND WITH INTEGRATED SETUP ==========
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
+    # Check if we can find index.html
     possible_paths = [Path("index.html"), project_root / "index.html"]
+    index_content = None
 
     for path in possible_paths:
         if path.exists():
             with open(path, "r", encoding="utf-8") as f:
-                return HTMLResponse(content=f.read())
+                index_content = f.read()
+            break
 
+    # If index.html exists, inject setup button into it
+    if index_content:
+        # Add setup script before closing body tag
+        setup_script = """
+    <div id="setup-banner" style="display:none; position:fixed; top:0; left:0; right:0; background:linear-gradient(90deg, #667eea, #764ba2); color:white; padding:15px; text-align:center; z-index:9999;">
+        <span style="font-weight:bold;">🚀 Database Not Initialized!</span> 
+        <button onclick="initDatabase()" style="margin-left:20px; padding:8px 20px; background:white; color:#667eea; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">
+            Initialize Now
+        </button>
+        <span id="setup-status" style="margin-left:20px;"></span>
+    </div>
+    <script>
+        // Check database status on load
+        fetch('/api/check-db')
+            .then(r => r.json())
+            .then(data => {
+                if (data.connected && !data.setup) {
+                    document.getElementById('setup-banner').style.display = 'block';
+                }
+            });
+
+        function initDatabase() {
+            const btn = document.querySelector('#setup-banner button');
+            const status = document.getElementById('setup-status');
+            btn.disabled = true;
+            btn.textContent = 'Initializing...';
+            status.textContent = 'Creating tables...';
+
+            fetch('/api/setup-db', {method: 'POST'})
+                .then(r => r.json())
+                .then(data => {
+                    status.textContent = '✅ ' + data.message;
+                    btn.textContent = 'Done!';
+                    setTimeout(() => {
+                        document.getElementById('setup-banner').style.display = 'none';
+                        alert('Database initialized! Login with: admin@pipways.com / admin123');
+                    }, 2000);
+                })
+                .catch(e => {
+                    status.textContent = '❌ Error: ' + e.message;
+                    btn.disabled = false;
+                    btn.textContent = 'Try Again';
+                });
+        }
+    </script>
+</body>"""
+
+        # Replace closing body tag with our script
+        if "</body>" in index_content:
+            index_content = index_content.replace("</body>", setup_script)
+        else:
+            index_content += setup_script
+
+        return HTMLResponse(content=index_content)
+
+    # Fallback HTML if no index.html found
     return HTMLResponse(content="""
-    <!DOCTYPE html>
-    <html>
-    <head><title>Pipways AI</title><script src="https://cdn.tailwindcss.com"></script></head>
-    <body class="bg-gray-100 min-h-screen flex items-center justify-center">
-        <div class="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
-            <h1 class="text-2xl font-bold mb-4 text-purple-600">Pipways AI</h1>
-            <p class="mb-4 text-gray-600">Index file not found</p>
-            <a href="/init-db" class="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700">
-                🚀 Initialize Database
-            </a>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipways AI - Trading Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Setup Banner -->
+    <div id="setup-banner" class="hidden bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 text-center">
+        <span class="font-bold text-lg">🚀 Database Not Initialized!</span>
+        <button onclick="initDatabase()" class="ml-4 px-6 py-2 bg-white text-purple-600 rounded-lg font-bold hover:bg-gray-100">
+            Initialize Database
+        </button>
+        <span id="setup-status" class="ml-4"></span>
+    </div>
+
+    <!-- Main App -->
+    <div id="app">
+        <nav class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4">
+            <div class="max-w-7xl mx-auto flex justify-between items-center">
+                <h1 class="text-2xl font-bold">Pipways AI</h1>
+            </div>
+        </nav>
+
+        <div class="max-w-md mx-auto mt-10 p-8 bg-white rounded-xl shadow-lg">
+            <h2 class="text-2xl font-bold text-center mb-6">Welcome Back</h2>
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">Email</label>
+                    <input type="email" id="email" value="admin@pipways.com" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-purple-500">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 mb-2">Password</label>
+                    <input type="password" id="password" value="admin123" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-purple-500">
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3 rounded-lg hover:opacity-90">
+                    Sign In
+                </button>
+            </form>
+            <div id="error" class="mt-4 p-3 bg-red-100 text-red-700 rounded-lg hidden"></div>
         </div>
-    </body>
-    </html>
+    </div>
+
+    <script>
+        // Check database status
+        fetch('/api/check-db')
+            .then(r => r.json())
+            .then(data => {
+                console.log('DB Status:', data);
+                if (data.connected && !data.setup) {
+                    document.getElementById('setup-banner').classList.remove('hidden');
+                }
+            });
+
+        function initDatabase() {
+            const btn = document.querySelector('#setup-banner button');
+            const status = document.getElementById('setup-status');
+            btn.disabled = true;
+            btn.textContent = 'Initializing...';
+
+            fetch('/api/setup-db', {method: 'POST'})
+                .then(r => r.json())
+                .then(data => {
+                    status.textContent = '✅ Success!';
+                    btn.textContent = 'Done';
+                    setTimeout(() => {
+                        document.getElementById('setup-banner').classList.add('hidden');
+                        alert('Database initialized! Login with: admin@pipways.com / admin123');
+                    }, 1500);
+                })
+                .catch(e => {
+                    status.textContent = '❌ Error: ' + e.message;
+                    btn.disabled = false;
+                    btn.textContent = 'Try Again';
+                });
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email, password})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.access_token) {
+                    localStorage.setItem('token', data.access_token);
+                    alert('Login successful!');
+                    // Redirect to dashboard or show logged-in UI
+                } else {
+                    document.getElementById('error').textContent = data.detail || 'Login failed';
+                    document.getElementById('error').classList.remove('hidden');
+                }
+            })
+            .catch(e => {
+                document.getElementById('error').textContent = 'Error: ' + e.message;
+                document.getElementById('error').classList.remove('hidden');
+            });
+        }
+    </script>
+</body>
+</html>
     """)
 
 if __name__ == "__main__":
